@@ -1,0 +1,60 @@
+# Defaults: Normalize Text and Enforce LF
+* text=auto eol=lf
+
+# Source Files
+*.js        text eol=lf
+*.cjs       text eol=lf
+*.mjs       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.md        text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+*.html      text eol=lf
+*.svg       text eol=lf
+
+# Configuration or dot Files
+*.env       text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+*.editorconfig text eol=lf
+
+# Shell Scripts
+*.sh        text eol=lf
+
+# Windows Scripts
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binary Files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.7z binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.mov binary
+
+# Mark Generated Artifacts
+**/dist/** linguist-generated=true
+**/build/** linguist-generated=true
+**/out/** linguist-generated=true
+**/coverage/** linguist-generated=true
+
+pnpm-lock.yaml text eol=lf
+package-lock.json text eol=lf
+bun.lockb binary

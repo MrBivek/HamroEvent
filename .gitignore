@@ -1,0 +1,57 @@
+# Dependencies
+**/node_modules/
+
+# PNPM Stores
+.pnpm-store/
+**/.pnpm-store/
+
+# Build Folders
+**/dist/
+**/build/
+**/out/
+**/.next/
+**/.nuxt/
+**/.vite/
+**/.cache/
+**/.turbo/
+**/coverage/
+**/.nyc_output/
+**/*.tsbuildinfo
+
+# Environmental Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# OS / Editor / IDE
+.DS_Store
+Thumbs.db
+
+.idea/
+**/*.iml
+
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# Miscellaneous
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*.pid
+*.pid.lock
+*.tgz
+*.local
