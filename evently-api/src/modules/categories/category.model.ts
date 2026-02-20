@@ -10,7 +10,7 @@ const CategorySchema = new Schema(
     { timestamps: true, collection: "categories" }
 );
 
-CategorySchema.index({ isActive: 1 });
+// isActive already has index: true on the field
 
 export type CategoryDoc = InferSchemaType<typeof CategorySchema> & { _id: mongoose.Types.ObjectId };
 

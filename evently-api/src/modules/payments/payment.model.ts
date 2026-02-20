@@ -15,8 +15,6 @@ const PaymentSchema = new Schema(
   { timestamps: true, collection: "payments" },
 );
 
-PaymentSchema.index({ bookingId: 1 });
-PaymentSchema.index({ status: 1 });
 PaymentSchema.index({ providerRef: 1 }, { unique: true, sparse: true });
 
 export type PaymentDoc = InferSchemaType<typeof PaymentSchema> & { _id: mongoose.Types.ObjectId };

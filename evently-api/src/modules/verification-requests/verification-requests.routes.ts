@@ -155,7 +155,7 @@ verificationRequestsRoutes.get(
       const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const { id } = req.params;
+      const id = String(req.params.id);
       if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Verification request not found");
 
       const doc = await VerificationRequestModel.findOne({ _id: id, vendorId: vendor._id }).lean();

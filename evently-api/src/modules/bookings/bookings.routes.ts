@@ -155,7 +155,7 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
  */
 bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
 
         const booking = await BookingModel.findOne({

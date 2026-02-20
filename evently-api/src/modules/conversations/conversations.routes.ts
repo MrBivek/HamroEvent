@@ -173,7 +173,7 @@ conversationsRoutes.get("/", requireAuth, async (req, res, next) => {
  */
 conversationsRoutes.get("/:id/messages", requireAuth, async (req, res, next) => {
   try {
-    const convoId = ensureObjectId(req.params.id, "Conversation not found");
+    const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
     await assertParticipant(convoId, req.auth!.sub);
 
     const q = MessageListQuerySchema.parse(req.query);
@@ -220,7 +220,7 @@ conversationsRoutes.get("/:id/messages", requireAuth, async (req, res, next) => 
  */
 conversationsRoutes.post("/:id/messages", requireAuth, validateBody(CreateMessageSchema), async (req, res, next) => {
   try {
-    const convoId = ensureObjectId(req.params.id, "Conversation not found");
+    const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
     await assertParticipant(convoId, req.auth!.sub);
 
     const message = await MessageModel.create({
@@ -254,7 +254,7 @@ conversationsRoutes.post("/:id/messages", requireAuth, validateBody(CreateMessag
  */
 conversationsRoutes.post("/:id/read", requireAuth, async (req, res, next) => {
   try {
-    const convoId = ensureObjectId(req.params.id, "Conversation not found");
+    const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
     await assertParticipant(convoId, req.auth!.sub);
 
     const result = await MessageModel.updateMany(

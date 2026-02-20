@@ -48,13 +48,14 @@ vendorQuotesRoutes.post(
       const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const { id } = req.params;
+      const id = String(req.params.id);
       if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
 
       const booking = await BookingModel.findOne({ _id: id, vendorId: vendor._id });
       if (!booking) throw new NotFoundError("Booking not found");
 
-      if (![BookingStatus.REQUESTED, BookingStatus.ACCEPTED].includes(booking.status as BookingStatus)) {
+      const allowed: BookingStatus[] = [BookingStatus.REQUESTED, BookingStatus.ACCEPTED];
+      if (!allowed.includes(booking.status as BookingStatus)) {
         throw new BadRequestError("Quotes can only be created for REQUESTED or ACCEPTED bookings");
       }
 
@@ -120,7 +121,7 @@ vendorQuotesRoutes.patch(
       const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const { id } = req.params;
+      const id = String(req.params.id);
       if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
 
       const quote = await QuoteModel.findOne({ _id: id, vendorId: vendor._id });

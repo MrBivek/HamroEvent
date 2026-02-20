@@ -3,7 +3,7 @@ import mongoose, { Schema, type InferSchemaType } from "mongoose";
 const ConversationSchema = new Schema(
   {
     participants: [{ type: Schema.Types.ObjectId, required: true, ref: "User" }],
-    bookingId: { type: Schema.Types.ObjectId, ref: "Booking", index: true },
+    bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },
     vendorId: { type: Schema.Types.ObjectId, ref: "Vendor", index: true },
     lastMessageAt: { type: Date },
   },

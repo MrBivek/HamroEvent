@@ -65,7 +65,7 @@ quotesRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
  */
 quotesRoutes.post("/:id/accept", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
 
     const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });
@@ -110,7 +110,7 @@ quotesRoutes.post("/:id/accept", requireAuth, requireRole(UserRole.CUSTOMER), as
  */
 quotesRoutes.post("/:id/reject", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
 
     const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });

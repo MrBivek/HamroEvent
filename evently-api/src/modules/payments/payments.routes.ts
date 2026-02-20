@@ -41,7 +41,7 @@ paymentsRoutes.post("/", requireAuth, requireRole(UserRole.CUSTOMER), validateBo
     const booking = await BookingModel.findOne({ _id: bookingId, userId: req.auth!.sub }).lean();
     if (!booking) throw new NotFoundError("Booking not found");
 
-    const allowed = [BookingStatus.ACCEPTED, BookingStatus.CONFIRMED_PENDING_PAYMENT];
+    const allowed: BookingStatus[] = [BookingStatus.ACCEPTED, BookingStatus.CONFIRMED_PENDING_PAYMENT];
     if (!allowed.includes(booking.status as BookingStatus)) {
       throw new BadRequestError("Payment is only allowed for accepted bookings or accepted quotes");
     }
@@ -80,7 +80,7 @@ paymentsRoutes.post("/", requireAuth, requireRole(UserRole.CUSTOMER), validateBo
  */
 paymentsRoutes.post("/:id/confirm", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Payment not found");
 
     const payment = await PaymentModel.findOne({ _id: id, userId: req.auth!.sub });

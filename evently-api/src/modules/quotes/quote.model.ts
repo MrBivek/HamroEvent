@@ -3,7 +3,7 @@ import { QuoteStatus } from "../../common/enums.js";
 
 const QuoteSchema = new Schema(
   {
-    bookingId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "Booking" },
+    bookingId: { type: Schema.Types.ObjectId, required: true, ref: "Booking" },
     vendorId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "Vendor" },
     customerId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "User" },
     status: { type: String, enum: Object.values(QuoteStatus), default: QuoteStatus.PENDING, index: true },

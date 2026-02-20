@@ -162,7 +162,7 @@ packagesRoutes.patch(
             const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
             if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-            const { id } = req.params;
+            const id = String(req.params.id);
             if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
             const updates: any = { ...req.body };
@@ -214,7 +214,7 @@ packagesRoutes.delete("/me/packages/:id", requireAuth, requireRole(UserRole.VEND
         const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
         if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
         const result = await PackageModel.deleteOne({ _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id });
@@ -256,7 +256,7 @@ packagesRoutes.post("/me/packages/:id/publish", requireAuth, requireRole(UserRol
             throw new BadRequestError("Vendor must be verified before publishing packages");
         }
 
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
         const doc = await PackageModel.findOneAndUpdate(
@@ -299,7 +299,7 @@ packagesRoutes.post("/me/packages/:id/unpublish", requireAuth, requireRole(UserR
         const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
         if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
         const doc = await PackageModel.findOneAndUpdate(
@@ -339,7 +339,7 @@ packagesRoutes.post("/me/packages/:id/unpublish", requireAuth, requireRole(UserR
  */
 packagesRoutes.get("/:vendorId/packages", async (req, res, next) => {
     try {
-        const { vendorId } = req.params;
+        const vendorId = String(req.params.vendorId);
         if (!mongoose.isValidObjectId(vendorId)) throw new NotFoundError("Vendor not found");
 
         const items = await PackageModel.find({

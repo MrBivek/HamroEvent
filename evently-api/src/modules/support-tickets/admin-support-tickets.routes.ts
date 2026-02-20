@@ -79,7 +79,7 @@ adminSupportTicketsRoutes.patch(
   validateBody(UpdateSupportTicketSchema),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Support ticket not found");
 
       const updates: Record<string, unknown> = {};

@@ -91,7 +91,7 @@ adminVerificationRequestsRoutes.patch(
   validateBody(AdminDecisionSchema),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Verification request not found");
 
       const request = await VerificationRequestModel.findById(id);

@@ -150,7 +150,7 @@ vendorsRoutes.get("/", async (req, res, next) => {
  */
 vendorsRoutes.get("/:id", async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Vendor not found");
 
         const vendor = await VendorModel.findById(id).lean();

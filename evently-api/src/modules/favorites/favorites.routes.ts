@@ -29,7 +29,7 @@ favoritesRoutes.post(
   requireRole(UserRole.CUSTOMER),
   async (req, res, next) => {
     try {
-      const { vendorId } = req.params;
+      const vendorId = String(req.params.vendorId);
       if (!mongoose.isValidObjectId(vendorId)) throw new BadRequestError("Invalid vendorId");
 
       await FavoriteModel.updateOne(
@@ -66,7 +66,7 @@ favoritesRoutes.delete(
   requireRole(UserRole.CUSTOMER),
   async (req, res, next) => {
     try {
-      const { vendorId } = req.params;
+      const vendorId = String(req.params.vendorId);
       if (!mongoose.isValidObjectId(vendorId)) throw new BadRequestError("Invalid vendorId");
 
       const result = await FavoriteModel.deleteOne({ userId: req.auth!.sub, vendorId });

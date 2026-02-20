@@ -11,8 +11,7 @@ const RefundSchema = new Schema(
   { timestamps: true, collection: "refunds" },
 );
 
-RefundSchema.index({ paymentId: 1 });
-RefundSchema.index({ bookingId: 1 });
+// paymentId and bookingId already have index: true on the fields
 
 export type RefundDoc = InferSchemaType<typeof RefundSchema> & { _id: mongoose.Types.ObjectId };
 

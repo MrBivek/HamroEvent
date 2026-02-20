@@ -66,7 +66,7 @@ notificationsRoutes.get("/", requireAuth, async (req, res, next) => {
  */
 notificationsRoutes.post("/:id/read", requireAuth, async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Notification not found");
     const doc = await NotificationModel.findOneAndUpdate(
       { _id: id, userId: req.auth!.sub },

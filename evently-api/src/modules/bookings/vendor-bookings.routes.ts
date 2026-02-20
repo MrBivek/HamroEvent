@@ -112,7 +112,7 @@ vendorBookingsRoutes.patch(
             const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
             if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-            const { id } = req.params;
+            const id = String(req.params.id);
             if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
 
             const booking = await BookingModel.findOne({ _id: id, vendorId: vendor._id });

@@ -116,7 +116,7 @@ eventsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
  */
 eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const id = String(req.params.id);
         if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
         const event = await EventModel.findOne({
@@ -154,7 +154,7 @@ eventsRoutes.patch(
     validateBody(UpdateEventSchema),
     async (req, res, next) => {
         try {
-            const { id } = req.params;
+            const id = String(req.params.id);
             if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
             const updates: any = { ...req.body };

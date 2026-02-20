@@ -144,7 +144,7 @@ availabilityRoutes.put(
       const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const date = parseDateOnly(req.params.date);
+      const date = parseDateOnly(String(req.params.date));
 
       if (req.body.isAvailable === false) {
         const hasBookings = await hasBlockingBookings(vendor._id, date);
@@ -195,7 +195,7 @@ availabilityRoutes.delete("/me/availability/:date", requireAuth, requireRole(Use
     const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
     if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-    const date = parseDateOnly(req.params.date);
+    const date = parseDateOnly(String(req.params.date));
 
     const hasBookings = await hasBlockingBookings(vendor._id, date);
     if (hasBookings) {
