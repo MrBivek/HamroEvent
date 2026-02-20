@@ -2,13 +2,25 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, BookingStatus } from "../../common/enums.js";
+import { UserRole, BookingStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { BookingModel } from "./booking.model.js";
 import { VendorDecisionSchema, BookingListQuerySchema } from "./bookings.schemas.js";
+import { AvailabilityModel } from "../availability/availability.model.js";
+import { EventModel } from "../events/event.model.js";
+import { createNotification } from "../notifications/notifications.service.js";
+import { createAuditLog } from "../audit-logs/audit-logs.service.js";
 
 export const vendorBookingsRoutes = Router();
+
+function startOfDayUtc(date: Date) {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function endOfDayUtc(date: Date) {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+}
 
 /**
  * NOTE:
@@ -115,6 +127,41 @@ vendorBookingsRoutes.patch(
             booking.decisionAt = new Date();
 
             if (decision === "ACCEPT") {
+                const event = await EventModel.findById(booking.eventId).lean();
+                if (!event) throw new NotFoundError("Event not found");
+
+                const date = startOfDayUtc(new Date(event.eventDate));
+                const endDate = endOfDayUtc(new Date(event.eventDate));
+                const availability = await AvailabilityModel.findOne({ vendorId: vendor._id, date }).lean();
+                if (!availability || availability.isAvailable === false) {
+                    throw new BadRequestError("Vendor is not available on the event date");
+                }
+
+                const eventsOnDate = await EventModel.find(
+                    { eventDate: { $gte: date, $lte: endDate } },
+                    { _id: 1 }
+                ).lean();
+                const eventIds = eventsOnDate.map((e) => e._id);
+                if (eventIds.length > 0) {
+                    const conflictCount = await BookingModel.countDocuments({
+                        _id: { $ne: booking._id },
+                        vendorId: vendor._id,
+                        eventId: { $in: eventIds },
+                        status: {
+                            $in: [
+                                BookingStatus.ACCEPTED,
+                                BookingStatus.CONFIRMED_PENDING_PAYMENT,
+                                BookingStatus.CONFIRMED,
+                                BookingStatus.COMPLETED,
+                            ],
+                        },
+                    });
+
+                    if (conflictCount > 0) {
+                        throw new BadRequestError("Booking conflicts with an existing confirmed booking");
+                    }
+                }
+
                 booking.status = BookingStatus.ACCEPTED;
                 booking.rejectReason = undefined;
             } else {
@@ -123,6 +170,28 @@ vendorBookingsRoutes.patch(
             }
 
             await booking.save();
+
+            await createAuditLog({
+                actorUserId: req.auth!.sub,
+                action: "BOOKING_DECISION",
+                targetType: "Booking",
+                targetId: booking._id,
+                metadata: { decision, vendorId: vendor._id.toString() },
+            });
+
+            const notificationType =
+                decision === "ACCEPT" ? NotificationType.BOOKING_ACCEPTED : NotificationType.BOOKING_REJECTED;
+            await createNotification({
+                userId: booking.userId.toString(),
+                type: notificationType,
+                title: decision === "ACCEPT" ? "Booking accepted" : "Booking rejected",
+                body:
+                    decision === "ACCEPT"
+                        ? "Your booking request was accepted."
+                        : "Your booking request was rejected.",
+                link: `/customer/bookings/${booking._id.toString()}`,
+            });
+
             res.json(booking.toObject());
         } catch (err) {
             next(err);

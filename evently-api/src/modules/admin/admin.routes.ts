@@ -1,9 +1,12 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
-import { UserRole, VerificationStatus } from "../../common/enums.js";
+import { UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
+import { PackageModel } from "../packages/package.model.js";
+import { createAuditLog } from "../audit-logs/audit-logs.service.js";
+import { createNotification } from "../notifications/notifications.service.js";
 
 export const adminRoutes = Router();
 
@@ -58,6 +61,45 @@ adminRoutes.patch(
             ).lean();
 
             if (!vendor) throw new NotFoundError("Vendor not found");
+
+            if (status !== VerificationStatus.APPROVED) {
+                await PackageModel.updateMany({ vendorId: vendor._id }, { $set: { isActive: false } });
+            }
+
+            await createAuditLog({
+                actorUserId: req.auth!.sub,
+                action: "VENDOR_VERIFICATION_DECISION",
+                targetType: "Vendor",
+                targetId: vendor._id,
+                metadata: { decision: status, note: note || null },
+            });
+
+            if (status === VerificationStatus.APPROVED || status === VerificationStatus.REJECTED || status === VerificationStatus.RESUBMIT_REQUIRED) {
+                const notificationType =
+                    status === VerificationStatus.APPROVED
+                        ? NotificationType.VENDOR_APPROVED
+                        : status === VerificationStatus.REJECTED
+                          ? NotificationType.VENDOR_REJECTED
+                          : NotificationType.VENDOR_RESUBMIT;
+
+                await createNotification({
+                    userId: vendor.userId.toString(),
+                    type: notificationType,
+                    title:
+                        status === VerificationStatus.APPROVED
+                            ? "Vendor verification approved"
+                            : status === VerificationStatus.REJECTED
+                              ? "Vendor verification rejected"
+                              : "Verification resubmission required",
+                    body:
+                        status === VerificationStatus.APPROVED
+                            ? "Your verification request has been approved."
+                            : status === VerificationStatus.REJECTED
+                              ? "Your verification request was rejected."
+                              : "Please update your verification documents and resubmit.",
+                    link: "/vendor/verification",
+                });
+            }
 
             // note can be stored later in verificationRequests/auditLogs (next iteration)
             res.json({ vendor, note: note || undefined });

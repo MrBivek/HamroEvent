@@ -2,13 +2,15 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, BookingStatus } from "../../common/enums.js";
+import { UserRole, BookingStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { BookingModel } from "./booking.model.js";
 import { CreateBookingSchema, BookingListQuerySchema } from "./bookings.schemas.js";
 import { EventModel } from "../events/event.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
+import { createNotification } from "../notifications/notifications.service.js";
+import { AvailabilityModel } from "../availability/availability.model.js";
 
 export const bookingsRoutes = Router();
 
@@ -56,6 +58,14 @@ bookingsRoutes.post(
             const vendor = await VendorModel.findById(vendorId).lean();
             if (!vendor) throw new NotFoundError("Vendor not found");
 
+            // if vendor has availability defined for event date, ensure available
+            const eventDate = new Date(event.eventDate);
+            const dateOnly = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate()));
+            const availability = await AvailabilityModel.findOne({ vendorId: vendor._id, date: dateOnly }).lean();
+            if (availability && availability.isAvailable === false) {
+                throw new BadRequestError("Vendor is not available on the event date");
+            }
+
             // if packageId provided, validate it belongs to vendor
             if (packageId) {
                 const pkg = await PackageModel.findOne({ _id: packageId, vendorId }).lean();
@@ -70,6 +80,14 @@ bookingsRoutes.post(
                 status: BookingStatus.REQUESTED,
                 customerNote,
                 requestedAt: new Date(),
+            });
+
+            await createNotification({
+                userId: vendor.userId.toString(),
+                type: NotificationType.BOOKING_REQUESTED,
+                title: "New booking request",
+                body: "You have a new booking request.",
+                link: `/vendor/bookings/${booking._id.toString()}`,
             });
 
             res.status(201).json(booking);

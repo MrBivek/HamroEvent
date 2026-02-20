@@ -28,11 +28,68 @@ export const BookingStatus = {
   ACCEPTED: "ACCEPTED",
   REJECTED: "REJECTED",
   CANCELLED: "CANCELLED",
+  CONFIRMED_PENDING_PAYMENT: "CONFIRMED_PENDING_PAYMENT",
   CONFIRMED: "CONFIRMED",
   COMPLETED: "COMPLETED",
 } as const;
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
+
+export const QuoteStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  REJECTED: "REJECTED",
+  EXPIRED: "EXPIRED",
+} as const;
+
+export type QuoteStatus = (typeof QuoteStatus)[keyof typeof QuoteStatus];
+
+export const PaymentStatus = {
+  INITIATED: "INITIATED",
+  PENDING: "PENDING",
+  PAID: "PAID",
+  FAILED: "FAILED",
+  REFUNDED: "REFUNDED",
+} as const;
+
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+
+export const NotificationType = {
+  BOOKING_REQUESTED: "BOOKING_REQUESTED",
+  BOOKING_ACCEPTED: "BOOKING_ACCEPTED",
+  BOOKING_REJECTED: "BOOKING_REJECTED",
+  BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
+  VENDOR_APPROVED: "VENDOR_APPROVED",
+  VENDOR_REJECTED: "VENDOR_REJECTED",
+  VENDOR_RESUBMIT: "VENDOR_RESUBMIT",
+  PAYMENT_CONFIRMED: "PAYMENT_CONFIRMED",
+} as const;
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
+export const SupportTicketStatus = {
+  OPEN: "OPEN",
+  IN_PROGRESS: "IN_PROGRESS",
+  RESOLVED: "RESOLVED",
+  CLOSED: "CLOSED",
+} as const;
+
+export type SupportTicketStatus = (typeof SupportTicketStatus)[keyof typeof SupportTicketStatus];
+
+export const ReportStatus = {
+  OPEN: "OPEN",
+  REVIEWED: "REVIEWED",
+  RESOLVED: "RESOLVED",
+} as const;
+
+export type ReportStatus = (typeof ReportStatus)[keyof typeof ReportStatus];
+
+export const DocumentOwnerType = {
+  VENDOR: "VENDOR",
+  USER: "USER",
+} as const;
+
+export type DocumentOwnerType = (typeof DocumentOwnerType)[keyof typeof DocumentOwnerType];
 
 export const EventType = {
   WEDDING: "WEDDING",
