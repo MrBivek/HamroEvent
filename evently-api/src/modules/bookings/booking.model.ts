@@ -19,6 +19,14 @@ const BookingSchema = new Schema(
     customerNote: { type: String },
     vendorNote: { type: String },
     rejectReason: { type: String },
+    history: [
+      {
+        status: { type: String, required: true },
+        byRole: { type: String, required: true },
+        at: { type: Date, required: true },
+        note: { type: String },
+      },
+    ],
 
     requestedAt: { type: Date, default: () => new Date() },
     decisionAt: { type: Date },

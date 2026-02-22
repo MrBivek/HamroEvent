@@ -11,6 +11,9 @@ import {
 } from "./verification-requests.schemas.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
+import { CategoryModel } from "../categories/category.model.js";
+import { LocationModel } from "../locations/location.model.js";
+import { DocumentModel } from "../documents/document.model.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
 
@@ -57,7 +60,47 @@ adminVerificationRequestsRoutes.get(
         VerificationRequestModel.countDocuments(filter),
       ]);
 
-      res.json({ items, page: q.page, limit: q.limit, total });
+      const vendorIds = items.map((item) => item.vendorId);
+      const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
+      const categoryIds = vendors.map((v) => v.categoryId).filter(Boolean) as mongoose.Types.ObjectId[];
+      const locationIds = vendors.map((v) => v.primaryLocationId).filter(Boolean) as mongoose.Types.ObjectId[];
+
+      const [categories, locations] = await Promise.all([
+        CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
+        LocationModel.find({ _id: { $in: locationIds } }).lean(),
+      ]);
+
+      const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
+      const locationMap = new Map(locations.map((l) => [l._id.toString(), l]));
+      const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+
+      const docCounts = await DocumentModel.aggregate([
+        { $match: { ownerId: { $in: vendorIds } } },
+        { $group: { _id: "$ownerId", count: { $sum: 1 } } },
+      ]);
+      const docCountMap = new Map(docCounts.map((d) => [d._id.toString(), d.count]));
+
+      const mapped = items.map((item) => {
+        const vendor = vendorMap.get(item.vendorId.toString());
+        const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+        const location = vendor?.primaryLocationId
+          ? locationMap.get(vendor.primaryLocationId.toString())
+          : undefined;
+        return {
+          ...item,
+          vendor: vendor
+            ? {
+                _id: vendor._id.toString(),
+                businessName: vendor.businessName,
+                category: category?.slug ?? "",
+                location: vendor.locationText ?? location?.name ?? "",
+              }
+            : undefined,
+          documentsCount: docCountMap.get(item.vendorId.toString()) ?? 0,
+        };
+      });
+
+      res.json({ items: mapped, page: q.page, limit: q.limit, total });
     } catch (err) {
       next(err);
     }
@@ -138,7 +181,7 @@ adminVerificationRequestsRoutes.patch(
 
       const vendor = await VendorModel.findByIdAndUpdate(
         request.vendorId,
-        { $set: { verifiedStatus: nextStatus } },
+        { $set: { verifiedStatus: nextStatus, verificationNote: req.body.note } },
         { new: true },
       ).lean();
       if (!vendor) throw new NotFoundError("Vendor not found");

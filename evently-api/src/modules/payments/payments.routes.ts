@@ -112,18 +112,36 @@ paymentsRoutes.post(
 
       const booking = await BookingModel.findByIdAndUpdate(
         payment.bookingId,
-        { $set: { status: BookingStatus.CONFIRMED } },
+        {
+          $set: { status: BookingStatus.CONFIRMED },
+          $push: {
+            history: {
+              status: "confirmed",
+              byRole: "customer",
+              at: new Date(),
+              note: "Payment confirmed",
+            },
+          },
+        },
         { new: true },
       ).lean();
 
       if (booking) {
+        await createNotification({
+          userId: booking.userId.toString(),
+          type: NotificationType.BOOKING_CONFIRMED,
+          title: "Booking confirmed",
+          body: "Your booking has been confirmed.",
+          link: `/customer/bookings/${booking._id.toString()}`,
+        });
+
         const vendor = await VendorModel.findById(booking.vendorId).lean();
         if (vendor) {
           await createNotification({
             userId: vendor.userId.toString(),
-            type: NotificationType.PAYMENT_CONFIRMED,
-            title: "Payment confirmed",
-            body: "A booking payment has been confirmed.",
+            type: NotificationType.PAYMENT_RECEIVED,
+            title: "Payment received",
+            body: "You received a booking payment.",
             link: "/vendor/bookings",
           });
         }

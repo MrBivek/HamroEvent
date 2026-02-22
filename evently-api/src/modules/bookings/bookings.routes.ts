@@ -11,8 +11,34 @@ import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { AvailabilityModel } from "../availability/availability.model.js";
+import { CategoryModel } from "../categories/category.model.js";
+import { LocationModel } from "../locations/location.model.js";
+import { UserModel } from "../auth/user.model.js";
+import { buildBookingDto, buildVendorProfile } from "../../common/dtos.js";
+import { mapUiBookingStatusToInternal } from "../../common/mappers.js";
+import { ConversationModel } from "../conversations/conversation.model.js";
+import { MessageModel } from "../conversations/message.model.js";
 
 export const bookingsRoutes = Router();
+
+async function getVendorProfileForBooking(vendorId: mongoose.Types.ObjectId) {
+  const vendor = await VendorModel.findById(vendorId).lean();
+  if (!vendor) return null;
+  const [user, category, location] = await Promise.all([
+    UserModel.findById(vendor.userId).lean(),
+    vendor.categoryId ? CategoryModel.findById(vendor.categoryId).lean() : Promise.resolve(null),
+    vendor.primaryLocationId ? LocationModel.findById(vendor.primaryLocationId).lean() : Promise.resolve(null),
+  ]);
+  return buildVendorProfile({
+    vendor,
+    user,
+    category,
+    location,
+    packages: [],
+    documents: [],
+    includePackages: false,
+  });
+}
 
 /**
  * @openapi
@@ -86,6 +112,14 @@ bookingsRoutes.post(
         status: BookingStatus.REQUESTED,
         customerNote,
         requestedAt: new Date(),
+        history: [
+          {
+            status: "pending",
+            byRole: "customer",
+            at: new Date(),
+            note: "Booking request submitted",
+          },
+        ],
       });
 
       await createNotification({
@@ -96,7 +130,21 @@ bookingsRoutes.post(
         link: `/vendor/bookings/${booking._id.toString()}`,
       });
 
-      res.status(201).json(booking);
+      const vendorProfile = await getVendorProfileForBooking(booking.vendorId);
+      const pkg = packageId
+        ? await PackageModel.findById(new mongoose.Types.ObjectId(packageId)).lean()
+        : null;
+      res
+        .status(201)
+        .json(
+          buildBookingDto({
+            booking: booking.toObject(),
+            event,
+            vendorProfile,
+            packageTitle: pkg?.title,
+            packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+          }),
+        );
     } catch (err) {
       next(err);
     }
@@ -130,14 +178,67 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
     const skip = (q.page - 1) * q.limit;
 
     const filter: any = { userId };
-    if (q.status) filter.status = q.status;
+    if (q.status) {
+      const internal = mapUiBookingStatusToInternal(q.status);
+      if (internal) filter.status = internal;
+    }
 
     const [items, total] = await Promise.all([
       BookingModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
       BookingModel.countDocuments(filter),
     ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
+    const eventIds = items.map((b) => b.eventId);
+    const vendorIds = items.map((b) => b.vendorId);
+    const packageIds = items.map((b) => b.packageId).filter(Boolean) as mongoose.Types.ObjectId[];
+
+    const [events, vendors, packages] = await Promise.all([
+      EventModel.find({ _id: { $in: eventIds } }).lean(),
+      VendorModel.find({ _id: { $in: vendorIds } }).lean(),
+      packageIds.length ? PackageModel.find({ _id: { $in: packageIds } }).lean() : Promise.resolve([]),
+    ]);
+
+    const categoryIds = vendors
+      .map((v) => v.categoryId)
+      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+    const [categories, users] = await Promise.all([
+      categoryIds.length ? CategoryModel.find({ _id: { $in: categoryIds } }).lean() : Promise.resolve([]),
+      UserModel.find({ _id: { $in: vendors.map((v) => v.userId) } }).lean(),
+    ]);
+
+    const eventMap = new Map(events.map((e) => [e._id.toString(), e]));
+    const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+    const packageMap = new Map(packages.map((p) => [p._id.toString(), p]));
+    const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    const enriched = items.map((booking) => {
+      const event = eventMap.get(booking.eventId.toString());
+      const vendor = vendorMap.get(booking.vendorId.toString());
+      const pkg = booking.packageId ? packageMap.get(booking.packageId.toString()) : undefined;
+      const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+      const vendorUser = vendor ? userMap.get(vendor.userId.toString()) : undefined;
+      const vendorProfile = vendor
+        ? buildVendorProfile({
+            vendor,
+            user: vendorUser,
+            category,
+            location: null,
+            packages: [],
+            documents: [],
+            includePackages: false,
+          })
+        : null;
+      return buildBookingDto({
+        booking,
+        event,
+        vendorProfile,
+        packageTitle: pkg?.title,
+        packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+      });
+    });
+
+    res.json({ items: enriched, page: q.page, limit: q.limit, total });
   } catch (err) {
     next(err);
   }
@@ -170,7 +271,51 @@ bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (r
     }).lean();
 
     if (!booking) throw new NotFoundError("Booking not found");
-    res.json(booking);
+
+    const [event, vendor, pkg] = await Promise.all([
+      EventModel.findById(booking.eventId).lean(),
+      VendorModel.findById(booking.vendorId).lean(),
+      booking.packageId ? PackageModel.findById(booking.packageId).lean() : Promise.resolve(null),
+    ]);
+
+    const [category, vendorUser] = await Promise.all([
+      vendor?.categoryId ? CategoryModel.findById(vendor.categoryId).lean() : Promise.resolve(null),
+      vendor ? UserModel.findById(vendor.userId).lean() : Promise.resolve(null),
+    ]);
+
+    const vendorProfile = vendor
+      ? buildVendorProfile({
+          vendor,
+          user: vendorUser,
+          category,
+          location: null,
+          packages: [],
+          documents: [],
+          includePackages: false,
+        })
+      : null;
+
+    const conversation = await ConversationModel.findOne({ bookingId: booking._id }).lean();
+    const messages = conversation
+      ? await MessageModel.find({ conversationId: conversation._id })
+          .sort({ createdAt: 1 })
+          .lean()
+      : [];
+    const messageRoleMap = new Map<string, string>();
+    messageRoleMap.set(booking.userId.toString(), "customer");
+    if (vendorUser?._id) messageRoleMap.set(vendorUser._id.toString(), "vendor");
+
+    res.json(
+      buildBookingDto({
+        booking,
+        event,
+        vendorProfile,
+        packageTitle: pkg?.title,
+        packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        messages,
+        messageRoleMap,
+      }),
+    );
   } catch (err) {
     next(err);
   }

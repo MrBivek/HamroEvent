@@ -2,12 +2,15 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, BookingStatus } from "../../common/enums.js";
+import { UserRole, BookingStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { ReviewModel } from "./review.model.js";
 import { CreateReviewSchema, ReviewListQuerySchema } from "./reviews.schemas.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
+import { UserModel } from "../auth/user.model.js";
+import { createNotification } from "../notifications/notifications.service.js";
+import { toUiUser } from "../../common/mappers.js";
 
 export const reviewsRoutes = Router();
 
@@ -70,6 +73,14 @@ reviewsRoutes.post(
           { _id: vendor._id },
           { $set: { ratingAvg: Number(newAvg.toFixed(2)), ratingCount: newCount } },
         );
+
+        await createNotification({
+          userId: vendor.userId.toString(),
+          type: NotificationType.REVIEW_RECEIVED,
+          title: "New review received",
+          body: "A customer left you a review.",
+          link: `/vendor/reviews`,
+        });
       }
 
       res.status(201).json(review);
@@ -113,7 +124,26 @@ reviewsRoutes.get("/", async (req, res, next) => {
       ReviewModel.countDocuments(filter),
     ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
+    const customerIds = items.map((r) => r.customerId);
+    const customers = await UserModel.find({ _id: { $in: customerIds } }).lean();
+    const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+
+    const mapped = items.map((review) => ({
+      _id: review._id.toString(),
+      bookingId: review.bookingId.toString(),
+      customerId: review.customerId.toString(),
+      vendorId: review.vendorId.toString(),
+      rating: review.rating,
+      comment: review.comment,
+      isHidden: review.isHidden ?? false,
+      moderationReason: review.moderationReason,
+      createdAt: review.createdAt?.toISOString(),
+      customer: customerMap.get(review.customerId.toString())
+        ? toUiUser(customerMap.get(review.customerId.toString())!)
+        : undefined,
+    }));
+
+    res.json({ items: mapped, page: q.page, limit: q.limit, total });
   } catch (err) {
     next(err);
   }

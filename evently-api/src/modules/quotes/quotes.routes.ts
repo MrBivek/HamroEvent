@@ -88,7 +88,17 @@ quotesRoutes.post(
 
       await BookingModel.updateOne(
         { _id: quote.bookingId },
-        { $set: { status: BookingStatus.CONFIRMED_PENDING_PAYMENT } },
+        {
+          $set: { status: BookingStatus.CONFIRMED_PENDING_PAYMENT },
+          $push: {
+            history: {
+              status: "accepted",
+              byRole: "customer",
+              at: new Date(),
+              note: "Quote accepted",
+            },
+          },
+        },
       );
 
       res.json(quote.toObject());
@@ -134,7 +144,17 @@ quotesRoutes.post(
 
       await BookingModel.updateOne(
         { _id: quote.bookingId },
-        { $set: { status: BookingStatus.CANCELLED } },
+        {
+          $set: { status: BookingStatus.CANCELLED },
+          $push: {
+            history: {
+              status: "cancelled",
+              byRole: "customer",
+              at: new Date(),
+              note: "Quote rejected",
+            },
+          },
+        },
       );
 
       res.json(quote.toObject());

@@ -11,6 +11,12 @@ import { AvailabilityModel } from "../availability/availability.model.js";
 import { EventModel } from "../events/event.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
+import { PackageModel } from "../packages/package.model.js";
+import { UserModel } from "../auth/user.model.js";
+import { buildBookingDto } from "../../common/dtos.js";
+import { mapUiBookingStatusToInternal } from "../../common/mappers.js";
+import { ConversationModel } from "../conversations/conversation.model.js";
+import { MessageModel } from "../conversations/message.model.js";
 
 export const vendorBookingsRoutes = Router();
 
@@ -67,14 +73,108 @@ vendorBookingsRoutes.get(
       const skip = (q.page - 1) * q.limit;
 
       const filter: any = { vendorId: vendor._id };
-      if (q.status) filter.status = q.status;
+      if (q.status) {
+        const internal = mapUiBookingStatusToInternal(q.status);
+        if (internal) filter.status = internal;
+      }
 
       const [items, total] = await Promise.all([
         BookingModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
         BookingModel.countDocuments(filter),
       ]);
 
-      res.json({ items, page: q.page, limit: q.limit, total });
+      const eventIds = items.map((b) => b.eventId);
+      const packageIds = items.map((b) => b.packageId).filter(Boolean) as mongoose.Types.ObjectId[];
+      const userIds = items.map((b) => b.userId);
+
+      const [events, packages, users] = await Promise.all([
+        EventModel.find({ _id: { $in: eventIds } }).lean(),
+        packageIds.length ? PackageModel.find({ _id: { $in: packageIds } }).lean() : Promise.resolve([]),
+        UserModel.find({ _id: { $in: userIds } }).lean(),
+      ]);
+
+      const eventMap = new Map(events.map((e) => [e._id.toString(), e]));
+      const packageMap = new Map(packages.map((p) => [p._id.toString(), p]));
+      const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+      const enriched = items.map((booking) => {
+        const event = eventMap.get(booking.eventId.toString());
+        const pkg = booking.packageId ? packageMap.get(booking.packageId.toString()) : undefined;
+        const customer = userMap.get(booking.userId.toString());
+        return buildBookingDto({
+          booking,
+          event,
+          customer,
+          packageTitle: pkg?.title,
+          packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        });
+      });
+
+      res.json({ items: enriched, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /api/vendors/me/bookings/{id}:
+ *   get:
+ *     tags: [Vendor Bookings]
+ *     summary: Get a booking (Vendor only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found }
+ */
+vendorBookingsRoutes.get(
+  "/me/bookings/:id",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
+    try {
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+
+      const booking = await BookingModel.findOne({ _id: id, vendorId: vendor._id }).lean();
+      if (!booking) throw new NotFoundError("Booking not found");
+
+      const [event, pkg, customer] = await Promise.all([
+        EventModel.findById(booking.eventId).lean(),
+        booking.packageId ? PackageModel.findById(booking.packageId).lean() : Promise.resolve(null),
+        UserModel.findById(booking.userId).lean(),
+      ]);
+
+      const conversation = await ConversationModel.findOne({ bookingId: booking._id }).lean();
+      const messages = conversation
+        ? await MessageModel.find({ conversationId: conversation._id })
+            .sort({ createdAt: 1 })
+            .lean()
+        : [];
+      const messageRoleMap = new Map<string, string>();
+      messageRoleMap.set(booking.userId.toString(), "customer");
+      messageRoleMap.set(vendor.userId.toString(), "vendor");
+
+      res.json(
+        buildBookingDto({
+          booking,
+          event,
+          customer,
+          packageTitle: pkg?.title,
+          packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+          messages,
+          messageRoleMap,
+        }),
+      );
     } catch (err) {
       next(err);
     }
@@ -171,9 +271,25 @@ vendorBookingsRoutes.patch(
 
         booking.status = BookingStatus.ACCEPTED;
         booking.rejectReason = undefined;
+        const history = (booking.history ?? []) as any[];
+        history.push({
+          status: "accepted",
+          byRole: "vendor",
+          at: new Date(),
+          note: "Vendor accepted the booking",
+        });
+        booking.history = history as any;
       } else {
         booking.status = BookingStatus.REJECTED;
         booking.rejectReason = req.body.rejectReason || "Rejected by vendor";
+        const history = (booking.history ?? []) as any[];
+        history.push({
+          status: "rejected",
+          byRole: "vendor",
+          at: new Date(),
+          note: booking.rejectReason,
+        });
+        booking.history = history as any;
       }
 
       await booking.save();
@@ -201,7 +317,21 @@ vendorBookingsRoutes.patch(
         link: `/customer/bookings/${booking._id.toString()}`,
       });
 
-      res.json(booking.toObject());
+      const [event, pkg, customer] = await Promise.all([
+        EventModel.findById(booking.eventId).lean(),
+        booking.packageId ? PackageModel.findById(booking.packageId).lean() : Promise.resolve(null),
+        UserModel.findById(booking.userId).lean(),
+      ]);
+
+      res.json(
+        buildBookingDto({
+          booking: booking.toObject(),
+          event,
+          customer,
+          packageTitle: pkg?.title,
+          packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        }),
+      );
     } catch (err) {
       next(err);
     }

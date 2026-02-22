@@ -9,7 +9,7 @@ export const CreateBookingSchema = z.object({
 });
 
 export const BookingListQuerySchema = z.object({
-  status: z.enum(Object.values(BookingStatus) as [string, ...string[]]).optional(),
+  status: z.string().optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(50).default(20),
 });

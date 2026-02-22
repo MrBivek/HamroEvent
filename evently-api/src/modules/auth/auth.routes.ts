@@ -27,6 +27,7 @@ export const authRoutes = Router();
  *             required: [fullName, email, password]
  *             properties:
  *               fullName: { type: string, example: "Customer One" }
+ *               name: { type: string, example: "Customer One" }
  *               email: { type: string, example: "customer1@test.com" }
  *               phone: { type: string, example: "+9779800000000" }
  *               password: { type: string, example: "123456" }
@@ -62,6 +63,7 @@ authRoutes.post(
  *                 required: [fullName, email, password]
  *                 properties:
  *                   fullName: { type: string, example: "Vendor One" }
+ *                   name: { type: string, example: "Vendor One" }
  *                   email: { type: string, example: "vendor1@test.com" }
  *                   phone: { type: string, example: "+9779811111111" }
  *                   password: { type: string, example: "123456" }
@@ -72,8 +74,10 @@ authRoutes.post(
  *                 properties:
  *                   businessName: { type: string, example: "Vendor One Studio" }
  *                   categoryId: { type: string, example: "65a000000000000000000001" }
+ *                   category: { type: string, example: "photography" }
  *                   description: { type: string, example: "Photo + video services" }
  *                   primaryLocationId: { type: string, example: "65a000000000000000000002" }
+ *                   location: { type: string, example: "Kathmandu" }
  *                   serviceAreas:
  *                     type: array
  *                     items: { type: string }
@@ -88,6 +92,7 @@ authRoutes.post(
  *                   required: [title]
  *                   properties:
  *                     title: { type: string, example: "Basic Package" }
+ *                     name: { type: string, example: "Basic Package" }
  *                     description: { type: string, example: "Great for small events" }
  *                     priceMin: { type: number, example: 25000 }
  *                     priceMax: { type: number, example: 50000 }
@@ -95,6 +100,12 @@ authRoutes.post(
  *                       type: array
  *                       items: { type: string }
  *                       example: ["4 hours coverage"]
+ *                     inclusions:
+ *                       type: array
+ *                       items: { type: string }
+ *               portfolioMedia:
+ *                 type: array
+ *                 items: { type: string }
  *     responses:
  *       201:
  *         description: Vendor onboarding created

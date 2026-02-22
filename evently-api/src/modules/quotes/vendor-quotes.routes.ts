@@ -76,6 +76,14 @@ vendorQuotesRoutes.post(
 
       if (booking.status === BookingStatus.REQUESTED) {
         booking.status = BookingStatus.ACCEPTED;
+        const history = (booking.history ?? []) as any[];
+        history.push({
+          status: "accepted",
+          byRole: "vendor",
+          at: new Date(),
+          note: "Quote sent",
+        });
+        booking.history = history as any;
         await booking.save();
       }
 

@@ -6,6 +6,7 @@ import compression from "compression";
 import { apiRouter } from "./modules/index.js";
 import { setupSwagger } from "./configurations/swagger.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { ensureUploadsDir, UPLOADS_DIR } from "./common/fileStorage.js";
 
 export function createApp() {
   const app = express();
@@ -15,6 +16,9 @@ export function createApp() {
   app.use(compression());
   app.use(express.json({ limit: "10mb" }));
   app.use(morgan("dev"));
+
+  ensureUploadsDir();
+  app.use("/uploads", express.static(UPLOADS_DIR));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });

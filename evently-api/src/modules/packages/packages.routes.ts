@@ -7,6 +7,8 @@ import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "./package.model.js";
 import { CreatePackageSchema, UpdatePackageSchema } from "./packages.schemas.js";
+import { recalculateVendorPricingRange } from "./packages.service.js";
+import { mapPackageToUi } from "../../common/dtos.js";
 
 export const packagesRoutes = Router();
 
@@ -50,7 +52,7 @@ packagesRoutes.get(
         .sort({ createdAt: -1 })
         .lean();
 
-      res.json({ items });
+      res.json({ items: items.map(mapPackageToUi) });
     } catch (err) {
       next(err);
     }
@@ -111,10 +113,17 @@ packagesRoutes.post(
       const doc = await PackageModel.create({
         vendorId: vendor._id,
         ...body,
+        title: body.title ?? body.name,
+        includes: body.includes ?? body.inclusions ?? [],
+        duration: body.duration,
+        policies: body.policies,
+        addOns: body.addOns ?? [],
         isActive: false, // publish requires verification
       });
 
-      res.status(201).json(doc);
+      await recalculateVendorPricingRange(vendor._id);
+
+      res.status(201).json(mapPackageToUi(doc));
     } catch (err) {
       next(err);
     }
@@ -178,6 +187,13 @@ packagesRoutes.patch(
         delete updates.categoryId;
       }
 
+      if (updates.name && !updates.title) {
+        updates.title = updates.name;
+      }
+      if (updates.inclusions && !updates.includes) {
+        updates.includes = updates.inclusions;
+      }
+
       const doc = await PackageModel.findOneAndUpdate(
         { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
         { $set: updates },
@@ -186,7 +202,9 @@ packagesRoutes.patch(
 
       if (!doc) throw new NotFoundError("Package not found");
 
-      res.json(doc);
+      await recalculateVendorPricingRange(vendor._id);
+
+      res.json(mapPackageToUi(doc as any));
     } catch (err) {
       next(err);
     }
@@ -230,6 +248,7 @@ packagesRoutes.delete(
         _id: new mongoose.Types.ObjectId(id),
         vendorId: vendor._id,
       });
+      await recalculateVendorPricingRange(vendor._id);
       res.json({ deleted: result.deletedCount === 1 });
     } catch (err) {
       next(err);
@@ -284,7 +303,8 @@ packagesRoutes.post(
 
       if (!doc) throw new NotFoundError("Package not found");
 
-      res.json(doc);
+      await recalculateVendorPricingRange(vendor._id);
+      res.json(mapPackageToUi(doc as any));
     } catch (err) {
       next(err);
     }
@@ -332,7 +352,8 @@ packagesRoutes.post(
 
       if (!doc) throw new NotFoundError("Package not found");
 
-      res.json(doc);
+      await recalculateVendorPricingRange(vendor._id);
+      res.json(mapPackageToUi(doc as any));
     } catch (err) {
       next(err);
     }
@@ -372,7 +393,7 @@ packagesRoutes.get("/:vendorId/packages", async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({ items });
+    res.json({ items: items.map(mapPackageToUi) });
   } catch (err) {
     next(err);
   }

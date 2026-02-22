@@ -7,6 +7,10 @@ import { env } from "../../configurations/env.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
 import { BadRequestError, UnauthorizedError } from "../../common/errors.js";
+import { toUiUser } from "../../common/mappers.js";
+import { CategoryModel } from "../categories/category.model.js";
+import { LocationModel } from "../locations/location.model.js";
+import { saveBase64File } from "../../common/fileStorage.js";
 
 function signToken(userId: string, role: UserRole) {
   const expiresIn = env.JWT_EXPIRES_IN as SignOptions["expiresIn"];
@@ -14,7 +18,8 @@ function signToken(userId: string, role: UserRole) {
 }
 
 export async function registerCustomer(input: {
-  fullName: string;
+  fullName?: string;
+  name?: string;
   email: string;
   phone?: string;
   password: string;
@@ -26,41 +31,43 @@ export async function registerCustomer(input: {
   const passwordHash = await bcrypt.hash(input.password, 10);
 
   const user = await UserModel.create({
-    fullName: input.fullName,
+    fullName: input.fullName ?? input.name ?? "",
     email,
     phone: input.phone,
     passwordHash,
     role: UserRole.CUSTOMER,
   });
 
-  return {
-    id: user._id.toString(),
-    fullName: user.fullName,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-  };
+  return { user: toUiUser(user) };
 }
 
 export async function registerVendor(input: {
-  account: { fullName: string; email: string; phone?: string; password: string };
+  account: { fullName?: string; name?: string; email: string; phone?: string; password: string };
   business: {
     businessName: string;
     categoryId?: string;
+    category?: string;
     description?: string;
     primaryLocationId?: string;
+    location?: string;
     serviceAreas?: string[];
     website?: string;
     instagram?: string;
     facebook?: string;
   };
   packages?: Array<{
-    title: string;
+    title?: string;
+    name?: string;
     description?: string;
     priceMin?: number;
     priceMax?: number;
     includes?: string[];
+    inclusions?: string[];
+    duration?: string;
+    policies?: string;
+    addOns?: string[];
   }>;
+  portfolioMedia?: string[];
 }) {
   const email = input.account.email.toLowerCase();
 
@@ -70,7 +77,7 @@ export async function registerVendor(input: {
   const passwordHash = await bcrypt.hash(input.account.password, 10);
 
   const user = await UserModel.create({
-    fullName: input.account.fullName,
+    fullName: input.account.fullName ?? input.account.name ?? "",
     email,
     phone: input.account.phone,
     passwordHash,
@@ -78,54 +85,94 @@ export async function registerVendor(input: {
   });
 
   try {
+    let categoryId = input.business.categoryId;
+    if (!categoryId && input.business.category) {
+      const category = await CategoryModel.findOne({ slug: input.business.category }).lean();
+      categoryId = category?._id.toString();
+    }
+
+    let primaryLocationId = input.business.primaryLocationId;
+    if (!primaryLocationId && input.business.location) {
+      const location = await LocationModel.findOne({ name: input.business.location }).lean();
+      primaryLocationId = location?._id.toString();
+    }
+
+    const storedMedia: string[] = [];
+    if (input.portfolioMedia?.length) {
+      for (const media of input.portfolioMedia) {
+        if (media.startsWith("data:")) {
+          const saved = saveBase64File({
+            data: media,
+            folder: `vendors/${user._id.toString()}`,
+            filenamePrefix: "portfolio",
+          });
+          storedMedia.push(saved.url);
+        } else {
+          storedMedia.push(media);
+        }
+      }
+    }
+
+    const packagePrices = (input.packages ?? [])
+      .map((p) => p.priceMin)
+      .filter((v): v is number => typeof v === "number");
+    const packageMaxPrices = (input.packages ?? [])
+      .map((p) => (typeof p.priceMax === "number" ? p.priceMax : p.priceMin))
+      .filter((v): v is number => typeof v === "number");
+    const pricingMin = packagePrices.length ? Math.min(...packagePrices) : undefined;
+    const pricingMax = packageMaxPrices.length ? Math.max(...packageMaxPrices) : pricingMin;
+
     const vendor = await VendorModel.create({
       userId: user._id,
       businessName: input.business.businessName,
       description: input.business.description,
-      categoryId: input.business.categoryId
-        ? new mongoose.Types.ObjectId(input.business.categoryId)
+      categoryId: categoryId
+        ? new mongoose.Types.ObjectId(categoryId)
         : undefined,
-      primaryLocationId: input.business.primaryLocationId
-        ? new mongoose.Types.ObjectId(input.business.primaryLocationId)
+      primaryLocationId: primaryLocationId
+        ? new mongoose.Types.ObjectId(primaryLocationId)
         : undefined,
+      locationText: input.business.location,
       serviceAreas: input.business.serviceAreas ?? [],
+      contactPhone: input.account.phone,
+      contactEmail: input.account.email,
       social: {
         website: input.business.website,
         instagram: input.business.instagram,
         facebook: input.business.facebook,
       },
-      locations: input.business.primaryLocationId
-        ? [new mongoose.Types.ObjectId(input.business.primaryLocationId)]
+      locations: primaryLocationId
+        ? [new mongoose.Types.ObjectId(primaryLocationId)]
         : [],
+      portfolioMedia: storedMedia,
+      pricingMin,
+      pricingMax,
     });
 
     if (input.packages?.length) {
       await PackageModel.insertMany(
         input.packages.map((p) => ({
           vendorId: vendor._id,
-          categoryId: input.business.categoryId
-            ? new mongoose.Types.ObjectId(input.business.categoryId)
+          categoryId: categoryId
+            ? new mongoose.Types.ObjectId(categoryId)
             : undefined,
-          title: p.title,
+          title: p.title ?? p.name ?? "Package",
           description: p.description,
           priceMin: p.priceMin,
           priceMax: p.priceMax,
-          includes: p.includes ?? [],
+          includes: p.includes ?? p.inclusions ?? [],
+          duration: p.duration,
+          policies: p.policies,
+          addOns: p.addOns ?? [],
           isActive: false,
         })),
       );
     }
 
     return {
-      user: {
-        id: user._id.toString(),
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-      },
+      user: toUiUser(user),
       vendor: {
-        id: vendor._id.toString(),
+        _id: vendor._id.toString(),
         businessName: vendor.businessName,
         verifiedStatus: vendor.verifiedStatus,
       },
@@ -151,12 +198,6 @@ export async function login(input: { email: string; password: string }) {
 
   return {
     token,
-    user: {
-      id: user._id.toString(),
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    },
+    user: toUiUser(user),
   };
 }

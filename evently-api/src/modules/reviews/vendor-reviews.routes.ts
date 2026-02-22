@@ -5,6 +5,8 @@ import { NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { ReviewModel } from "./review.model.js";
 import { ReviewListQuerySchema } from "./reviews.schemas.js";
+import { UserModel } from "../auth/user.model.js";
+import { toUiUser } from "../../common/mappers.js";
 
 export const vendorReviewsRoutes = Router();
 
@@ -46,7 +48,26 @@ vendorReviewsRoutes.get(
         ReviewModel.countDocuments({ vendorId: vendor._id }),
       ]);
 
-      res.json({ items, page: q.page, limit: q.limit, total });
+      const customerIds = items.map((r) => r.customerId);
+      const customers = await UserModel.find({ _id: { $in: customerIds } }).lean();
+      const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+
+      const mapped = items.map((review) => ({
+        _id: review._id.toString(),
+        bookingId: review.bookingId.toString(),
+        customerId: review.customerId.toString(),
+        vendorId: review.vendorId.toString(),
+        rating: review.rating,
+        comment: review.comment,
+        isHidden: review.isHidden ?? false,
+        moderationReason: review.moderationReason,
+        createdAt: review.createdAt?.toISOString(),
+        customer: customerMap.get(review.customerId.toString())
+          ? toUiUser(customerMap.get(review.customerId.toString())!)
+          : undefined,
+      }));
+
+      res.json({ items: mapped, page: q.page, limit: q.limit, total });
     } catch (err) {
       next(err);
     }

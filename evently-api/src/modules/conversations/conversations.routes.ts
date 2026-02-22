@@ -13,6 +13,8 @@ import {
 } from "./conversations.schemas.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
+import { createNotification } from "../notifications/notifications.service.js";
+import { NotificationType } from "../../common/enums.js";
 
 export const conversationsRoutes = Router();
 
@@ -243,7 +245,41 @@ conversationsRoutes.post(
         text: req.body.text,
       });
 
-      await ConversationModel.updateOne({ _id: convoId }, { $set: { lastMessageAt: new Date() } });
+      const convo = await ConversationModel.findByIdAndUpdate(
+        convoId,
+        { $set: { lastMessageAt: new Date() } },
+        { new: true },
+      ).lean();
+
+      if (convo) {
+        const recipients = convo.participants.filter((id) => id.toString() !== req.auth!.sub);
+        if (recipients.length > 0) {
+          const booking =
+            convo.bookingId ? await BookingModel.findById(convo.bookingId).lean() : null;
+          let vendorUserId: string | null = null;
+          if (booking) {
+            const vendor = await VendorModel.findById(booking.vendorId).lean();
+            vendorUserId = vendor?.userId?.toString() ?? null;
+          }
+
+          for (const recipient of recipients) {
+            const recipientId = recipient.toString();
+            const isVendor = vendorUserId && recipientId === vendorUserId;
+            const link = booking
+              ? isVendor
+                ? `/vendor/bookings/${booking._id.toString()}`
+                : `/customer/bookings/${booking._id.toString()}`
+              : "/messages";
+            await createNotification({
+              userId: recipientId,
+              type: NotificationType.MESSAGE,
+              title: "New message",
+              body: "You have a new message.",
+              link,
+            });
+          }
+        }
+      }
 
       res.status(201).json(message);
     } catch (err) {

@@ -1,12 +1,11 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
-import { EventType } from "../../common/enums.js";
 
 const EventSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "User" },
 
     title: { type: String, required: true, trim: true },
-    eventType: { type: String, enum: Object.values(EventType), required: true },
+    eventType: { type: String, required: true },
 
     // Workable choice: store as Date
     eventDate: { type: Date, required: true, index: true },

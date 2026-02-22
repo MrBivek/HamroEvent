@@ -59,10 +59,16 @@ export const NotificationType = {
   BOOKING_ACCEPTED: "BOOKING_ACCEPTED",
   BOOKING_REJECTED: "BOOKING_REJECTED",
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
+  BOOKING_CANCELLED: "BOOKING_CANCELLED",
+  BOOKING_RESCHEDULED: "BOOKING_RESCHEDULED",
   VENDOR_APPROVED: "VENDOR_APPROVED",
   VENDOR_REJECTED: "VENDOR_REJECTED",
   VENDOR_RESUBMIT: "VENDOR_RESUBMIT",
+  REVIEW_RECEIVED: "REVIEW_RECEIVED",
+  MESSAGE: "MESSAGE",
+  PAYMENT_RECEIVED: "PAYMENT_RECEIVED",
   PAYMENT_CONFIRMED: "PAYMENT_CONFIRMED",
+  SYSTEM: "SYSTEM",
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
@@ -90,6 +96,14 @@ export const DocumentOwnerType = {
 } as const;
 
 export type DocumentOwnerType = (typeof DocumentOwnerType)[keyof typeof DocumentOwnerType];
+
+export const PayoutStatus = {
+  PROCESSING: "PROCESSING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+} as const;
+
+export type PayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus];
 
 export const EventType = {
   WEDDING: "WEDDING",

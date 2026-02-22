@@ -4,6 +4,20 @@ import mongoose from "mongoose";
 import { NotificationModel } from "./notification.model.js";
 import { NotificationListQuerySchema } from "./notifications.schemas.js";
 import { NotFoundError } from "../../common/errors.js";
+import { mapNotificationTypeToUi } from "../../common/mappers.js";
+
+function mapNotification(doc: any) {
+  return {
+    _id: doc._id.toString(),
+    userId: doc.userId.toString(),
+    type: mapNotificationTypeToUi(doc.type),
+    title: doc.title,
+    body: doc.body,
+    link: doc.link,
+    isRead: Boolean(doc.readAt),
+    createdAt: doc.createdAt?.toISOString(),
+  };
+}
 
 export const notificationsRoutes = Router();
 
@@ -42,7 +56,7 @@ notificationsRoutes.get("/", requireAuth, async (req, res, next) => {
       NotificationModel.countDocuments(filter),
     ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
+    res.json({ items: items.map(mapNotification), page: q.page, limit: q.limit, total });
   } catch (err) {
     next(err);
   }
@@ -76,7 +90,7 @@ notificationsRoutes.post("/:id/read", requireAuth, async (req, res, next) => {
 
     if (!doc) throw new NotFoundError("Notification not found");
 
-    res.json(doc);
+    res.json(mapNotification(doc));
   } catch (err) {
     next(err);
   }

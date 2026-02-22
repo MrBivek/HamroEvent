@@ -12,6 +12,9 @@ const PackageSchema = new Schema(
     priceMax: { type: Number },
 
     includes: [{ type: String }],
+    duration: { type: String },
+    policies: { type: String },
+    addOns: [{ type: String }],
 
     isActive: { type: Boolean, default: false, index: true },
   },

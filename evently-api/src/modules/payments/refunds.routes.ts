@@ -10,6 +10,7 @@ import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { CreateRefundSchema, RefundListQuerySchema } from "./payments.schemas.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
+import { mapUserRoleToUi } from "../../common/mappers.js";
 
 export const refundsRoutes = Router();
 
@@ -67,7 +68,17 @@ refundsRoutes.post(
 
       await BookingModel.updateOne(
         { _id: booking._id },
-        { $set: { status: BookingStatus.CANCELLED } },
+        {
+          $set: { status: BookingStatus.CANCELLED },
+          $push: {
+            history: {
+              status: "cancelled",
+              byRole: mapUserRoleToUi(req.auth!.role),
+              at: new Date(),
+              note: reason ?? "Refund issued",
+            },
+          },
+        },
       );
 
       const refund = await RefundModel.create({
