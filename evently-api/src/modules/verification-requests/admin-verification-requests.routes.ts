@@ -5,7 +5,10 @@ import { validateBody } from "../../middlewares/validate.js";
 import { UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VerificationRequestModel } from "./verification-request.model.js";
-import { VerificationRequestListQuerySchema, AdminDecisionSchema } from "./verification-requests.schemas.js";
+import {
+  VerificationRequestListQuerySchema,
+  AdminDecisionSchema,
+} from "./verification-requests.schemas.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
@@ -46,7 +49,11 @@ adminVerificationRequestsRoutes.get(
       if (q.status) filter.status = q.status;
 
       const [items, total] = await Promise.all([
-        VerificationRequestModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        VerificationRequestModel.find(filter)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(q.limit)
+          .lean(),
         VerificationRequestModel.countDocuments(filter),
       ]);
 
@@ -145,7 +152,11 @@ adminVerificationRequestsRoutes.patch(
         action: "VENDOR_VERIFICATION_DECISION",
         targetType: "Vendor",
         targetId: vendor._id,
-        metadata: { decision: req.body.decision, note: req.body.note ?? null, requestId: request._id.toString() },
+        metadata: {
+          decision: req.body.decision,
+          note: req.body.note ?? null,
+          requestId: request._id.toString(),
+        },
       });
 
       await createNotification({

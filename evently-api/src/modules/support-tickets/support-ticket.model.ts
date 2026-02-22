@@ -21,7 +21,9 @@ SupportTicketSchema.index({ status: 1, createdAt: -1 });
 SupportTicketSchema.index({ createdBy: 1, createdAt: -1 });
 SupportTicketSchema.index({ assignedTo: 1, createdAt: -1 });
 
-export type SupportTicketDoc = InferSchemaType<typeof SupportTicketSchema> & { _id: mongoose.Types.ObjectId };
+export type SupportTicketDoc = InferSchemaType<typeof SupportTicketSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const SupportTicketModel =
   (mongoose.models.SupportTicket as mongoose.Model<SupportTicketDoc>) ||

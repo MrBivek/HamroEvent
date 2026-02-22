@@ -22,7 +22,10 @@ function ensureObjectId(id: string, message: string) {
 }
 
 async function assertParticipant(conversationId: mongoose.Types.ObjectId, userId: string) {
-  const convo = await ConversationModel.findOne({ _id: conversationId, participants: userId }).lean();
+  const convo = await ConversationModel.findOne({
+    _id: conversationId,
+    participants: userId,
+  }).lean();
   if (!convo) throw new ForbiddenError("You are not a participant in this conversation");
   return convo;
 }
@@ -47,71 +50,78 @@ async function assertParticipant(conversationId: mongoose.Types.ObjectId, userId
  *     responses:
  *       200: { description: OK }
  */
-conversationsRoutes.post("/", requireAuth, validateBody(CreateConversationSchema), async (req, res, next) => {
-  try {
-    const userId = req.auth!.sub;
-    const { bookingId, vendorId, customerUserId } = req.body;
+conversationsRoutes.post(
+  "/",
+  requireAuth,
+  validateBody(CreateConversationSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.auth!.sub;
+      const { bookingId, vendorId, customerUserId } = req.body;
 
-    if (bookingId) {
-      const bookingObjectId = ensureObjectId(bookingId, "Booking not found");
-      const booking = await BookingModel.findById(bookingObjectId).lean();
-      if (!booking) throw new NotFoundError("Booking not found");
+      if (bookingId) {
+        const bookingObjectId = ensureObjectId(bookingId, "Booking not found");
+        const booking = await BookingModel.findById(bookingObjectId).lean();
+        if (!booking) throw new NotFoundError("Booking not found");
 
-      const vendor = await VendorModel.findById(booking.vendorId).lean();
-      if (!vendor) throw new NotFoundError("Vendor not found");
+        const vendor = await VendorModel.findById(booking.vendorId).lean();
+        if (!vendor) throw new NotFoundError("Vendor not found");
 
-      const customerUserId = booking.userId.toString();
-      const vendorUserId = vendor.userId.toString();
+        const customerUserId = booking.userId.toString();
+        const vendorUserId = vendor.userId.toString();
 
-      if (userId !== customerUserId && userId !== vendorUserId) {
-        throw new ForbiddenError("Not authorized for this booking");
+        if (userId !== customerUserId && userId !== vendorUserId) {
+          throw new ForbiddenError("Not authorized for this booking");
+        }
+
+        const existing = await ConversationModel.findOne({ bookingId: bookingObjectId }).lean();
+        if (existing) return res.json(existing);
+
+        const convo = await ConversationModel.create({
+          participants: [customerUserId, vendorUserId],
+          bookingId: bookingObjectId,
+          vendorId: vendor._id,
+        });
+
+        return res.json(convo);
       }
 
-      const existing = await ConversationModel.findOne({ bookingId: bookingObjectId }).lean();
+      if (!vendorId)
+        throw new BadRequestError("vendorId is required when bookingId is not provided");
+
+      const vendorObjectId = ensureObjectId(vendorId, "Vendor not found");
+      const vendor = await VendorModel.findById(vendorObjectId).lean();
+      if (!vendor) throw new NotFoundError("Vendor not found");
+
+      const vendorUserId = vendor.userId.toString();
+      let customerId = userId;
+
+      if (userId === vendorUserId) {
+        if (!customerUserId)
+          throw new BadRequestError("customerUserId is required for vendor-initiated chats");
+        ensureObjectId(customerUserId, "Customer not found");
+        customerId = customerUserId;
+      }
+
+      const existing = await ConversationModel.findOne({
+        vendorId: vendorObjectId,
+        bookingId: { $exists: false },
+        participants: { $all: [customerId, vendorUserId] },
+      }).lean();
+
       if (existing) return res.json(existing);
 
       const convo = await ConversationModel.create({
-        participants: [customerUserId, vendorUserId],
-        bookingId: bookingObjectId,
-        vendorId: vendor._id,
+        participants: [customerId, vendorUserId],
+        vendorId: vendorObjectId,
       });
 
-      return res.json(convo);
+      res.json(convo);
+    } catch (err) {
+      next(err);
     }
-
-    if (!vendorId) throw new BadRequestError("vendorId is required when bookingId is not provided");
-
-    const vendorObjectId = ensureObjectId(vendorId, "Vendor not found");
-    const vendor = await VendorModel.findById(vendorObjectId).lean();
-    if (!vendor) throw new NotFoundError("Vendor not found");
-
-    const vendorUserId = vendor.userId.toString();
-    let customerId = userId;
-
-    if (userId === vendorUserId) {
-      if (!customerUserId) throw new BadRequestError("customerUserId is required for vendor-initiated chats");
-      ensureObjectId(customerUserId, "Customer not found");
-      customerId = customerUserId;
-    }
-
-    const existing = await ConversationModel.findOne({
-      vendorId: vendorObjectId,
-      bookingId: { $exists: false },
-      participants: { $all: [customerId, vendorUserId] },
-    }).lean();
-
-    if (existing) return res.json(existing);
-
-    const convo = await ConversationModel.create({
-      participants: [customerId, vendorUserId],
-      vendorId: vendorObjectId,
-    });
-
-    res.json(convo);
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 /**
  * @openapi
@@ -218,24 +228,29 @@ conversationsRoutes.get("/:id/messages", requireAuth, async (req, res, next) => 
  *     responses:
  *       201: { description: Created }
  */
-conversationsRoutes.post("/:id/messages", requireAuth, validateBody(CreateMessageSchema), async (req, res, next) => {
-  try {
-    const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
-    await assertParticipant(convoId, req.auth!.sub);
+conversationsRoutes.post(
+  "/:id/messages",
+  requireAuth,
+  validateBody(CreateMessageSchema),
+  async (req, res, next) => {
+    try {
+      const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
+      await assertParticipant(convoId, req.auth!.sub);
 
-    const message = await MessageModel.create({
-      conversationId: convoId,
-      senderId: new mongoose.Types.ObjectId(req.auth!.sub),
-      text: req.body.text,
-    });
+      const message = await MessageModel.create({
+        conversationId: convoId,
+        senderId: new mongoose.Types.ObjectId(req.auth!.sub),
+        text: req.body.text,
+      });
 
-    await ConversationModel.updateOne({ _id: convoId }, { $set: { lastMessageAt: new Date() } });
+      await ConversationModel.updateOne({ _id: convoId }, { $set: { lastMessageAt: new Date() } });
 
-    res.status(201).json(message);
-  } catch (err) {
-    next(err);
-  }
-});
+      res.status(201).json(message);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * @openapi

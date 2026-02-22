@@ -74,22 +74,27 @@ documentsRoutes.post(
  *     responses:
  *       200: { description: OK }
  */
-documentsRoutes.get("/me/documents", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
-  try {
-    const q = DocumentListQuerySchema.parse(req.query);
-    const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-    if (!vendor) throw new NotFoundError("Vendor profile not found");
+documentsRoutes.get(
+  "/me/documents",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
+    try {
+      const q = DocumentListQuerySchema.parse(req.query);
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-    const skip = (q.page - 1) * q.limit;
-    const filter = { ownerType: DocumentOwnerType.VENDOR, ownerId: vendor._id };
+      const skip = (q.page - 1) * q.limit;
+      const filter = { ownerType: DocumentOwnerType.VENDOR, ownerId: vendor._id };
 
-    const [items, total] = await Promise.all([
-      DocumentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      DocumentModel.countDocuments(filter),
-    ]);
+      const [items, total] = await Promise.all([
+        DocumentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        DocumentModel.countDocuments(filter),
+      ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

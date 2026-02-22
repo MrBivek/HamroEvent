@@ -2,7 +2,10 @@ import { Router } from "express";
 import { requireAuth } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
 import { SupportTicketModel } from "./support-ticket.model.js";
-import { CreateSupportTicketSchema, SupportTicketListQuerySchema } from "./support-tickets.schemas.js";
+import {
+  CreateSupportTicketSchema,
+  SupportTicketListQuerySchema,
+} from "./support-tickets.schemas.js";
 
 export const supportTicketsRoutes = Router();
 
@@ -26,19 +29,24 @@ export const supportTicketsRoutes = Router();
  *     responses:
  *       201: { description: Created }
  */
-supportTicketsRoutes.post("/", requireAuth, validateBody(CreateSupportTicketSchema), async (req, res, next) => {
-  try {
-    const ticket = await SupportTicketModel.create({
-      createdBy: req.auth!.sub,
-      subject: req.body.subject,
-      message: req.body.message,
-    });
+supportTicketsRoutes.post(
+  "/",
+  requireAuth,
+  validateBody(CreateSupportTicketSchema),
+  async (req, res, next) => {
+    try {
+      const ticket = await SupportTicketModel.create({
+        createdBy: req.auth!.sub,
+        subject: req.body.subject,
+        message: req.body.message,
+      });
 
-    res.status(201).json(ticket);
-  } catch (err) {
-    next(err);
-  }
-});
+      res.status(201).json(ticket);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * @openapi

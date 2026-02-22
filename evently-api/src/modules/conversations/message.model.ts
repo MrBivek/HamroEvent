@@ -2,7 +2,12 @@ import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const MessageSchema = new Schema(
   {
-    conversationId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "Conversation" },
+    conversationId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      index: true,
+      ref: "Conversation",
+    },
     senderId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "User" },
     text: { type: String, required: true },
     readAt: { type: Date },

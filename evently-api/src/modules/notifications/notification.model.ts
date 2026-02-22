@@ -16,7 +16,9 @@ const NotificationSchema = new Schema(
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, readAt: 1 });
 
-export type NotificationDoc = InferSchemaType<typeof NotificationSchema> & { _id: mongoose.Types.ObjectId };
+export type NotificationDoc = InferSchemaType<typeof NotificationSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const NotificationModel =
   (mongoose.models.Notification as mongoose.Model<NotificationDoc>) ||

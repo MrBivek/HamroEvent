@@ -16,4 +16,5 @@ const RefundSchema = new Schema(
 export type RefundDoc = InferSchemaType<typeof RefundSchema> & { _id: mongoose.Types.ObjectId };
 
 export const RefundModel =
-  (mongoose.models.Refund as mongoose.Model<RefundDoc>) || mongoose.model<RefundDoc>("Refund", RefundSchema);
+  (mongoose.models.Refund as mongoose.Model<RefundDoc>) ||
+  mongoose.model<RefundDoc>("Refund", RefundSchema);

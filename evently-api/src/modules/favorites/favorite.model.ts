@@ -15,4 +15,5 @@ FavoriteSchema.index({ userId: 1, packageId: 1 }, { unique: true, sparse: true }
 export type FavoriteDoc = InferSchemaType<typeof FavoriteSchema> & { _id: mongoose.Types.ObjectId };
 
 export const FavoriteModel =
-  (mongoose.models.Favorite as mongoose.Model<FavoriteDoc>) || mongoose.model<FavoriteDoc>("Favorite", FavoriteSchema);
+  (mongoose.models.Favorite as mongoose.Model<FavoriteDoc>) ||
+  mongoose.model<FavoriteDoc>("Favorite", FavoriteSchema);

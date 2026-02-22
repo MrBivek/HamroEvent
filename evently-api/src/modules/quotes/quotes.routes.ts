@@ -63,35 +63,40 @@ quotesRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
  *     responses:
  *       200: { description: OK }
  */
-quotesRoutes.post("/:id/accept", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const id = String(req.params.id);
-    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
+quotesRoutes.post(
+  "/:id/accept",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
 
-    const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });
-    if (!quote) throw new NotFoundError("Quote not found");
+      const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });
+      if (!quote) throw new NotFoundError("Quote not found");
 
-    if (quote.status !== QuoteStatus.PENDING) {
-      throw new BadRequestError("Only PENDING quotes can be accepted");
+      if (quote.status !== QuoteStatus.PENDING) {
+        throw new BadRequestError("Only PENDING quotes can be accepted");
+      }
+
+      if (quote.expiresAt && quote.expiresAt < new Date()) {
+        throw new BadRequestError("Quote has expired");
+      }
+
+      quote.status = QuoteStatus.ACCEPTED;
+      await quote.save();
+
+      await BookingModel.updateOne(
+        { _id: quote.bookingId },
+        { $set: { status: BookingStatus.CONFIRMED_PENDING_PAYMENT } },
+      );
+
+      res.json(quote.toObject());
+    } catch (err) {
+      next(err);
     }
-
-    if (quote.expiresAt && quote.expiresAt < new Date()) {
-      throw new BadRequestError("Quote has expired");
-    }
-
-    quote.status = QuoteStatus.ACCEPTED;
-    await quote.save();
-
-    await BookingModel.updateOne(
-      { _id: quote.bookingId },
-      { $set: { status: BookingStatus.CONFIRMED_PENDING_PAYMENT } },
-    );
-
-    res.json(quote.toObject());
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 /**
  * @openapi
@@ -108,25 +113,33 @@ quotesRoutes.post("/:id/accept", requireAuth, requireRole(UserRole.CUSTOMER), as
  *     responses:
  *       200: { description: OK }
  */
-quotesRoutes.post("/:id/reject", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const id = String(req.params.id);
-    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
+quotesRoutes.post(
+  "/:id/reject",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Quote not found");
 
-    const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });
-    if (!quote) throw new NotFoundError("Quote not found");
+      const quote = await QuoteModel.findOne({ _id: id, customerId: req.auth!.sub });
+      if (!quote) throw new NotFoundError("Quote not found");
 
-    if (quote.status !== QuoteStatus.PENDING) {
-      throw new BadRequestError("Only PENDING quotes can be rejected");
+      if (quote.status !== QuoteStatus.PENDING) {
+        throw new BadRequestError("Only PENDING quotes can be rejected");
+      }
+
+      quote.status = QuoteStatus.REJECTED;
+      await quote.save();
+
+      await BookingModel.updateOne(
+        { _id: quote.bookingId },
+        { $set: { status: BookingStatus.CANCELLED } },
+      );
+
+      res.json(quote.toObject());
+    } catch (err) {
+      next(err);
     }
-
-    quote.status = QuoteStatus.REJECTED;
-    await quote.save();
-
-    await BookingModel.updateOne({ _id: quote.bookingId }, { $set: { status: BookingStatus.CANCELLED } });
-
-    res.json(quote.toObject());
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);

@@ -1,8 +1,4 @@
-import {
-    LoginSchema,
-    RegisterVendorSchema,
-    RegisterCustomerSchema,
-} from "./auth.schemas.js";
+import { LoginSchema, RegisterVendorSchema, RegisterCustomerSchema } from "./auth.schemas.js";
 import { Router } from "express";
 import * as controller from "./auth.controller.js";
 import { validateBody } from "../../middlewares/validate.js";
@@ -42,9 +38,9 @@ export const authRoutes = Router();
  *         description: Validation error / duplicate email
  */
 authRoutes.post(
-    "/register/customer",
-    validateBody(RegisterCustomerSchema),
-    controller.registerCustomer
+  "/register/customer",
+  validateBody(RegisterCustomerSchema),
+  controller.registerCustomer,
 );
 
 /**
@@ -105,11 +101,7 @@ authRoutes.post(
  *       400:
  *         description: Validation error / duplicate email
  */
-authRoutes.post(
-    "/register/vendor",
-    validateBody(RegisterVendorSchema),
-    controller.registerVendor
-);
+authRoutes.post("/register/vendor", validateBody(RegisterVendorSchema), controller.registerVendor);
 
 /**
  * @openapi

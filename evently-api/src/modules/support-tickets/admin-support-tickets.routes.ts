@@ -5,7 +5,10 @@ import { validateBody } from "../../middlewares/validate.js";
 import { UserRole } from "../../common/enums.js";
 import { NotFoundError, BadRequestError } from "../../common/errors.js";
 import { SupportTicketModel } from "./support-ticket.model.js";
-import { SupportTicketListQuerySchema, UpdateSupportTicketSchema } from "./support-tickets.schemas.js";
+import {
+  SupportTicketListQuerySchema,
+  UpdateSupportTicketSchema,
+} from "./support-tickets.schemas.js";
 
 export const adminSupportTicketsRoutes = Router();
 
@@ -29,24 +32,29 @@ export const adminSupportTicketsRoutes = Router();
  *     responses:
  *       200: { description: OK }
  */
-adminSupportTicketsRoutes.get("/support-tickets", requireAuth, requireRole(UserRole.ADMIN), async (req, res, next) => {
-  try {
-    const q = SupportTicketListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+adminSupportTicketsRoutes.get(
+  "/support-tickets",
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  async (req, res, next) => {
+    try {
+      const q = SupportTicketListQuerySchema.parse(req.query);
+      const skip = (q.page - 1) * q.limit;
 
-    const filter: Record<string, unknown> = {};
-    if (q.status) filter.status = q.status;
+      const filter: Record<string, unknown> = {};
+      if (q.status) filter.status = q.status;
 
-    const [items, total] = await Promise.all([
-      SupportTicketModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      SupportTicketModel.countDocuments(filter),
-    ]);
+      const [items, total] = await Promise.all([
+        SupportTicketModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        SupportTicketModel.countDocuments(filter),
+      ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * @openapi
@@ -91,7 +99,11 @@ adminSupportTicketsRoutes.patch(
         updates.assignedTo = new mongoose.Types.ObjectId(req.body.assignedTo);
       }
 
-      const ticket = await SupportTicketModel.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+      const ticket = await SupportTicketModel.findByIdAndUpdate(
+        id,
+        { $set: updates },
+        { new: true },
+      ).lean();
       if (!ticket) throw new NotFoundError("Support ticket not found");
 
       res.json(ticket);

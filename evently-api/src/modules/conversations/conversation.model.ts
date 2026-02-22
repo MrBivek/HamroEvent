@@ -14,7 +14,9 @@ ConversationSchema.index({ participants: 1 });
 ConversationSchema.index({ lastMessageAt: -1 });
 ConversationSchema.index({ bookingId: 1 }, { unique: true, sparse: true });
 
-export type ConversationDoc = InferSchemaType<typeof ConversationSchema> & { _id: mongoose.Types.ObjectId };
+export type ConversationDoc = InferSchemaType<typeof ConversationSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const ConversationModel =
   (mongoose.models.Conversation as mongoose.Model<ConversationDoc>) ||

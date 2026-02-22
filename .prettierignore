@@ -1,0 +1,19 @@
+# Ignore PNPM Lock File
+pnpm-lock.yaml
+.pnpm-store/**
+
+# Ignore SCSS/CSS Files
+**/*.scss
+**/*.css
+
+# Ignore Client Asset Files
+*/client/src/assets/**
+
+# Miscellaneous Development Helpers
+apps/client/public/db.json
+
+# Eslint Configuration
+eslint.config.js
+
+# Ignore Client Index.HTML File
+apps/client/index.html

@@ -1,0 +1,63 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import type { CancelablePromise } from "../core/CancelablePromise";
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
+export class VendorBookingsService {
+    /**
+     * Vendor inbox - list bookings for my vendor (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiVendorsMeBookings({
+        status,
+        page = 1,
+        limit = 20
+    }: {
+        status?: string;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/vendors/me/bookings",
+            query: {
+                status: status,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+    /**
+     * Accept or reject a booking request (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static patchApiVendorsMeBookingsDecision({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody: {
+            decision: "ACCEPT" | "REJECT";
+            vendorNote?: string;
+            rejectReason?: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/vendors/me/bookings/{id}/decision",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json",
+            errors: {
+                400: `Invalid transition`,
+                404: `Booking not found`
+            }
+        });
+    }
+}

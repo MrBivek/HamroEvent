@@ -32,44 +32,52 @@ export const reviewsRoutes = Router();
  *     responses:
  *       201: { description: Created }
  */
-reviewsRoutes.post("/", requireAuth, requireRole(UserRole.CUSTOMER), validateBody(CreateReviewSchema), async (req, res, next) => {
-  try {
-    const { bookingId, rating, comment } = req.body;
-    if (!mongoose.isValidObjectId(bookingId)) throw new BadRequestError("Invalid bookingId");
+reviewsRoutes.post(
+  "/",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  validateBody(CreateReviewSchema),
+  async (req, res, next) => {
+    try {
+      const { bookingId, rating, comment } = req.body;
+      if (!mongoose.isValidObjectId(bookingId)) throw new BadRequestError("Invalid bookingId");
 
-    const booking = await BookingModel.findOne({ _id: bookingId, userId: req.auth!.sub }).lean();
-    if (!booking) throw new NotFoundError("Booking not found");
+      const booking = await BookingModel.findOne({ _id: bookingId, userId: req.auth!.sub }).lean();
+      if (!booking) throw new NotFoundError("Booking not found");
 
-    if (booking.status !== BookingStatus.COMPLETED) {
-      throw new BadRequestError("Reviews can only be submitted after completed bookings");
+      if (booking.status !== BookingStatus.COMPLETED) {
+        throw new BadRequestError("Reviews can only be submitted after completed bookings");
+      }
+
+      const exists = await ReviewModel.findOne({
+        bookingId: new mongoose.Types.ObjectId(bookingId),
+      }).lean();
+      if (exists) throw new BadRequestError("Review already exists for this booking");
+
+      const review = await ReviewModel.create({
+        bookingId: new mongoose.Types.ObjectId(bookingId),
+        vendorId: booking.vendorId,
+        customerId: booking.userId,
+        rating,
+        comment,
+      });
+
+      const vendor = await VendorModel.findById(booking.vendorId).lean();
+      if (vendor) {
+        const newCount = (vendor.ratingCount ?? 0) + 1;
+        const newAvg = ((vendor.ratingAvg ?? 0) * (vendor.ratingCount ?? 0) + rating) / newCount;
+        await VendorModel.updateOne(
+          { _id: vendor._id },
+          { $set: { ratingAvg: Number(newAvg.toFixed(2)), ratingCount: newCount } },
+        );
+      }
+
+      res.status(201).json(review);
+    } catch (err) {
+      next(err);
     }
-
-    const exists = await ReviewModel.findOne({ bookingId: new mongoose.Types.ObjectId(bookingId) }).lean();
-    if (exists) throw new BadRequestError("Review already exists for this booking");
-
-    const review = await ReviewModel.create({
-      bookingId: new mongoose.Types.ObjectId(bookingId),
-      vendorId: booking.vendorId,
-      customerId: booking.userId,
-      rating,
-      comment,
-    });
-
-    const vendor = await VendorModel.findById(booking.vendorId).lean();
-    if (vendor) {
-      const newCount = (vendor.ratingCount ?? 0) + 1;
-      const newAvg = ((vendor.ratingAvg ?? 0) * (vendor.ratingCount ?? 0) + rating) / newCount;
-      await VendorModel.updateOne(
-        { _id: vendor._id },
-        { $set: { ratingAvg: Number(newAvg.toFixed(2)), ratingCount: newCount } },
-      );
-    }
-
-    res.status(201).json(review);
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 /**
  * @openapi

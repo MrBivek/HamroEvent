@@ -28,7 +28,9 @@ export function setupSwagger(app: Express) {
   });
 
   app.get("/swagger.json", (_req, res) => res.json(spec));
-  app.get("/swagger/", (_req, res) => res.redirect(308, "/swagger"));
-  app.use("/swagger", swaggerUi.serve);
-  app.get("/swagger", swaggerUi.setup(spec, { explorer: true }));
+  app.use(
+    "/swagger",
+    swaggerUi.serveFiles(spec, { explorer: true }),
+    swaggerUi.setup(spec, { explorer: true }),
+  );
 }

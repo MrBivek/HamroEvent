@@ -33,25 +33,30 @@ export const auditLogsRoutes = Router();
  *     responses:
  *       200: { description: OK }
  */
-auditLogsRoutes.get("/audit-logs", requireAuth, requireRole(UserRole.ADMIN), async (req, res, next) => {
-  try {
-    const q = AuditLogListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+auditLogsRoutes.get(
+  "/audit-logs",
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  async (req, res, next) => {
+    try {
+      const q = AuditLogListQuerySchema.parse(req.query);
+      const skip = (q.page - 1) * q.limit;
 
-    const filter: Record<string, unknown> = {};
-    if (q.action) filter.action = q.action;
-    if (q.targetType) filter.targetType = q.targetType;
-    if (q.targetId && mongoose.isValidObjectId(q.targetId)) {
-      filter.targetId = new mongoose.Types.ObjectId(q.targetId);
+      const filter: Record<string, unknown> = {};
+      if (q.action) filter.action = q.action;
+      if (q.targetType) filter.targetType = q.targetType;
+      if (q.targetId && mongoose.isValidObjectId(q.targetId)) {
+        filter.targetId = new mongoose.Types.ObjectId(q.targetId);
+      }
+
+      const [items, total] = await Promise.all([
+        AuditLogModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        AuditLogModel.countDocuments(filter),
+      ]);
+
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
     }
-
-    const [items, total] = await Promise.all([
-      AuditLogModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      AuditLogModel.countDocuments(filter),
-    ]);
-
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);

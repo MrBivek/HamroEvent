@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint evently-client",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api-generation@mac": "./node_modules/.bin/openapi --input http://localhost:4000/swagger.json --client axios --useOptions --output ./src"
   },
   "dependencies": {
     "@fontsource/plus-jakarta-sans": "^5.2.8",
@@ -81,6 +82,9 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "axios": "1.13.5",
+    "form-data": "~4.0.3",
+    "openapi-typescript-codegen": "^0.29.0"
   }
 }

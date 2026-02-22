@@ -26,21 +26,26 @@ export const adminReportsRoutes = Router();
  *     responses:
  *       200: { description: OK }
  */
-adminReportsRoutes.get("/reports", requireAuth, requireRole(UserRole.ADMIN), async (req, res, next) => {
-  try {
-    const q = ReportListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+adminReportsRoutes.get(
+  "/reports",
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  async (req, res, next) => {
+    try {
+      const q = ReportListQuerySchema.parse(req.query);
+      const skip = (q.page - 1) * q.limit;
 
-    const filter: Record<string, unknown> = {};
-    if (q.status) filter.status = q.status;
+      const filter: Record<string, unknown> = {};
+      if (q.status) filter.status = q.status;
 
-    const [items, total] = await Promise.all([
-      ReportModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      ReportModel.countDocuments(filter),
-    ]);
+      const [items, total] = await Promise.all([
+        ReportModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        ReportModel.countDocuments(filter),
+      ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

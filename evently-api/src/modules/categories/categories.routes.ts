@@ -18,12 +18,12 @@ export const categoriesRoutes = Router();
  *       200: { description: OK }
  */
 categoriesRoutes.get("/", async (req, res, next) => {
-    try {
-        const activeOnly = String(req.query.active ?? "true") === "true";
-        const filter = activeOnly ? { isActive: true } : {};
-        const items = await CategoryModel.find(filter).sort({ name: 1 }).lean();
-        res.json({ items });
-    } catch (err) {
-        next(err);
-    }
+  try {
+    const activeOnly = String(req.query.active ?? "true") === "true";
+    const filter = activeOnly ? { isActive: true } : {};
+    const items = await CategoryModel.find(filter).sort({ name: 1 }).lean();
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
 });

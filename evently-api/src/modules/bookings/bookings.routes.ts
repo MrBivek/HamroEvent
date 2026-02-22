@@ -37,64 +37,70 @@ export const bookingsRoutes = Router();
  *       201: { description: Created }
  */
 bookingsRoutes.post(
-    "/",
-    requireAuth,
-    requireRole(UserRole.CUSTOMER),
-    validateBody(CreateBookingSchema),
-    async (req, res, next) => {
-        try {
-            const userId = new mongoose.Types.ObjectId(req.auth!.sub);
-            const { vendorId, packageId, eventId, customerNote } = req.body;
+  "/",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  validateBody(CreateBookingSchema),
+  async (req, res, next) => {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.auth!.sub);
+      const { vendorId, packageId, eventId, customerNote } = req.body;
 
-            if (!mongoose.isValidObjectId(vendorId)) throw new BadRequestError("Invalid vendorId");
-            if (!mongoose.isValidObjectId(eventId)) throw new BadRequestError("Invalid eventId");
-            if (packageId && !mongoose.isValidObjectId(packageId)) throw new BadRequestError("Invalid packageId");
+      if (!mongoose.isValidObjectId(vendorId)) throw new BadRequestError("Invalid vendorId");
+      if (!mongoose.isValidObjectId(eventId)) throw new BadRequestError("Invalid eventId");
+      if (packageId && !mongoose.isValidObjectId(packageId))
+        throw new BadRequestError("Invalid packageId");
 
-            // verify event belongs to customer
-            const event = await EventModel.findOne({ _id: eventId, userId }).lean();
-            if (!event) throw new NotFoundError("Event not found");
+      // verify event belongs to customer
+      const event = await EventModel.findOne({ _id: eventId, userId }).lean();
+      if (!event) throw new NotFoundError("Event not found");
 
-            // verify vendor exists
-            const vendor = await VendorModel.findById(vendorId).lean();
-            if (!vendor) throw new NotFoundError("Vendor not found");
+      // verify vendor exists
+      const vendor = await VendorModel.findById(vendorId).lean();
+      if (!vendor) throw new NotFoundError("Vendor not found");
 
-            // if vendor has availability defined for event date, ensure available
-            const eventDate = new Date(event.eventDate);
-            const dateOnly = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate()));
-            const availability = await AvailabilityModel.findOne({ vendorId: vendor._id, date: dateOnly }).lean();
-            if (availability && availability.isAvailable === false) {
-                throw new BadRequestError("Vendor is not available on the event date");
-            }
+      // if vendor has availability defined for event date, ensure available
+      const eventDate = new Date(event.eventDate);
+      const dateOnly = new Date(
+        Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate()),
+      );
+      const availability = await AvailabilityModel.findOne({
+        vendorId: vendor._id,
+        date: dateOnly,
+      }).lean();
+      if (availability && availability.isAvailable === false) {
+        throw new BadRequestError("Vendor is not available on the event date");
+      }
 
-            // if packageId provided, validate it belongs to vendor
-            if (packageId) {
-                const pkg = await PackageModel.findOne({ _id: packageId, vendorId }).lean();
-                if (!pkg) throw new NotFoundError("Package not found for this vendor");
-            }
+      // if packageId provided, validate it belongs to vendor
+      if (packageId) {
+        const pkg = await PackageModel.findOne({ _id: packageId, vendorId }).lean();
+        if (!pkg) throw new NotFoundError("Package not found for this vendor");
+      }
 
-            const booking = await BookingModel.create({
-                userId,
-                vendorId: new mongoose.Types.ObjectId(vendorId),
-                packageId: packageId ? new mongoose.Types.ObjectId(packageId) : undefined,
-                eventId: new mongoose.Types.ObjectId(eventId),
-                status: BookingStatus.REQUESTED,
-                customerNote,
-                requestedAt: new Date(),
-            });
+      const booking = await BookingModel.create({
+        userId,
+        vendorId: new mongoose.Types.ObjectId(vendorId),
+        packageId: packageId ? new mongoose.Types.ObjectId(packageId) : undefined,
+        eventId: new mongoose.Types.ObjectId(eventId),
+        status: BookingStatus.REQUESTED,
+        customerNote,
+        requestedAt: new Date(),
+      });
 
-            await createNotification({
-                userId: vendor.userId.toString(),
-                type: NotificationType.BOOKING_REQUESTED,
-                title: "New booking request",
-                body: "You have a new booking request.",
-                link: `/vendor/bookings/${booking._id.toString()}`,
-            });
+      await createNotification({
+        userId: vendor.userId.toString(),
+        type: NotificationType.BOOKING_REQUESTED,
+        title: "New booking request",
+        body: "You have a new booking request.",
+        link: `/vendor/bookings/${booking._id.toString()}`,
+      });
 
-            res.status(201).json(booking);
-        } catch (err) {
-            next(err);
-        }
+      res.status(201).json(booking);
+    } catch (err) {
+      next(err);
     }
+  },
 );
 
 /**
@@ -118,23 +124,23 @@ bookingsRoutes.post(
  *       200: { description: OK }
  */
 bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-    try {
-        const q = BookingListQuerySchema.parse(req.query);
-        const userId = new mongoose.Types.ObjectId(req.auth!.sub);
-        const skip = (q.page - 1) * q.limit;
+  try {
+    const q = BookingListQuerySchema.parse(req.query);
+    const userId = new mongoose.Types.ObjectId(req.auth!.sub);
+    const skip = (q.page - 1) * q.limit;
 
-        const filter: any = { userId };
-        if (q.status) filter.status = q.status;
+    const filter: any = { userId };
+    if (q.status) filter.status = q.status;
 
-        const [items, total] = await Promise.all([
-            BookingModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-            BookingModel.countDocuments(filter),
-        ]);
+    const [items, total] = await Promise.all([
+      BookingModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+      BookingModel.countDocuments(filter),
+    ]);
 
-        res.json({ items, page: q.page, limit: q.limit, total });
-    } catch (err) {
-        next(err);
-    }
+    res.json({ items, page: q.page, limit: q.limit, total });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -154,18 +160,18 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
  *       404: { description: Not found }
  */
 bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-    try {
-        const id = String(req.params.id);
-        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+  try {
+    const id = String(req.params.id);
+    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
 
-        const booking = await BookingModel.findOne({
-            _id: new mongoose.Types.ObjectId(id),
-            userId: new mongoose.Types.ObjectId(req.auth!.sub),
-        }).lean();
+    const booking = await BookingModel.findOne({
+      _id: new mongoose.Types.ObjectId(id),
+      userId: new mongoose.Types.ObjectId(req.auth!.sub),
+    }).lean();
 
-        if (!booking) throw new NotFoundError("Booking not found");
-        res.json(booking);
-    } catch (err) {
-        next(err);
-    }
+    if (!booking) throw new NotFoundError("Booking not found");
+    res.json(booking);
+  } catch (err) {
+    next(err);
+  }
 });

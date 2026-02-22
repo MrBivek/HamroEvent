@@ -38,29 +38,29 @@ export const eventsRoutes = Router();
  *       201: { description: Created }
  */
 eventsRoutes.post(
-    "/",
-    requireAuth,
-    requireRole(UserRole.CUSTOMER),
-    validateBody(CreateEventSchema),
-    async (req, res, next) => {
-        try {
-            const body: any = { ...req.body };
+  "/",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  validateBody(CreateEventSchema),
+  async (req, res, next) => {
+    try {
+      const body: any = { ...req.body };
 
-            body.userId = new mongoose.Types.ObjectId(req.auth!.sub);
-            body.eventDate = new Date(body.eventDate);
+      body.userId = new mongoose.Types.ObjectId(req.auth!.sub);
+      body.eventDate = new Date(body.eventDate);
 
-            if (body.locationId && mongoose.isValidObjectId(body.locationId)) {
-                body.locationId = new mongoose.Types.ObjectId(body.locationId);
-            } else {
-                delete body.locationId;
-            }
+      if (body.locationId && mongoose.isValidObjectId(body.locationId)) {
+        body.locationId = new mongoose.Types.ObjectId(body.locationId);
+      } else {
+        delete body.locationId;
+      }
 
-            const event = await EventModel.create(body);
-            res.status(201).json(event);
-        } catch (err) {
-            next(err);
-        }
+      const event = await EventModel.create(body);
+      res.status(201).json(event);
+    } catch (err) {
+      next(err);
     }
+  },
 );
 
 /**
@@ -81,21 +81,21 @@ eventsRoutes.post(
  *       200: { description: OK }
  */
 eventsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-    try {
-        const q = EventListQuerySchema.parse(req.query);
-        const skip = (q.page - 1) * q.limit;
+  try {
+    const q = EventListQuerySchema.parse(req.query);
+    const skip = (q.page - 1) * q.limit;
 
-        const filter = { userId: new mongoose.Types.ObjectId(req.auth!.sub) };
+    const filter = { userId: new mongoose.Types.ObjectId(req.auth!.sub) };
 
-        const [items, total] = await Promise.all([
-            EventModel.find(filter).sort({ eventDate: -1 }).skip(skip).limit(q.limit).lean(),
-            EventModel.countDocuments(filter),
-        ]);
+    const [items, total] = await Promise.all([
+      EventModel.find(filter).sort({ eventDate: -1 }).skip(skip).limit(q.limit).lean(),
+      EventModel.countDocuments(filter),
+    ]);
 
-        res.json({ items, page: q.page, limit: q.limit, total });
-    } catch (err) {
-        next(err);
-    }
+    res.json({ items, page: q.page, limit: q.limit, total });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -115,20 +115,20 @@ eventsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
  *       404: { description: Not found }
  */
 eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-    try {
-        const id = String(req.params.id);
-        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+  try {
+    const id = String(req.params.id);
+    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-        const event = await EventModel.findOne({
-            _id: new mongoose.Types.ObjectId(id),
-            userId: new mongoose.Types.ObjectId(req.auth!.sub),
-        }).lean();
+    const event = await EventModel.findOne({
+      _id: new mongoose.Types.ObjectId(id),
+      userId: new mongoose.Types.ObjectId(req.auth!.sub),
+    }).lean();
 
-        if (!event) throw new NotFoundError("Event not found");
-        res.json(event);
-    } catch (err) {
-        next(err);
-    }
+    if (!event) throw new NotFoundError("Event not found");
+    res.json(event);
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -148,37 +148,40 @@ eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req
  *       404: { description: Not found }
  */
 eventsRoutes.patch(
-    "/:id",
-    requireAuth,
-    requireRole(UserRole.CUSTOMER),
-    validateBody(UpdateEventSchema),
-    async (req, res, next) => {
-        try {
-            const id = String(req.params.id);
-            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+  "/:id",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  validateBody(UpdateEventSchema),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-            const updates: any = { ...req.body };
+      const updates: any = { ...req.body };
 
-            if (updates.eventDate) updates.eventDate = new Date(updates.eventDate);
+      if (updates.eventDate) updates.eventDate = new Date(updates.eventDate);
 
-            if ("locationId" in updates) {
-                if (updates.locationId && mongoose.isValidObjectId(updates.locationId)) {
-                    updates.locationId = new mongoose.Types.ObjectId(updates.locationId);
-                } else {
-                    delete updates.locationId;
-                }
-            }
-
-            const event = await EventModel.findOneAndUpdate(
-                { _id: new mongoose.Types.ObjectId(id), userId: new mongoose.Types.ObjectId(req.auth!.sub) },
-                { $set: updates },
-                { new: true }
-            ).lean();
-
-            if (!event) throw new NotFoundError("Event not found");
-            res.json(event);
-        } catch (err) {
-            next(err);
+      if ("locationId" in updates) {
+        if (updates.locationId && mongoose.isValidObjectId(updates.locationId)) {
+          updates.locationId = new mongoose.Types.ObjectId(updates.locationId);
+        } else {
+          delete updates.locationId;
         }
+      }
+
+      const event = await EventModel.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(id),
+          userId: new mongoose.Types.ObjectId(req.auth!.sub),
+        },
+        { $set: updates },
+        { new: true },
+      ).lean();
+
+      if (!event) throw new NotFoundError("Event not found");
+      res.json(event);
+    } catch (err) {
+      next(err);
     }
+  },
 );

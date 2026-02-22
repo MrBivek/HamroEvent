@@ -3,7 +3,12 @@ import { DocumentOwnerType } from "../../common/enums.js";
 
 const DocumentSchema = new Schema(
   {
-    ownerType: { type: String, enum: Object.values(DocumentOwnerType), required: true, index: true },
+    ownerType: {
+      type: String,
+      enum: Object.values(DocumentOwnerType),
+      required: true,
+      index: true,
+    },
     ownerId: { type: Schema.Types.ObjectId, required: true, index: true },
     name: { type: String, required: true },
     type: { type: String },

@@ -9,8 +9,13 @@ export async function createAuditLog(input: {
   metadata?: Record<string, unknown>;
 }) {
   const actorUserId =
-    typeof input.actorUserId === "string" ? new mongoose.Types.ObjectId(input.actorUserId) : input.actorUserId;
-  const targetId = typeof input.targetId === "string" ? new mongoose.Types.ObjectId(input.targetId) : input.targetId;
+    typeof input.actorUserId === "string"
+      ? new mongoose.Types.ObjectId(input.actorUserId)
+      : input.actorUserId;
+  const targetId =
+    typeof input.targetId === "string"
+      ? new mongoose.Types.ObjectId(input.targetId)
+      : input.targetId;
 
   await AuditLogModel.create({
     actorUserId,

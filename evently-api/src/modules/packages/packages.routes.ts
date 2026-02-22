@@ -37,20 +37,25 @@ export const packagesRoutes = Router();
  *       404:
  *         description: Vendor profile not found
  */
-packagesRoutes.get("/me/packages", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
+packagesRoutes.get(
+  "/me/packages",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
     try {
-        const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-        if (!vendor) throw new NotFoundError("Vendor profile not found");
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        const items = await PackageModel.find({ vendorId: vendor._id })
-            .sort({ createdAt: -1 })
-            .lean();
+      const items = await PackageModel.find({ vendorId: vendor._id })
+        .sort({ createdAt: -1 })
+        .lean();
 
-        res.json({ items });
+      res.json({ items });
     } catch (err) {
-        next(err);
+      next(err);
     }
-});
+  },
+);
 
 /**
  * @openapi
@@ -86,34 +91,34 @@ packagesRoutes.get("/me/packages", requireAuth, requireRole(UserRole.VENDOR), as
  *         description: Vendor profile not found
  */
 packagesRoutes.post(
-    "/me/packages",
-    requireAuth,
-    requireRole(UserRole.VENDOR),
-    validateBody(CreatePackageSchema),
-    async (req, res, next) => {
-        try {
-            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-            if (!vendor) throw new NotFoundError("Vendor profile not found");
+  "/me/packages",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  validateBody(CreatePackageSchema),
+  async (req, res, next) => {
+    try {
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-            const body: any = { ...req.body };
+      const body: any = { ...req.body };
 
-            if (body.categoryId && mongoose.isValidObjectId(body.categoryId)) {
-                body.categoryId = new mongoose.Types.ObjectId(body.categoryId);
-            } else {
-                delete body.categoryId;
-            }
+      if (body.categoryId && mongoose.isValidObjectId(body.categoryId)) {
+        body.categoryId = new mongoose.Types.ObjectId(body.categoryId);
+      } else {
+        delete body.categoryId;
+      }
 
-            const doc = await PackageModel.create({
-                vendorId: vendor._id,
-                ...body,
-                isActive: false, // publish requires verification
-            });
+      const doc = await PackageModel.create({
+        vendorId: vendor._id,
+        ...body,
+        isActive: false, // publish requires verification
+      });
 
-            res.status(201).json(doc);
-        } catch (err) {
-            next(err);
-        }
+      res.status(201).json(doc);
+    } catch (err) {
+      next(err);
     }
+  },
 );
 
 /**
@@ -153,39 +158,39 @@ packagesRoutes.post(
  *         description: Package not found
  */
 packagesRoutes.patch(
-    "/me/packages/:id",
-    requireAuth,
-    requireRole(UserRole.VENDOR),
-    validateBody(UpdatePackageSchema),
-    async (req, res, next) => {
-        try {
-            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-            if (!vendor) throw new NotFoundError("Vendor profile not found");
+  "/me/packages/:id",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  validateBody(UpdatePackageSchema),
+  async (req, res, next) => {
+    try {
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-            const id = String(req.params.id);
-            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
-            const updates: any = { ...req.body };
+      const updates: any = { ...req.body };
 
-            if (updates.categoryId && mongoose.isValidObjectId(updates.categoryId)) {
-                updates.categoryId = new mongoose.Types.ObjectId(updates.categoryId);
-            } else if ("categoryId" in updates) {
-                delete updates.categoryId;
-            }
+      if (updates.categoryId && mongoose.isValidObjectId(updates.categoryId)) {
+        updates.categoryId = new mongoose.Types.ObjectId(updates.categoryId);
+      } else if ("categoryId" in updates) {
+        delete updates.categoryId;
+      }
 
-            const doc = await PackageModel.findOneAndUpdate(
-                { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
-                { $set: updates },
-                { new: true }
-            ).lean();
+      const doc = await PackageModel.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
+        { $set: updates },
+        { new: true },
+      ).lean();
 
-            if (!doc) throw new NotFoundError("Package not found");
+      if (!doc) throw new NotFoundError("Package not found");
 
-            res.json(doc);
-        } catch (err) {
-            next(err);
-        }
+      res.json(doc);
+    } catch (err) {
+      next(err);
     }
+  },
 );
 
 /**
@@ -209,20 +214,28 @@ packagesRoutes.patch(
  *       404:
  *         description: Package not found
  */
-packagesRoutes.delete("/me/packages/:id", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
+packagesRoutes.delete(
+  "/me/packages/:id",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
     try {
-        const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-        if (!vendor) throw new NotFoundError("Vendor profile not found");
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        const id = String(req.params.id);
-        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
-        const result = await PackageModel.deleteOne({ _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id });
-        res.json({ deleted: result.deletedCount === 1 });
+      const result = await PackageModel.deleteOne({
+        _id: new mongoose.Types.ObjectId(id),
+        vendorId: vendor._id,
+      });
+      res.json({ deleted: result.deletedCount === 1 });
     } catch (err) {
-        next(err);
+      next(err);
     }
-});
+  },
+);
 
 /**
  * @openapi
@@ -247,31 +260,36 @@ packagesRoutes.delete("/me/packages/:id", requireAuth, requireRole(UserRole.VEND
  *       404:
  *         description: Package not found
  */
-packagesRoutes.post("/me/packages/:id/publish", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
+packagesRoutes.post(
+  "/me/packages/:id/publish",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
     try {
-        const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-        if (!vendor) throw new NotFoundError("Vendor profile not found");
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        if (vendor.verifiedStatus !== VerificationStatus.APPROVED) {
-            throw new BadRequestError("Vendor must be verified before publishing packages");
-        }
+      if (vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+        throw new BadRequestError("Vendor must be verified before publishing packages");
+      }
 
-        const id = String(req.params.id);
-        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
-        const doc = await PackageModel.findOneAndUpdate(
-            { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
-            { $set: { isActive: true } },
-            { new: true }
-        ).lean();
+      const doc = await PackageModel.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
+        { $set: { isActive: true } },
+        { new: true },
+      ).lean();
 
-        if (!doc) throw new NotFoundError("Package not found");
+      if (!doc) throw new NotFoundError("Package not found");
 
-        res.json(doc);
+      res.json(doc);
     } catch (err) {
-        next(err);
+      next(err);
     }
-});
+  },
+);
 
 /**
  * @openapi
@@ -294,27 +312,32 @@ packagesRoutes.post("/me/packages/:id/publish", requireAuth, requireRole(UserRol
  *       404:
  *         description: Package not found
  */
-packagesRoutes.post("/me/packages/:id/unpublish", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
+packagesRoutes.post(
+  "/me/packages/:id/unpublish",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
     try {
-        const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-        if (!vendor) throw new NotFoundError("Vendor profile not found");
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-        const id = String(req.params.id);
-        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Package not found");
 
-        const doc = await PackageModel.findOneAndUpdate(
-            { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
-            { $set: { isActive: false } },
-            { new: true }
-        ).lean();
+      const doc = await PackageModel.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(id), vendorId: vendor._id },
+        { $set: { isActive: false } },
+        { new: true },
+      ).lean();
 
-        if (!doc) throw new NotFoundError("Package not found");
+      if (!doc) throw new NotFoundError("Package not found");
 
-        res.json(doc);
+      res.json(doc);
     } catch (err) {
-        next(err);
+      next(err);
     }
-});
+  },
+);
 
 /* -------------------------------------------------------------------------- */
 /* Public: Active Packages for a Vendor                                       */
@@ -338,19 +361,19 @@ packagesRoutes.post("/me/packages/:id/unpublish", requireAuth, requireRole(UserR
  *         description: Vendor not found
  */
 packagesRoutes.get("/:vendorId/packages", async (req, res, next) => {
-    try {
-        const vendorId = String(req.params.vendorId);
-        if (!mongoose.isValidObjectId(vendorId)) throw new NotFoundError("Vendor not found");
+  try {
+    const vendorId = String(req.params.vendorId);
+    if (!mongoose.isValidObjectId(vendorId)) throw new NotFoundError("Vendor not found");
 
-        const items = await PackageModel.find({
-            vendorId: new mongoose.Types.ObjectId(vendorId),
-            isActive: true,
-        })
-            .sort({ createdAt: -1 })
-            .lean();
+    const items = await PackageModel.find({
+      vendorId: new mongoose.Types.ObjectId(vendorId),
+      isActive: true,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
-        res.json({ items });
-    } catch (err) {
-        next(err);
-    }
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
 });

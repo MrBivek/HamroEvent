@@ -33,35 +33,46 @@ export const paymentsRoutes = Router();
  *     responses:
  *       201: { description: Created }
  */
-paymentsRoutes.post("/", requireAuth, requireRole(UserRole.CUSTOMER), validateBody(CreatePaymentSchema), async (req, res, next) => {
-  try {
-    const { bookingId, amount, provider } = req.body;
-    if (!mongoose.isValidObjectId(bookingId)) throw new BadRequestError("Invalid bookingId");
+paymentsRoutes.post(
+  "/",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  validateBody(CreatePaymentSchema),
+  async (req, res, next) => {
+    try {
+      const { bookingId, amount, provider } = req.body;
+      if (!mongoose.isValidObjectId(bookingId)) throw new BadRequestError("Invalid bookingId");
 
-    const booking = await BookingModel.findOne({ _id: bookingId, userId: req.auth!.sub }).lean();
-    if (!booking) throw new NotFoundError("Booking not found");
+      const booking = await BookingModel.findOne({ _id: bookingId, userId: req.auth!.sub }).lean();
+      if (!booking) throw new NotFoundError("Booking not found");
 
-    const allowed: BookingStatus[] = [BookingStatus.ACCEPTED, BookingStatus.CONFIRMED_PENDING_PAYMENT];
-    if (!allowed.includes(booking.status as BookingStatus)) {
-      throw new BadRequestError("Payment is only allowed for accepted bookings or accepted quotes");
+      const allowed: BookingStatus[] = [
+        BookingStatus.ACCEPTED,
+        BookingStatus.CONFIRMED_PENDING_PAYMENT,
+      ];
+      if (!allowed.includes(booking.status as BookingStatus)) {
+        throw new BadRequestError(
+          "Payment is only allowed for accepted bookings or accepted quotes",
+        );
+      }
+
+      const payment = await PaymentModel.create({
+        bookingId: new mongoose.Types.ObjectId(bookingId),
+        userId: new mongoose.Types.ObjectId(req.auth!.sub),
+        amount,
+        provider,
+        status: PaymentStatus.INITIATED,
+      });
+
+      payment.payUrl = `mock://pay/${payment._id.toString()}`;
+      await payment.save();
+
+      res.status(201).json({ paymentId: payment._id.toString(), payUrl: payment.payUrl });
+    } catch (err) {
+      next(err);
     }
-
-    const payment = await PaymentModel.create({
-      bookingId: new mongoose.Types.ObjectId(bookingId),
-      userId: new mongoose.Types.ObjectId(req.auth!.sub),
-      amount,
-      provider,
-      status: PaymentStatus.INITIATED,
-    });
-
-    payment.payUrl = `mock://pay/${payment._id.toString()}`;
-    await payment.save();
-
-    res.status(201).json({ paymentId: payment._id.toString(), payUrl: payment.payUrl });
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 /**
  * @openapi
@@ -78,45 +89,52 @@ paymentsRoutes.post("/", requireAuth, requireRole(UserRole.CUSTOMER), validateBo
  *     responses:
  *       200: { description: OK }
  */
-paymentsRoutes.post("/:id/confirm", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const id = String(req.params.id);
-    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Payment not found");
+paymentsRoutes.post(
+  "/:id/confirm",
+  requireAuth,
+  requireRole(UserRole.CUSTOMER),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Payment not found");
 
-    const payment = await PaymentModel.findOne({ _id: id, userId: req.auth!.sub });
-    if (!payment) throw new NotFoundError("Payment not found");
+      const payment = await PaymentModel.findOne({ _id: id, userId: req.auth!.sub });
+      if (!payment) throw new NotFoundError("Payment not found");
 
-    if (payment.status === PaymentStatus.PAID) throw new BadRequestError("Payment already confirmed");
-    if (payment.status === PaymentStatus.REFUNDED) throw new BadRequestError("Payment is refunded");
+      if (payment.status === PaymentStatus.PAID)
+        throw new BadRequestError("Payment already confirmed");
+      if (payment.status === PaymentStatus.REFUNDED)
+        throw new BadRequestError("Payment is refunded");
 
-    payment.status = PaymentStatus.PAID;
-    payment.paidAt = new Date();
-    await payment.save();
+      payment.status = PaymentStatus.PAID;
+      payment.paidAt = new Date();
+      await payment.save();
 
-    const booking = await BookingModel.findByIdAndUpdate(
-      payment.bookingId,
-      { $set: { status: BookingStatus.CONFIRMED } },
-      { new: true },
-    ).lean();
+      const booking = await BookingModel.findByIdAndUpdate(
+        payment.bookingId,
+        { $set: { status: BookingStatus.CONFIRMED } },
+        { new: true },
+      ).lean();
 
-    if (booking) {
-      const vendor = await VendorModel.findById(booking.vendorId).lean();
-      if (vendor) {
-        await createNotification({
-          userId: vendor.userId.toString(),
-          type: NotificationType.PAYMENT_CONFIRMED,
-          title: "Payment confirmed",
-          body: "A booking payment has been confirmed.",
-          link: "/vendor/bookings",
-        });
+      if (booking) {
+        const vendor = await VendorModel.findById(booking.vendorId).lean();
+        if (vendor) {
+          await createNotification({
+            userId: vendor.userId.toString(),
+            type: NotificationType.PAYMENT_CONFIRMED,
+            title: "Payment confirmed",
+            body: "A booking payment has been confirmed.",
+            link: "/vendor/bookings",
+          });
+        }
       }
-    }
 
-    res.json(payment.toObject());
-  } catch (err) {
-    next(err);
-  }
-});
+      res.json(payment.toObject());
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * @openapi

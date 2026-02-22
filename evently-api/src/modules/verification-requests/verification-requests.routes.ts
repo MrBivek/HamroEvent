@@ -109,26 +109,35 @@ verificationRequestsRoutes.post(
  *     responses:
  *       200: { description: OK }
  */
-verificationRequestsRoutes.get("/me/verification-requests", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
-  try {
-    const q = VerificationRequestListQuerySchema.parse(req.query);
-    const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-    if (!vendor) throw new NotFoundError("Vendor profile not found");
+verificationRequestsRoutes.get(
+  "/me/verification-requests",
+  requireAuth,
+  requireRole(UserRole.VENDOR),
+  async (req, res, next) => {
+    try {
+      const q = VerificationRequestListQuerySchema.parse(req.query);
+      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-    const skip = (q.page - 1) * q.limit;
-    const filter: Record<string, unknown> = { vendorId: vendor._id };
-    if (q.status) filter.status = q.status;
+      const skip = (q.page - 1) * q.limit;
+      const filter: Record<string, unknown> = { vendorId: vendor._id };
+      if (q.status) filter.status = q.status;
 
-    const [items, total] = await Promise.all([
-      VerificationRequestModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      VerificationRequestModel.countDocuments(filter),
-    ]);
+      const [items, total] = await Promise.all([
+        VerificationRequestModel.find(filter)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(q.limit)
+          .lean(),
+        VerificationRequestModel.countDocuments(filter),
+      ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /**
  * @openapi

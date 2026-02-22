@@ -15,6 +15,12 @@ export async function up(conn: mongoose.Connection) {
 }
 
 export async function down(conn: mongoose.Connection) {
-  await conn.collection("quotes").dropIndex("bookingId_1").catch(() => {});
-  await conn.collection("conversations").dropIndex("bookingId_1").catch(() => {});
+  await conn
+    .collection("quotes")
+    .dropIndex("bookingId_1")
+    .catch(() => {});
+  await conn
+    .collection("conversations")
+    .dropIndex("bookingId_1")
+    .catch(() => {});
 }

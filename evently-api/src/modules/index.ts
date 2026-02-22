@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authRoutes } from "./auth/auth.routes.js";
-import {adminRoutes} from "./admin/admin.routes.js";
+import { adminRoutes } from "./admin/admin.routes.js";
 import { eventsRoutes } from "./events/events.routes.js";
 import { vendorsRoutes } from "./vendors/vendors.routes.js";
 import { bookingsRoutes } from "./bookings/bookings.routes.js";

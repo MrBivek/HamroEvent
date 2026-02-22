@@ -39,72 +39,76 @@ export const adminRoutes = Router();
  *       200: { description: OK }
  */
 adminRoutes.patch(
-    "/vendors/:id/verification",
-    requireAuth,
-    requireRole(UserRole.ADMIN),
-    async (req, res, next) => {
-        try {
-            const id = String(req.params.id);
-            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Vendor not found");
+  "/vendors/:id/verification",
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  async (req, res, next) => {
+    try {
+      const id = String(req.params.id);
+      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Vendor not found");
 
-            const status = String(req.body?.status ?? "").trim();
-            const note = String(req.body?.note ?? "").trim();
+      const status = String(req.body?.status ?? "").trim();
+      const note = String(req.body?.note ?? "").trim();
 
-            if (!Object.values(VerificationStatus).includes(status as any)) {
-                throw new BadRequestError("Invalid verification status");
-            }
+      if (!Object.values(VerificationStatus).includes(status as any)) {
+        throw new BadRequestError("Invalid verification status");
+      }
 
-            const vendor = await VendorModel.findByIdAndUpdate(
-                id,
-                { $set: { verifiedStatus: status } },
-                { new: true }
-            ).lean();
+      const vendor = await VendorModel.findByIdAndUpdate(
+        id,
+        { $set: { verifiedStatus: status } },
+        { new: true },
+      ).lean();
 
-            if (!vendor) throw new NotFoundError("Vendor not found");
+      if (!vendor) throw new NotFoundError("Vendor not found");
 
-            if (status !== VerificationStatus.APPROVED) {
-                await PackageModel.updateMany({ vendorId: vendor._id }, { $set: { isActive: false } });
-            }
+      if (status !== VerificationStatus.APPROVED) {
+        await PackageModel.updateMany({ vendorId: vendor._id }, { $set: { isActive: false } });
+      }
 
-            await createAuditLog({
-                actorUserId: req.auth!.sub,
-                action: "VENDOR_VERIFICATION_DECISION",
-                targetType: "Vendor",
-                targetId: vendor._id,
-                metadata: { decision: status, note: note || null },
-            });
+      await createAuditLog({
+        actorUserId: req.auth!.sub,
+        action: "VENDOR_VERIFICATION_DECISION",
+        targetType: "Vendor",
+        targetId: vendor._id,
+        metadata: { decision: status, note: note || null },
+      });
 
-            if (status === VerificationStatus.APPROVED || status === VerificationStatus.REJECTED || status === VerificationStatus.RESUBMIT_REQUIRED) {
-                const notificationType =
-                    status === VerificationStatus.APPROVED
-                        ? NotificationType.VENDOR_APPROVED
-                        : status === VerificationStatus.REJECTED
-                          ? NotificationType.VENDOR_REJECTED
-                          : NotificationType.VENDOR_RESUBMIT;
+      if (
+        status === VerificationStatus.APPROVED ||
+        status === VerificationStatus.REJECTED ||
+        status === VerificationStatus.RESUBMIT_REQUIRED
+      ) {
+        const notificationType =
+          status === VerificationStatus.APPROVED
+            ? NotificationType.VENDOR_APPROVED
+            : status === VerificationStatus.REJECTED
+              ? NotificationType.VENDOR_REJECTED
+              : NotificationType.VENDOR_RESUBMIT;
 
-                await createNotification({
-                    userId: vendor.userId.toString(),
-                    type: notificationType,
-                    title:
-                        status === VerificationStatus.APPROVED
-                            ? "Vendor verification approved"
-                            : status === VerificationStatus.REJECTED
-                              ? "Vendor verification rejected"
-                              : "Verification resubmission required",
-                    body:
-                        status === VerificationStatus.APPROVED
-                            ? "Your verification request has been approved."
-                            : status === VerificationStatus.REJECTED
-                              ? "Your verification request was rejected."
-                              : "Please update your verification documents and resubmit.",
-                    link: "/vendor/verification",
-                });
-            }
+        await createNotification({
+          userId: vendor.userId.toString(),
+          type: notificationType,
+          title:
+            status === VerificationStatus.APPROVED
+              ? "Vendor verification approved"
+              : status === VerificationStatus.REJECTED
+                ? "Vendor verification rejected"
+                : "Verification resubmission required",
+          body:
+            status === VerificationStatus.APPROVED
+              ? "Your verification request has been approved."
+              : status === VerificationStatus.REJECTED
+                ? "Your verification request was rejected."
+                : "Please update your verification documents and resubmit.",
+          link: "/vendor/verification",
+        });
+      }
 
-            // note can be stored later in verificationRequests/auditLogs (next iteration)
-            res.json({ vendor, note: note || undefined });
-        } catch (err) {
-            next(err);
-        }
+      // note can be stored later in verificationRequests/auditLogs (next iteration)
+      res.json({ vendor, note: note || undefined });
+    } catch (err) {
+      next(err);
     }
+  },
 );

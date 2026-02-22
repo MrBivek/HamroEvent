@@ -9,7 +9,8 @@ export async function createNotification(input: {
   body: string;
   link?: string;
 }) {
-  const userId = typeof input.userId === "string" ? new mongoose.Types.ObjectId(input.userId) : input.userId;
+  const userId =
+    typeof input.userId === "string" ? new mongoose.Types.ObjectId(input.userId) : input.userId;
   await NotificationModel.create({
     userId,
     type: input.type,

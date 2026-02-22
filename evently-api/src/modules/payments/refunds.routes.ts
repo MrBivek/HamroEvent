@@ -65,7 +65,10 @@ refundsRoutes.post(
       payment.status = PaymentStatus.REFUNDED;
       await payment.save();
 
-      await BookingModel.updateOne({ _id: booking._id }, { $set: { status: BookingStatus.CANCELLED } });
+      await BookingModel.updateOne(
+        { _id: booking._id },
+        { $set: { status: BookingStatus.CANCELLED } },
+      );
 
       const refund = await RefundModel.create({
         paymentId: payment._id,
@@ -110,40 +113,45 @@ refundsRoutes.post(
  *     responses:
  *       200: { description: OK }
  */
-refundsRoutes.get("/", requireAuth, requireRole(UserRole.ADMIN, UserRole.VENDOR), async (req, res, next) => {
-  try {
-    const q = RefundListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+refundsRoutes.get(
+  "/",
+  requireAuth,
+  requireRole(UserRole.ADMIN, UserRole.VENDOR),
+  async (req, res, next) => {
+    try {
+      const q = RefundListQuerySchema.parse(req.query);
+      const skip = (q.page - 1) * q.limit;
 
-    const filter: Record<string, unknown> = {};
+      const filter: Record<string, unknown> = {};
 
-    if (q.bookingId) {
-      if (!mongoose.isValidObjectId(q.bookingId)) throw new BadRequestError("Invalid bookingId");
-      filter.bookingId = new mongoose.Types.ObjectId(q.bookingId);
-    }
-
-    if (req.auth!.role === UserRole.VENDOR) {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-      if (!vendor) throw new NotFoundError("Vendor profile not found");
-
-      const bookingIds = await BookingModel.find({ vendorId: vendor._id }, { _id: 1 }).lean();
-      const allowedIds = bookingIds.map((b) => b._id.toString());
-      if (filter.bookingId) {
-        if (!allowedIds.includes((filter.bookingId as mongoose.Types.ObjectId).toString())) {
-          filter.bookingId = { $in: [] };
-        }
-      } else {
-        filter.bookingId = { $in: bookingIds.map((b) => b._id) };
+      if (q.bookingId) {
+        if (!mongoose.isValidObjectId(q.bookingId)) throw new BadRequestError("Invalid bookingId");
+        filter.bookingId = new mongoose.Types.ObjectId(q.bookingId);
       }
+
+      if (req.auth!.role === UserRole.VENDOR) {
+        const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+        if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+        const bookingIds = await BookingModel.find({ vendorId: vendor._id }, { _id: 1 }).lean();
+        const allowedIds = bookingIds.map((b) => b._id.toString());
+        if (filter.bookingId) {
+          if (!allowedIds.includes((filter.bookingId as mongoose.Types.ObjectId).toString())) {
+            filter.bookingId = { $in: [] };
+          }
+        } else {
+          filter.bookingId = { $in: bookingIds.map((b) => b._id) };
+        }
+      }
+
+      const [items, total] = await Promise.all([
+        RefundModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+        RefundModel.countDocuments(filter),
+      ]);
+
+      res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+      next(err);
     }
-
-    const [items, total] = await Promise.all([
-      RefundModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      RefundModel.countDocuments(filter),
-    ]);
-
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);

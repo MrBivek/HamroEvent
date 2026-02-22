@@ -18,7 +18,9 @@ const AvailabilitySchema = new Schema(
 
 AvailabilitySchema.index({ vendorId: 1, date: 1 }, { unique: true });
 
-export type AvailabilityDoc = InferSchemaType<typeof AvailabilitySchema> & { _id: mongoose.Types.ObjectId };
+export type AvailabilityDoc = InferSchemaType<typeof AvailabilitySchema> & {
+  _id: mongoose.Types.ObjectId;
+};
 
 export const AvailabilityModel =
   (mongoose.models.Availability as mongoose.Model<AvailabilityDoc>) ||
