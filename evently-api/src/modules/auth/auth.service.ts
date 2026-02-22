@@ -126,9 +126,7 @@ export async function registerVendor(input: {
       userId: user._id,
       businessName: input.business.businessName,
       description: input.business.description,
-      categoryId: categoryId
-        ? new mongoose.Types.ObjectId(categoryId)
-        : undefined,
+      categoryId: categoryId ? new mongoose.Types.ObjectId(categoryId) : undefined,
       primaryLocationId: primaryLocationId
         ? new mongoose.Types.ObjectId(primaryLocationId)
         : undefined,
@@ -141,9 +139,7 @@ export async function registerVendor(input: {
         instagram: input.business.instagram,
         facebook: input.business.facebook,
       },
-      locations: primaryLocationId
-        ? [new mongoose.Types.ObjectId(primaryLocationId)]
-        : [],
+      locations: primaryLocationId ? [new mongoose.Types.ObjectId(primaryLocationId)] : [],
       portfolioMedia: storedMedia,
       pricingMin,
       pricingMax,
@@ -153,9 +149,7 @@ export async function registerVendor(input: {
       await PackageModel.insertMany(
         input.packages.map((p) => ({
           vendorId: vendor._id,
-          categoryId: categoryId
-            ? new mongoose.Types.ObjectId(categoryId)
-            : undefined,
+          categoryId: categoryId ? new mongoose.Types.ObjectId(categoryId) : undefined,
           title: p.title ?? p.name ?? "Package",
           description: p.description,
           priceMin: p.priceMin,

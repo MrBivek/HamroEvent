@@ -33,64 +33,61 @@ export const adminRoutes = Router();
  *     responses:
  *       200: { description: OK }
  */
-adminRoutes.get(
-  "/dashboard",
-  requireAuth,
-  requireRole(UserRole.ADMIN),
-  async (_req, res, next) => {
-    try {
-      const [totalUsers, activeVendors, totalBookings, avgRatingAgg] = await Promise.all([
-        UserModel.countDocuments({}),
-        VendorModel.countDocuments({ verifiedStatus: VerificationStatus.APPROVED }),
-        BookingModel.countDocuments({}),
-        VendorModel.aggregate([
-          { $match: { ratingCount: { $gt: 0 } } },
-          { $group: { _id: null, avg: { $avg: "$ratingAvg" } } },
-        ]),
-      ]);
+adminRoutes.get("/dashboard", requireAuth, requireRole(UserRole.ADMIN), async (_req, res, next) => {
+  try {
+    const [totalUsers, activeVendors, totalBookings, avgRatingAgg] = await Promise.all([
+      UserModel.countDocuments({}),
+      VendorModel.countDocuments({ verifiedStatus: VerificationStatus.APPROVED }),
+      BookingModel.countDocuments({}),
+      VendorModel.aggregate([
+        { $match: { ratingCount: { $gt: 0 } } },
+        { $group: { _id: null, avg: { $avg: "$ratingAvg" } } },
+      ]),
+    ]);
 
-      const avgRating = avgRatingAgg.length ? Number(avgRatingAgg[0].avg.toFixed(2)) : 0;
+    const avgRating = avgRatingAgg.length ? Number(avgRatingAgg[0].avg.toFixed(2)) : 0;
 
-      const pending = await VerificationRequestModel.find({ status: VerificationStatus.PENDING })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .lean();
-      const vendorIds = pending.map((p) => p.vendorId);
-      const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
-      const categoryIds = vendors
-        .map((v) => v.categoryId)
-        .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
-      const categories = categoryIds.length
-        ? await CategoryModel.find({ _id: { $in: categoryIds } }).lean()
-        : [];
-      const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
-      const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+    const pending = await VerificationRequestModel.find({ status: VerificationStatus.PENDING })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+    const vendorIds = pending.map((p) => p.vendorId);
+    const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
+    const categoryIds = vendors
+      .map((v) => v.categoryId)
+      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+    const categories = categoryIds.length
+      ? await CategoryModel.find({ _id: { $in: categoryIds } }).lean()
+      : [];
+    const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
+    const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
 
-      const pendingVendors = pending.map((req) => {
-        const vendor = vendorMap.get(req.vendorId.toString());
-        const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
-        return {
-          id: req._id.toString(),
-          name: vendor?.businessName ?? "",
-          category: category?.name ?? category?.slug ?? "",
-          date: req.submittedAt?.toISOString(),
-        };
-      });
+    const pendingVendors = pending.map((req) => {
+      const vendor = vendorMap.get(req.vendorId.toString());
+      const category = vendor?.categoryId
+        ? categoryMap.get(vendor.categoryId.toString())
+        : undefined;
+      return {
+        id: req._id.toString(),
+        name: vendor?.businessName ?? "",
+        category: category?.name ?? category?.slug ?? "",
+        date: req.submittedAt?.toISOString(),
+      };
+    });
 
-      res.json({
-        stats: {
-          totalUsers,
-          activeVendors,
-          totalBookings,
-          avgRating,
-        },
-        pendingVendors,
-      });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+    res.json({
+      stats: {
+        totalUsers,
+        activeVendors,
+        totalBookings,
+        avgRating,
+      },
+      pendingVendors,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * @openapi
@@ -389,7 +386,7 @@ adminRoutes.get("/analytics", requireAuth, requireRole(UserRole.ADMIN), async (_
     for (const booking of bookings) {
       const vendor = vendorMap.get(booking.vendorId.toString());
       const categoryName = vendor?.categoryId
-        ? categoryMap.get(vendor.categoryId.toString()) ?? "Other"
+        ? (categoryMap.get(vendor.categoryId.toString()) ?? "Other")
         : "Other";
       counts[categoryName] = (counts[categoryName] ?? 0) + 1;
     }

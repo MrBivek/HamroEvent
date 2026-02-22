@@ -155,11 +155,15 @@ eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req
 
     const bookings = await BookingModel.find({ eventId: event._id }).lean();
     const vendorIds = bookings.map((b) => b.vendorId);
-    const packageIds = bookings.map((b) => b.packageId).filter(Boolean) as mongoose.Types.ObjectId[];
+    const packageIds = bookings
+      .map((b) => b.packageId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
 
     const [vendors, packages] = await Promise.all([
       VendorModel.find({ _id: { $in: vendorIds } }).lean(),
-      packageIds.length ? PackageModel.find({ _id: { $in: packageIds } }).lean() : Promise.resolve([]),
+      packageIds.length
+        ? PackageModel.find({ _id: { $in: packageIds } }).lean()
+        : Promise.resolve([]),
     ]);
     const categoryIds = vendors
       .map((v) => v.categoryId)
@@ -271,23 +275,18 @@ eventsRoutes.patch(
  *       200: { description: OK }
  *       404: { description: Not found }
  */
-eventsRoutes.delete(
-  "/:id",
-  requireAuth,
-  requireRole(UserRole.CUSTOMER),
-  async (req, res, next) => {
-    try {
-      const id = String(req.params.id);
-      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+eventsRoutes.delete("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-      const result = await EventModel.deleteOne({
-        _id: new mongoose.Types.ObjectId(id),
-        userId: new mongoose.Types.ObjectId(req.auth!.sub),
-      });
-      if (result.deletedCount !== 1) throw new NotFoundError("Event not found");
-      res.json({ deleted: true });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+    const result = await EventModel.deleteOne({
+      _id: new mongoose.Types.ObjectId(id),
+      userId: new mongoose.Types.ObjectId(req.auth!.sub),
+    });
+    if (result.deletedCount !== 1) throw new NotFoundError("Event not found");
+    res.json({ deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});

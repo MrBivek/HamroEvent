@@ -31,6 +31,23 @@ export class VendorBookingsService {
         });
     }
     /**
+     * Get a booking (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiVendorsMeBookings1({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/vendors/me/bookings/{id}",
+            path: {
+                id: id
+            },
+            errors: {
+                404: `Not found`
+            }
+        });
+    }
+    /**
      * Accept or reject a booking request (Vendor only)
      * @returns any OK
      * @throws ApiError

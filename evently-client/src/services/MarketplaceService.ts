@@ -31,15 +31,29 @@ export class MarketplaceService {
     public static getApiVendors({
         q,
         categoryId,
+        category,
         locationId,
+        location,
         verifiedStatus,
+        verified,
+        priceMin,
+        priceMax,
+        minRating,
+        sortBy,
         page = 1,
         limit = 20
     }: {
         q?: string;
         categoryId?: string;
+        category?: string;
         locationId?: string;
+        location?: string;
         verifiedStatus?: string;
+        verified?: boolean;
+        priceMin?: number;
+        priceMax?: number;
+        minRating?: number;
+        sortBy?: string;
         page?: number;
         limit?: number;
     }): CancelablePromise<any> {
@@ -49,8 +63,15 @@ export class MarketplaceService {
             query: {
                 q: q,
                 categoryId: categoryId,
+                category: category,
                 locationId: locationId,
+                location: location,
                 verifiedStatus: verifiedStatus,
+                verified: verified,
+                priceMin: priceMin,
+                priceMax: priceMax,
+                minRating: minRating,
+                sortBy: sortBy,
                 page: page,
                 limit: limit
             }

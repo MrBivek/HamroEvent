@@ -89,7 +89,9 @@ vendorBookingsRoutes.get(
 
       const [events, packages, users] = await Promise.all([
         EventModel.find({ _id: { $in: eventIds } }).lean(),
-        packageIds.length ? PackageModel.find({ _id: { $in: packageIds } }).lean() : Promise.resolve([]),
+        packageIds.length
+          ? PackageModel.find({ _id: { $in: packageIds } }).lean()
+          : Promise.resolve([]),
         UserModel.find({ _id: { $in: userIds } }).lean(),
       ]);
 

@@ -126,8 +126,12 @@ favoritesRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req
       .map((v) => v.primaryLocationId)
       .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
     const [categories, locations, users] = await Promise.all([
-      categoryIds.length ? CategoryModel.find({ _id: { $in: categoryIds } }).lean() : Promise.resolve([]),
-      locationIds.length ? LocationModel.find({ _id: { $in: locationIds } }).lean() : Promise.resolve([]),
+      categoryIds.length
+        ? CategoryModel.find({ _id: { $in: categoryIds } }).lean()
+        : Promise.resolve([]),
+      locationIds.length
+        ? LocationModel.find({ _id: { $in: locationIds } }).lean()
+        : Promise.resolve([]),
       UserModel.find({ _id: { $in: vendors.map((v) => v.userId) } }).lean(),
     ]);
     const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));

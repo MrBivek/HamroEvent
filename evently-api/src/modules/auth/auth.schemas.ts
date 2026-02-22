@@ -2,30 +2,34 @@ import { z } from "zod";
 
 const Password = z.string().min(6);
 
-export const RegisterCustomerSchema = z.object({
-  fullName: z.string().min(2).optional(),
-  name: z.string().min(2).optional(),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  password: Password,
-  acceptTerms: z.boolean().optional(),
-}).refine((data) => Boolean(data.fullName || data.name), {
-  message: "fullName or name is required",
-  path: ["fullName"],
-});
-
-export const RegisterVendorSchema = z.object({
-  account: z.object({
+export const RegisterCustomerSchema = z
+  .object({
     fullName: z.string().min(2).optional(),
     name: z.string().min(2).optional(),
     email: z.string().email(),
     phone: z.string().optional(),
     password: Password,
     acceptTerms: z.boolean().optional(),
-  }).refine((data) => Boolean(data.fullName || data.name), {
+  })
+  .refine((data) => Boolean(data.fullName || data.name), {
     message: "fullName or name is required",
     path: ["fullName"],
-  }),
+  });
+
+export const RegisterVendorSchema = z.object({
+  account: z
+    .object({
+      fullName: z.string().min(2).optional(),
+      name: z.string().min(2).optional(),
+      email: z.string().email(),
+      phone: z.string().optional(),
+      password: Password,
+      acceptTerms: z.boolean().optional(),
+    })
+    .refine((data) => Boolean(data.fullName || data.name), {
+      message: "fullName or name is required",
+      path: ["fullName"],
+    }),
   business: z.object({
     businessName: z.string().min(2),
     categoryId: z.string().optional(),

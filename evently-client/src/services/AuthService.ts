@@ -16,6 +16,7 @@ export class AuthService {
     }: {
         requestBody: {
             fullName: string;
+            name?: string;
             email: string;
             phone?: string;
             password: string;
@@ -43,6 +44,7 @@ export class AuthService {
         requestBody: {
             account: {
                 fullName: string;
+                name?: string;
                 email: string;
                 phone?: string;
                 password: string;
@@ -51,8 +53,10 @@ export class AuthService {
             business: {
                 businessName: string;
                 categoryId?: string;
+                category?: string;
                 description?: string;
                 primaryLocationId?: string;
+                location?: string;
                 serviceAreas?: Array<string>;
                 website?: string;
                 instagram?: string;
@@ -60,11 +64,14 @@ export class AuthService {
             };
             packages?: Array<{
                 title: string;
+                name?: string;
                 description?: string;
                 priceMin?: number;
                 priceMax?: number;
                 includes?: Array<string>;
+                inclusions?: Array<string>;
             }>;
+            portfolioMedia?: Array<string>;
         };
     }): CancelablePromise<any> {
         return __request(OpenAPI, {

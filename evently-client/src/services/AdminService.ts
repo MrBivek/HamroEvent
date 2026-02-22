@@ -7,6 +7,17 @@ import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AdminService {
     /**
+     * Admin dashboard stats
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiAdminDashboard(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/dashboard"
+        });
+    }
+    /**
      * Update vendor verification status (Admin only)
      * @returns any OK
      * @throws ApiError
@@ -29,6 +40,127 @@ export class AdminService {
             },
             body: requestBody,
             mediaType: "application/json"
+        });
+    }
+    /**
+     * List users (Admin only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiAdminUsers({
+        q,
+        role,
+        status,
+        page = 1,
+        limit = 20
+    }: {
+        q?: string;
+        role?: string;
+        status?: string;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/users",
+            query: {
+                q: q,
+                role: role,
+                status: status,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+    /**
+     * Update a user (Admin only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static patchApiAdminUsers({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody: {
+            isActive?: boolean;
+            status?: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/admin/users/{id}",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json",
+            errors: {
+                404: `Not found`
+            }
+        });
+    }
+    /**
+     * List reviews (Admin only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiAdminReviews({
+        hidden,
+        page = 1,
+        limit = 20
+    }: {
+        hidden?: boolean;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/reviews",
+            query: {
+                hidden: hidden,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+    /**
+     * Analytics overview (Admin only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiAdminAnalytics(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/analytics"
+        });
+    }
+    /**
+     * Moderate a review (Admin only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static patchApiAdminReviews({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody: {
+            isHidden: boolean;
+            moderationReason?: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/admin/reviews/{id}",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json",
+            errors: {
+                404: `Not found`
+            }
         });
     }
     /**

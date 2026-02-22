@@ -62,8 +62,12 @@ adminVerificationRequestsRoutes.get(
 
       const vendorIds = items.map((item) => item.vendorId);
       const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
-      const categoryIds = vendors.map((v) => v.categoryId).filter(Boolean) as mongoose.Types.ObjectId[];
-      const locationIds = vendors.map((v) => v.primaryLocationId).filter(Boolean) as mongoose.Types.ObjectId[];
+      const categoryIds = vendors
+        .map((v) => v.categoryId)
+        .filter(Boolean) as mongoose.Types.ObjectId[];
+      const locationIds = vendors
+        .map((v) => v.primaryLocationId)
+        .filter(Boolean) as mongoose.Types.ObjectId[];
 
       const [categories, locations] = await Promise.all([
         CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
@@ -82,7 +86,9 @@ adminVerificationRequestsRoutes.get(
 
       const mapped = items.map((item) => {
         const vendor = vendorMap.get(item.vendorId.toString());
-        const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+        const category = vendor?.categoryId
+          ? categoryMap.get(vendor.categoryId.toString())
+          : undefined;
         const location = vendor?.primaryLocationId
           ? locationMap.get(vendor.primaryLocationId.toString())
           : undefined;

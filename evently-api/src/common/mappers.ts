@@ -1,4 +1,10 @@
-import { BookingStatus, NotificationType, UserRole, UserStatus, VerificationStatus } from "./enums.js";
+import {
+  BookingStatus,
+  NotificationType,
+  UserRole,
+  UserStatus,
+  VerificationStatus,
+} from "./enums.js";
 import type { UserDoc } from "../modules/auth/user.model.js";
 
 export function mapUserRoleToUi(role: UserRole) {

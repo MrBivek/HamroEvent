@@ -27,7 +27,9 @@ async function getVendorProfileForBooking(vendorId: mongoose.Types.ObjectId) {
   const [user, category, location] = await Promise.all([
     UserModel.findById(vendor.userId).lean(),
     vendor.categoryId ? CategoryModel.findById(vendor.categoryId).lean() : Promise.resolve(null),
-    vendor.primaryLocationId ? LocationModel.findById(vendor.primaryLocationId).lean() : Promise.resolve(null),
+    vendor.primaryLocationId
+      ? LocationModel.findById(vendor.primaryLocationId).lean()
+      : Promise.resolve(null),
   ]);
   return buildVendorProfile({
     vendor,
@@ -134,17 +136,15 @@ bookingsRoutes.post(
       const pkg = packageId
         ? await PackageModel.findById(new mongoose.Types.ObjectId(packageId)).lean()
         : null;
-      res
-        .status(201)
-        .json(
-          buildBookingDto({
-            booking: booking.toObject(),
-            event,
-            vendorProfile,
-            packageTitle: pkg?.title,
-            packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
-          }),
-        );
+      res.status(201).json(
+        buildBookingDto({
+          booking: booking.toObject(),
+          event,
+          vendorProfile,
+          packageTitle: pkg?.title,
+          packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        }),
+      );
     } catch (err) {
       next(err);
     }
@@ -195,14 +195,18 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
     const [events, vendors, packages] = await Promise.all([
       EventModel.find({ _id: { $in: eventIds } }).lean(),
       VendorModel.find({ _id: { $in: vendorIds } }).lean(),
-      packageIds.length ? PackageModel.find({ _id: { $in: packageIds } }).lean() : Promise.resolve([]),
+      packageIds.length
+        ? PackageModel.find({ _id: { $in: packageIds } }).lean()
+        : Promise.resolve([]),
     ]);
 
     const categoryIds = vendors
       .map((v) => v.categoryId)
       .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
     const [categories, users] = await Promise.all([
-      categoryIds.length ? CategoryModel.find({ _id: { $in: categoryIds } }).lean() : Promise.resolve([]),
+      categoryIds.length
+        ? CategoryModel.find({ _id: { $in: categoryIds } }).lean()
+        : Promise.resolve([]),
       UserModel.find({ _id: { $in: vendors.map((v) => v.userId) } }).lean(),
     ]);
 
@@ -216,7 +220,9 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
       const event = eventMap.get(booking.eventId.toString());
       const vendor = vendorMap.get(booking.vendorId.toString());
       const pkg = booking.packageId ? packageMap.get(booking.packageId.toString()) : undefined;
-      const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+      const category = vendor?.categoryId
+        ? categoryMap.get(vendor.categoryId.toString())
+        : undefined;
       const vendorUser = vendor ? userMap.get(vendor.userId.toString()) : undefined;
       const vendorProfile = vendor
         ? buildVendorProfile({
@@ -297,9 +303,7 @@ bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (r
 
     const conversation = await ConversationModel.findOne({ bookingId: booking._id }).lean();
     const messages = conversation
-      ? await MessageModel.find({ conversationId: conversation._id })
-          .sort({ createdAt: 1 })
-          .lean()
+      ? await MessageModel.find({ conversationId: conversation._id }).sort({ createdAt: 1 }).lean()
       : [];
     const messageRoleMap = new Map<string, string>();
     messageRoleMap.set(booking.userId.toString(), "customer");

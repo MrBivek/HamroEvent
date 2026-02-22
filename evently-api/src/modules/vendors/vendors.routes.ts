@@ -32,7 +32,9 @@ async function hydrateVendorProfile(
   const [user, category, location, packages, documents] = await Promise.all([
     UserModel.findById(vendor.userId).lean(),
     vendor.categoryId ? CategoryModel.findById(vendor.categoryId).lean() : Promise.resolve(null),
-    vendor.primaryLocationId ? LocationModel.findById(vendor.primaryLocationId).lean() : Promise.resolve(null),
+    vendor.primaryLocationId
+      ? LocationModel.findById(vendor.primaryLocationId).lean()
+      : Promise.resolve(null),
     PackageModel.find({ vendorId: vendor._id, ...packageFilter }).lean(),
     DocumentModel.find({ ownerType: DocumentOwnerType.VENDOR, ownerId: vendor._id }).lean(),
   ]);
@@ -430,7 +432,10 @@ vendorsRoutes.get("/:id", async (req, res, next) => {
     const vendor = await VendorModel.findById(id).lean();
     if (!vendor) throw new NotFoundError("Vendor not found");
 
-    const profile = await hydrateVendorProfile(vendor, { includePackages: true, packageFilter: { isActive: true } });
+    const profile = await hydrateVendorProfile(vendor, {
+      includePackages: true,
+      packageFilter: { isActive: true },
+    });
     res.json(profile);
   } catch (err) {
     next(err);

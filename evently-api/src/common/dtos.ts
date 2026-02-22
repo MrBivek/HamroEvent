@@ -1,4 +1,9 @@
-import { mapVerificationStatusToUi, formatEventType, mapBookingStatusToUi, toUiUser } from "./mappers.js";
+import {
+  mapVerificationStatusToUi,
+  formatEventType,
+  mapBookingStatusToUi,
+  toUiUser,
+} from "./mappers.js";
 import type { VendorDoc } from "../modules/vendors/vendor.model.js";
 import type { PackageDoc } from "../modules/packages/package.model.js";
 import type { CategoryDoc } from "../modules/categories/category.model.js";
@@ -34,7 +39,9 @@ function computePricingRange(packages: PackageDoc[], vendor: VendorDoc) {
     };
   }
   const mins = packages.map((p) => p.priceMin).filter((v): v is number => typeof v === "number");
-  const maxs = packages.map((p) => p.priceMax ?? p.priceMin).filter((v): v is number => typeof v === "number");
+  const maxs = packages
+    .map((p) => p.priceMax ?? p.priceMin)
+    .filter((v): v is number => typeof v === "number");
   return {
     min: mins.length ? Math.min(...mins) : 0,
     max: maxs.length ? Math.max(...maxs) : 0,
@@ -144,7 +151,7 @@ export function buildBookingDto({
     location: event?.locationText ?? "",
     notes: booking.customerNote,
     status: mapBookingStatusToUi(booking.status),
-    history: includeHistory ? booking.history ?? [] : [],
+    history: includeHistory ? (booking.history ?? []) : [],
     createdAt: booking.createdAt?.toISOString(),
     updatedAt: booking.updatedAt?.toISOString(),
     vendor: vendorProfile ?? undefined,

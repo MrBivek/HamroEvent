@@ -26,5 +26,6 @@ export { ReportsService } from "./services/ReportsService";
 export { ReviewsService } from "./services/ReviewsService";
 export { SupportService } from "./services/SupportService";
 export { VendorBookingsService } from "./services/VendorBookingsService";
+export { VendorPaymentsService } from "./services/VendorPaymentsService";
 export { VendorsService } from "./services/VendorsService";
 export { VendorVerificationService } from "./services/VendorVerificationService";

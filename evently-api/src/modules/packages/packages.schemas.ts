@@ -14,9 +14,12 @@ const BasePackageSchema = z.object({
   addOns: z.array(z.string()).optional(),
 });
 
-export const CreatePackageSchema = BasePackageSchema.refine((data) => Boolean(data.title || data.name), {
-  message: "title or name is required",
-  path: ["title"],
-});
+export const CreatePackageSchema = BasePackageSchema.refine(
+  (data) => Boolean(data.title || data.name),
+  {
+    message: "title or name is required",
+    path: ["title"],
+  },
+);
 
 export const UpdatePackageSchema = BasePackageSchema.partial();

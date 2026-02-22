@@ -12,8 +12,5 @@ export async function recalculateVendorPricingRange(vendorId: mongoose.Types.Obj
   const pricingMin = mins.length ? Math.min(...mins) : 0;
   const pricingMax = maxs.length ? Math.max(...maxs) : pricingMin;
 
-  await VendorModel.updateOne(
-    { _id: vendorId },
-    { $set: { pricingMin, pricingMax } },
-  );
+  await VendorModel.updateOne({ _id: vendorId }, { $set: { pricingMin, pricingMax } });
 }

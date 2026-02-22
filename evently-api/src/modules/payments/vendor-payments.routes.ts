@@ -66,7 +66,8 @@ vendorPaymentsRoutes.get(
       const lastMonth = paidPayments
         .filter((p) => p.paidAt && getMonthKey(p.paidAt) === lastMonthKey)
         .reduce((sum, p) => sum + p.amount, 0);
-      const growth = lastMonth > 0 ? Number((((thisMonth - lastMonth) / lastMonth) * 100).toFixed(1)) : 0;
+      const growth =
+        lastMonth > 0 ? Number((((thisMonth - lastMonth) / lastMonth) * 100).toFixed(1)) : 0;
 
       res.json({
         totalEarnings,
@@ -171,7 +172,9 @@ vendorPaymentsRoutes.get(
       const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const payouts = await PayoutModel.find({ vendorId: vendor._id }).sort({ createdAt: -1 }).lean();
+      const payouts = await PayoutModel.find({ vendorId: vendor._id })
+        .sort({ createdAt: -1 })
+        .lean();
 
       res.json({
         items: payouts.map((p) => ({

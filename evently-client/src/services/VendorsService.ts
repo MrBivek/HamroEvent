@@ -31,4 +31,49 @@ export class VendorsService {
             url: "/api/vendors/me"
         });
     }
+    /**
+     * Upload portfolio images (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiVendorsMePortfolio({
+        requestBody
+    }: {
+        requestBody: {
+            images: Array<{
+                /**
+                 * Base64 or data URL
+                 */
+                data: string;
+                filename?: string;
+                mimeType?: string;
+            }>;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/vendors/me/portfolio",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+    /**
+     * Remove a portfolio image (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static deleteApiVendorsMePortfolio({
+        requestBody
+    }: {
+        requestBody: {
+            url: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "DELETE",
+            url: "/api/vendors/me/portfolio",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
 }

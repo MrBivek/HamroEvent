@@ -17,7 +17,12 @@ export class DocumentsService {
         requestBody: {
             name: string;
             type?: string;
-            url: string;
+            url?: string;
+            /**
+             * Base64 or data URL
+             */
+            data?: string;
+            mimeType?: string;
         };
     }): CancelablePromise<any> {
         return __request(OpenAPI, {

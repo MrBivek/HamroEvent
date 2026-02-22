@@ -254,8 +254,9 @@ conversationsRoutes.post(
       if (convo) {
         const recipients = convo.participants.filter((id) => id.toString() !== req.auth!.sub);
         if (recipients.length > 0) {
-          const booking =
-            convo.bookingId ? await BookingModel.findById(convo.bookingId).lean() : null;
+          const booking = convo.bookingId
+            ? await BookingModel.findById(convo.bookingId).lean()
+            : null;
           let vendorUserId: string | null = null;
           if (booking) {
             const vendor = await VendorModel.findById(booking.vendorId).lean();

@@ -16,10 +16,13 @@ const BaseEventSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const CreateEventSchema = BaseEventSchema.refine((data) => Boolean(data.eventDate || data.date), {
-  message: "eventDate or date is required",
-  path: ["eventDate"],
-});
+export const CreateEventSchema = BaseEventSchema.refine(
+  (data) => Boolean(data.eventDate || data.date),
+  {
+    message: "eventDate or date is required",
+    path: ["eventDate"],
+  },
+);
 
 export const UpdateEventSchema = BaseEventSchema.partial();
 

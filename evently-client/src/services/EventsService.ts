@@ -17,13 +17,16 @@ export class EventsService {
         requestBody: {
             title: string;
             eventType: string;
-            eventDate: string;
+            eventDate?: string;
+            date?: string;
             startTime?: string;
             endTime?: string;
             locationText?: string;
+            location?: string;
             guestCount?: number;
             budgetMin?: number;
             budgetMax?: number;
+            budget?: number;
             notes?: string;
         };
     }): CancelablePromise<any> {
@@ -74,6 +77,23 @@ export class EventsService {
     public static patchApiEvents({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
+            url: "/api/events/{id}",
+            path: {
+                id: id
+            },
+            errors: {
+                404: `Not found`
+            }
+        });
+    }
+    /**
+     * Delete an event (Customer only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static deleteApiEvents({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "DELETE",
             url: "/api/events/{id}",
             path: {
                 id: id
