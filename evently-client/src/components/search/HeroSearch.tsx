@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
-import { vendorCategories, nepalLocations } from "@/data/mockData.ts";
+import { CatalogService } from "@/services/CatalogService";
+import { getCategoryMeta } from "@/data/catalog";
 
 interface HeroSearchProps {
     variant?: "hero" | "compact";
@@ -15,12 +16,37 @@ export function HeroSearch({ variant = "hero" }: HeroSearchProps) {
     const [category, setCategory] = useState<string>("");
     const [location, setLocation] = useState<string>("");
     const [keyword, setKeyword] = useState("");
+    const [categories, setCategories] = useState<any[]>([]);
+    const [locations, setLocations] = useState<any[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const [categoriesRes, locationsRes] = await Promise.all([
+                    CatalogService.getApiCategories({ active: true }),
+                    CatalogService.getApiLocations({ type: "CITY" })
+                ]);
+                if (!active) return;
+                setCategories(categoriesRes?.items || []);
+                setLocations(locationsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setCategories([]);
+                setLocations([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         const params = new URLSearchParams();
-        if (category) params.set("category", category);
-        if (location) params.set("location", location);
+        if (category && category !== "all") params.set("category", category);
+        if (location && location !== "all") params.set("location", location);
         if (keyword) params.set("q", keyword);
         navigate(`/vendors?${params.toString()}`);
     };
@@ -59,14 +85,18 @@ export function HeroSearch({ variant = "hero" }: HeroSearchProps) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Services</SelectItem>
-                                {vendorCategories.map((cat) => (
-                                    <SelectItem key={cat.value} value={cat.value}>
+                                {categories.map((cat) => {
+                                    const value = cat.slug || cat.name || cat._id;
+                                    const meta = getCategoryMeta(cat.slug || cat.name);
+                                    return (
+                                        <SelectItem key={cat._id || value} value={value}>
                                         <span className="flex items-center gap-2">
-                                            <span>{cat.icon}</span>
-                                            <span>{cat.label}</span>
+                                                <span>{meta.icon}</span>
+                                                <span>{meta.label || cat.name}</span>
                                         </span>
-                                    </SelectItem>
-                                ))}
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
                     </div>
@@ -85,9 +115,9 @@ export function HeroSearch({ variant = "hero" }: HeroSearchProps) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Locations</SelectItem>
-                                {nepalLocations.map((loc) => (
-                                    <SelectItem key={loc} value={loc}>
-                                        {loc}
+                                {locations.map((loc) => (
+                                    <SelectItem key={loc._id || loc.name} value={loc.name}>
+                                        {loc.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

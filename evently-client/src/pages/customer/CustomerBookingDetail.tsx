@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
     ArrowLeft,
@@ -17,54 +17,41 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-
-const mockBooking = {
-    id: "1",
-    vendorName: "Himalayan Moments Photography",
-    vendorImage: "https://images.unsplash.com/photo-1519741497674-611481863552?w=200",
-    vendorPhone: "+977-9812345678",
-    vendorEmail: "himalayan@photography.com",
-    category: "Photography",
-    packageName: "Premium Package",
-    eventType: "Wedding",
-    date: "2025-02-15",
-    timeRange: { start: "10:00 AM", end: "8:00 PM" },
-    location: "Grand Banquet Hall, Kathmandu",
-    notes: "Please include pre-wedding shoot at Nagarkot viewpoint.",
-    status: "confirmed",
-    price: 75000,
-    history: [
-        { status: "pending", at: "2025-01-05T10:00:00Z", note: "Booking request submitted" },
-        { status: "accepted", at: "2025-01-06T14:00:00Z", note: "Vendor accepted your booking" },
-        { status: "confirmed", at: "2025-01-07T09:00:00Z", note: "Booking confirmed with advance payment" }
-    ],
-    messages: [
-        {
-            id: "1",
-            sender: "vendor",
-            text: "Thank you for your booking request! We are excited to be part of your special day.",
-            createdAt: "2025-01-05T11:00:00Z"
-        },
-        {
-            id: "2",
-            sender: "customer",
-            text: "Great! Can we include some drone shots as well?",
-            createdAt: "2025-01-05T12:00:00Z"
-        },
-        {
-            id: "3",
-            sender: "vendor",
-            text: "Absolutely! Drone coverage is included in the Premium Package. We will capture stunning aerial shots.",
-            createdAt: "2025-01-05T14:00:00Z"
-        }
-    ]
-};
+import { BookingsService } from "@/services/BookingsService";
+import { ConversationsService } from "@/services/ConversationsService";
+import { resolveMediaUrl } from "@/lib/api";
+import type { Booking } from "@/types";
 
 export default function CustomerBookingDetail() {
     const { id } = useParams();
     const [newMessage, setNewMessage] = useState("");
-    const [messages, setMessages] = useState(mockBooking.messages);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [booking, setBooking] = useState<Booking | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            if (!id) return;
+            try {
+                const res = await BookingsService.getApiBookings1({ id });
+                if (!active) return;
+                setBooking(res || null);
+                setMessages(res?.messages || []);
+            } catch {
+                if (!active) return;
+                setBooking(null);
+                setMessages([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [id]);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -97,26 +84,64 @@ export default function CustomerBookingDetail() {
         }
     };
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !id) return;
 
-        setMessages([
-            ...messages,
-            {
-                id: String(messages.length + 1),
-                sender: "customer",
-                text: newMessage,
-                createdAt: new Date().toISOString()
-            }
-        ]);
-        setNewMessage("");
-        toast({ title: "Message sent" });
+        try {
+            const convo = await ConversationsService.postApiConversations({
+                requestBody: { bookingId: id }
+            });
+            const message = await ConversationsService.postApiConversationsMessages({
+                id: convo._id,
+                requestBody: { text: newMessage }
+            });
+            setMessages([...messages, message]);
+            setNewMessage("");
+            toast({ title: "Message sent" });
+        } catch (error: any) {
+            toast({
+                title: "Failed to send message",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
     const handleCancel = () => {
         toast({ title: "Cancellation requested", description: "The vendor will be notified." });
     };
+
+    if (isLoading) {
+        return (
+            <div className="container py-16 text-center">
+                <p className="text-muted-foreground">Loading booking...</p>
+            </div>
+        );
+    }
+
+    if (!booking) {
+        return (
+            <div className="container py-16 text-center">
+                <h1 className="text-2xl font-bold text-foreground mb-4">Booking not found</h1>
+                <Button asChild>
+                    <Link to="/customer/bookings">Back to Bookings</Link>
+                </Button>
+            </div>
+        );
+    }
+
+    const bookingAny = booking as any;
+    const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "Vendor";
+    const vendorImage = bookingAny.vendorImage || booking.vendor?.portfolioMedia?.[0];
+    const category = bookingAny.category || booking.vendor?.category || "Service";
+    const packageName = bookingAny.packageName || bookingAny.packageTitle || booking.packageId || "Package";
+    const price = bookingAny.price || 0;
+    const timeRange = bookingAny.timeRange || { start: "--", end: "--" };
+    const location = bookingAny.location || booking.location || "";
+    const vendorPhone = bookingAny.vendorPhone || booking.vendor?.contact?.phone || "";
+    const vendorEmail = bookingAny.vendorEmail || booking.vendor?.contact?.email || "";
+    const history = bookingAny.history || [];
 
     return (
         <div className="space-y-6">
@@ -137,32 +162,27 @@ export default function CustomerBookingDetail() {
                         <CardContent className="p-6">
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <img
-                                    src={mockBooking.vendorImage}
-                                    alt={mockBooking.vendorName}
+                                    src={resolveMediaUrl(vendorImage)}
+                                    alt={vendorName}
                                     className="w-24 h-24 rounded-lg object-cover"
                                 />
                                 <div className="flex-1">
                                     <div className="flex items-start justify-between gap-2 mb-2">
                                         <div>
-                                            <h1 className="text-xl font-bold text-foreground">
-                                                {mockBooking.vendorName}
-                                            </h1>
+                                            <h1 className="text-xl font-bold text-foreground">{vendorName}</h1>
                                             <p className="text-muted-foreground">
-                                                {mockBooking.category} • {mockBooking.packageName}
+                                                {category} • {packageName}
                                             </p>
                                         </div>
-                                        <Badge
-                                            variant={getStatusVariant(mockBooking.status) as any}
-                                            className="capitalize"
-                                        >
-                                            {mockBooking.status}
+                                        <Badge variant={getStatusVariant(booking.status) as any} className="capitalize">
+                                            {booking.status}
                                         </Badge>
                                     </div>
                                     <div className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
                                         <div className="flex items-center gap-2 text-muted-foreground">
                                             <Calendar className="h-4 w-4" />
                                             <span>
-                                                {new Date(mockBooking.date).toLocaleDateString("en-US", {
+                                                {new Date(booking.date).toLocaleDateString("en-US", {
                                                     weekday: "long",
                                                     month: "long",
                                                     day: "numeric",
@@ -173,43 +193,43 @@ export default function CustomerBookingDetail() {
                                         <div className="flex items-center gap-2 text-muted-foreground">
                                             <Clock className="h-4 w-4" />
                                             <span>
-                                                {mockBooking.timeRange.start} - {mockBooking.timeRange.end}
+                                                {timeRange.start} - {timeRange.end}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-muted-foreground">
                                             <MapPin className="h-4 w-4" />
-                                            <span>{mockBooking.location}</span>
+                                            <span>{location}</span>
                                         </div>
                                         <div className="font-semibold text-foreground">
-                                            NPR {mockBooking.price.toLocaleString()}
+                                            NPR {price.toLocaleString()}
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {mockBooking.notes && (
+                            {bookingAny.notes && (
                                 <div className="mt-4 pt-4 border-t border-border">
                                     <p className="text-sm text-muted-foreground">
                                         <span className="font-medium text-foreground">Notes: </span>
-                                        {mockBooking.notes}
+                                        {bookingAny.notes}
                                     </p>
                                 </div>
                             )}
 
                             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={`tel:${mockBooking.vendorPhone}`}>
+                                    <a href={`tel:${vendorPhone}`}>
                                         <Phone className="h-4 w-4 mr-1" />
                                         Call
                                     </a>
                                 </Button>
                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={`mailto:${mockBooking.vendorEmail}`}>
+                                    <a href={`mailto:${vendorEmail}`}>
                                         <Mail className="h-4 w-4 mr-1" />
                                         Email
                                     </a>
                                 </Button>
-                                {mockBooking.status !== "completed" && mockBooking.status !== "cancelled" && (
+                                {booking.status !== "completed" && booking.status !== "cancelled" && (
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -230,34 +250,37 @@ export default function CustomerBookingDetail() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4 max-h-80 overflow-y-auto mb-4">
-                                {messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        className={`flex ${msg.sender === "customer" ? "justify-end" : "justify-start"}`}
-                                    >
+                                {messages.map((msg, index) => {
+                                    const sender = msg.senderRole || msg.sender;
+                                    return (
                                         <div
-                                            className={`max-w-[80%] rounded-xl px-4 py-2 ${
-                                                msg.sender === "customer"
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted text-foreground"
-                                            }`}
+                                            key={msg._id || msg.id || index}
+                                            className={`flex ${sender === "customer" ? "justify-end" : "justify-start"}`}
                                         >
-                                            <p className="text-sm">{msg.text}</p>
-                                            <p
-                                                className={`text-xs mt-1 ${
-                                                    msg.sender === "customer"
-                                                        ? "text-primary-foreground/70"
-                                                        : "text-muted-foreground"
+                                            <div
+                                                className={`max-w-[80%] rounded-xl px-4 py-2 ${
+                                                    sender === "customer"
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted text-foreground"
                                                 }`}
                                             >
-                                                {new Date(msg.createdAt).toLocaleTimeString("en-US", {
-                                                    hour: "numeric",
-                                                    minute: "2-digit"
-                                                })}
-                                            </p>
+                                                <p className="text-sm">{msg.text}</p>
+                                                <p
+                                                    className={`text-xs mt-1 ${
+                                                        sender === "customer"
+                                                            ? "text-primary-foreground/70"
+                                                            : "text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {new Date(msg.createdAt).toLocaleTimeString("en-US", {
+                                                        hour: "numeric",
+                                                        minute: "2-digit"
+                                                    })}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <form onSubmit={handleSendMessage} className="flex gap-2">
                                 <Input
@@ -282,11 +305,11 @@ export default function CustomerBookingDetail() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {mockBooking.history.map((entry, i) => (
+                                {history.map((entry: any, i: number) => (
                                     <div key={i} className="flex gap-3">
                                         <div className="flex flex-col items-center">
                                             {getStatusIcon(entry.status)}
-                                            {i < mockBooking.history.length - 1 && (
+                                            {i < history.length - 1 && (
                                                 <div className="w-px flex-1 bg-border mt-2" />
                                             )}
                                         </div>

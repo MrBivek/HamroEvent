@@ -1,31 +1,87 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Calendar, Users, Star, Clock, BadgeCheck, AlertCircle, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
-import { mockVendors } from "@/data/mockData.ts";
+import { VendorsService } from "@/services/VendorsService";
+import { VendorBookingsService } from "@/services/VendorBookingsService";
+import type { Booking, VendorProfile } from "@/types";
 
 export default function VendorDashboard() {
     const { user } = useAuthStore();
-    const vendor = mockVendors[0]; // Mock current vendor
+    const [vendor, setVendor] = useState<VendorProfile | null>(null);
+    const [bookings, setBookings] = useState<Booking[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const [vendorRes, bookingsRes] = await Promise.all([
+                    VendorsService.getApiVendorsMe(),
+                    VendorBookingsService.getApiVendorsMeBookings({ page: 1, limit: 50 })
+                ]);
+                if (!active) return;
+                setVendor(vendorRes);
+                setBookings(bookingsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setVendor(null);
+                setBookings([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const stats = [
-        { label: "Pending Requests", value: "3", icon: Clock, color: "bg-warning-soft text-warning" },
-        { label: "Active Bookings", value: "5", icon: Calendar, color: "bg-primary-soft text-primary" },
-        { label: "Completed", value: "127", icon: Users, color: "bg-success-soft text-success" },
-        { label: "Rating", value: vendor.ratingAvg.toString(), icon: Star, color: "bg-accent-soft text-accent" }
+        {
+            label: "Pending Requests",
+            value: String(bookings.filter((b) => b.status === "pending").length),
+            icon: Clock,
+            color: "bg-warning-soft text-warning"
+        },
+        {
+            label: "Active Bookings",
+            value: String(bookings.filter((b) => ["accepted", "confirmed"].includes(b.status)).length),
+            icon: Calendar,
+            color: "bg-primary-soft text-primary"
+        },
+        {
+            label: "Completed",
+            value: String(bookings.filter((b) => b.status === "completed").length),
+            icon: Users,
+            color: "bg-success-soft text-success"
+        },
+        {
+            label: "Rating",
+            value: vendor ? vendor.ratingAvg.toString() : "0",
+            icon: Star,
+            color: "bg-accent-soft text-accent"
+        }
     ];
 
-    const pendingBookings = [
-        { id: "1", customer: "Sita Sharma", event: "Wedding", date: "2025-02-15", package: "Premium" },
-        { id: "2", customer: "Ram Thapa", event: "Birthday", date: "2025-03-20", package: "Essential" }
-    ];
+    const pendingBookings = bookings.filter((b) => b.status === "pending").slice(0, 3);
+
+    const handleDecision = async (id: string, decision: "ACCEPT" | "REJECT") => {
+        try {
+            const res = await VendorBookingsService.patchApiVendorsMeBookingsDecision({
+                id,
+                requestBody: { decision }
+            });
+            setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, status: res.status } : b)));
+        } catch {
+            // ignore for dashboard
+        }
+    };
 
     return (
         <div className="space-y-6">
             {/* Verification Banner */}
-            {vendor.verificationStatus !== "verified" && (
+            {vendor && vendor.verificationStatus !== "verified" && (
                 <Card className="bg-warning-soft border-warning/20">
                     <CardContent className="p-4 flex items-center gap-4">
                         <AlertCircle className="h-6 w-6 text-warning" />
@@ -74,29 +130,32 @@ export default function VendorDashboard() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {pendingBookings.map((booking) => (
-                            <div
-                                key={booking.id}
-                                className="flex items-center justify-between p-3 rounded-lg border border-border"
-                            >
-                                <div>
-                                    <p className="font-medium text-foreground">{booking.customer}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {booking.event} • {booking.package} Package
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(booking.date).toLocaleDateString()}
-                                    </p>
-                                    <div className="flex gap-2 mt-2">
-                                        <Button size="sm" variant="success">
-                                            Accept
-                                        </Button>
-                                        <Button size="sm" variant="outline">
-                                            Decline
-                                        </Button>
-                                    </div>
+            {pendingBookings.map((booking: any) => (
+                <div
+                    key={booking._id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border"
+                >
+                    <div>
+                        <p className="font-medium text-foreground">
+                            {booking.customer?.name || booking.customerName || "Customer"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {booking.eventType || booking.event || "Event"} •{" "}
+                            {booking.packageName || booking.packageTitle || "Package"}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                            {new Date(booking.date).toLocaleDateString()}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                            <Button size="sm" variant="success" onClick={() => handleDecision(booking._id, "ACCEPT")}>
+                                Accept
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleDecision(booking._id, "REJECT")}>
+                                Decline
+                            </Button>
+                        </div>
                                 </div>
                             </div>
                         ))}

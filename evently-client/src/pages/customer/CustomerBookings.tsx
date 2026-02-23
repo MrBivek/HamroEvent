@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Calendar, Search, Filter, MessageSquare, Clock, CheckCircle2 } from "lucide-react";
@@ -7,57 +7,35 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
-
-const mockBookings = [
-    {
-        id: "1",
-        vendorName: "Himalayan Moments Photography",
-        vendorImage: "https://images.unsplash.com/photo-1519741497674-611481863552?w=200",
-        category: "Photography",
-        eventType: "Wedding",
-        date: "2025-02-15",
-        status: "confirmed",
-        price: 75000,
-        location: "Kathmandu"
-    },
-    {
-        id: "2",
-        vendorName: "Grand Banquet Hall",
-        vendorImage: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200",
-        category: "Venue",
-        eventType: "Wedding",
-        date: "2025-02-15",
-        status: "pending",
-        price: 150000,
-        location: "Kathmandu"
-    },
-    {
-        id: "3",
-        vendorName: "Spice Route Catering",
-        vendorImage: "https://images.unsplash.com/photo-1555244162-803834f70033?w=200",
-        category: "Catering",
-        eventType: "Wedding",
-        date: "2025-02-15",
-        status: "accepted",
-        price: 100000,
-        location: "Lalitpur"
-    },
-    {
-        id: "4",
-        vendorName: "Dream Decorators",
-        vendorImage: "https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=200",
-        category: "Decoration",
-        eventType: "Birthday",
-        date: "2025-03-20",
-        status: "completed",
-        price: 50000,
-        location: "Bhaktapur"
-    }
-];
+import { BookingsService } from "@/services/BookingsService";
+import { resolveMediaUrl } from "@/lib/api";
+import type { Booking } from "@/types";
 
 export default function CustomerBookings() {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeTab, setActiveTab] = useState("all");
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await BookingsService.getApiBookings({ page: 1, limit: 50 });
+                if (!active) return;
+                setBookings(res?.items || []);
+            } catch {
+                if (!active) return;
+                setBookings([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -89,10 +67,13 @@ export default function CustomerBookings() {
         }
     };
 
-    const filteredBookings = mockBookings.filter((booking) => {
+    const filteredBookings = bookings.filter((booking) => {
+        const bookingAny = booking as any;
+        const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "";
+        const category = bookingAny.category || booking.vendor?.category || "";
         const matchesSearch =
-            booking.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.category.toLowerCase().includes(searchTerm.toLowerCase());
+            vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            category.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTab = activeTab === "all" || booking.status === activeTab;
         return matchesSearch && matchesTab;
     });
@@ -131,68 +112,76 @@ export default function CustomerBookings() {
                 <TabsContent value={activeTab} className="mt-6">
                     {filteredBookings.length > 0 ? (
                         <div className="space-y-4">
-                            {filteredBookings.map((booking, index) => (
-                                <motion.div
-                                    key={booking.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                >
-                                    <Card variant="interactive">
-                                        <CardContent className="p-4">
-                                            <div className="flex flex-col sm:flex-row gap-4">
-                                                <img
-                                                    src={booking.vendorImage}
-                                                    alt={booking.vendorName}
-                                                    className="w-full sm:w-24 h-24 rounded-lg object-cover"
-                                                />
-                                                <div className="flex-1">
-                                                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                        <div>
-                                                            <h3 className="font-semibold text-foreground">
-                                                                {booking.vendorName}
-                                                            </h3>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {booking.category}
-                                                            </p>
+                            {filteredBookings.map((booking, index) => {
+                                const bookingAny = booking as any;
+                                const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "Vendor";
+                                const vendorImage = bookingAny.vendorImage || booking.vendor?.portfolioMedia?.[0];
+                                const category = bookingAny.category || booking.vendor?.category || "Service";
+                                const price = bookingAny.price || 0;
+                                const location = bookingAny.location || booking.location || "";
+                                return (
+                                    <motion.div
+                                        key={booking._id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <Card variant="interactive">
+                                            <CardContent className="p-4">
+                                                <div className="flex flex-col sm:flex-row gap-4">
+                                                    <img
+                                                        src={resolveMediaUrl(vendorImage)}
+                                                        alt={vendorName}
+                                                        className="w-full sm:w-24 h-24 rounded-lg object-cover"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                            <div>
+                                                                <h3 className="font-semibold text-foreground">
+                                                                    {vendorName}
+                                                                </h3>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {category}
+                                                                </p>
+                                                            </div>
+                                                            <Badge
+                                                                variant={getStatusVariant(booking.status) as any}
+                                                                className="capitalize gap-1"
+                                                            >
+                                                                {getStatusIcon(booking.status)}
+                                                                {booking.status}
+                                                            </Badge>
                                                         </div>
-                                                        <Badge
-                                                            variant={getStatusVariant(booking.status) as any}
-                                                            className="capitalize gap-1"
-                                                        >
-                                                            {getStatusIcon(booking.status)}
-                                                            {booking.status}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                                                        <span className="flex items-center gap-1">
-                                                            <Calendar className="h-4 w-4" />
-                                                            {new Date(booking.date).toLocaleDateString("en-US", {
-                                                                month: "short",
-                                                                day: "numeric",
-                                                                year: "numeric"
-                                                            })}
-                                                        </span>
-                                                        <span>{booking.eventType}</span>
-                                                        <span>{booking.location}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-semibold text-foreground">
-                                                            NPR {booking.price.toLocaleString()}
-                                                        </span>
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <Link to={`/customer/bookings/${booking.id}`}>
-                                                                <MessageSquare className="h-4 w-4 mr-1" />
-                                                                View Details
-                                                            </Link>
-                                                        </Button>
+                                                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+                                                            <span className="flex items-center gap-1">
+                                                                <Calendar className="h-4 w-4" />
+                                                                {new Date(booking.date).toLocaleDateString("en-US", {
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                    year: "numeric"
+                                                                })}
+                                                            </span>
+                                                            <span>{booking.eventType}</span>
+                                                            <span>{location}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-semibold text-foreground">
+                                                                NPR {price.toLocaleString()}
+                                                            </span>
+                                                            <Button variant="outline" size="sm" asChild>
+                                                                <Link to={`/customer/bookings/${booking._id}`}>
+                                                                    <MessageSquare className="h-4 w-4 mr-1" />
+                                                                    View Details
+                                                                </Link>
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            ))}
+                                            </CardContent>
+                                        </Card>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <Card className="py-16 text-center">

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Filter, SlidersHorizontal, X, Star, BadgeCheck } from "lucide-react";
@@ -11,8 +11,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Slider } from "@/components/ui/slider.tsx";
 import { VendorCard } from "@/components/vendors/VendorCard.tsx";
-import { mockVendors, vendorCategories, nepalLocations } from "@/data/mockData.ts";
-import type { VendorCategory } from "@/types";
+import { CatalogService } from "@/services/CatalogService";
+import { MarketplaceService } from "@/services/MarketplaceService";
+import { getCategoryMeta } from "@/data/catalog";
+import type { VendorProfile } from "@/types";
 
 export default function VendorsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -26,66 +28,78 @@ export default function VendorsPage() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
     const [minRating, setMinRating] = useState<number>(0);
     const [sortBy, setSortBy] = useState<string>("rating");
+    const [vendors, setVendors] = useState<VendorProfile[]>([]);
+    const [total, setTotal] = useState<number>(0);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [locations, setLocations] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Filter vendors
-    const filteredVendors = useMemo(() => {
-        let result = [...mockVendors];
+    useEffect(() => {
+        let active = true;
+        const loadFilters = async () => {
+            try {
+                const [categoriesRes, locationsRes] = await Promise.all([
+                    CatalogService.getApiCategories({ active: true }),
+                    CatalogService.getApiLocations({ type: "CITY" })
+                ]);
+                if (!active) return;
+                setCategories(categoriesRes?.items || []);
+                setLocations(locationsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setCategories([]);
+                setLocations([]);
+            }
+        };
+        loadFilters();
+        return () => {
+            active = false;
+        };
+    }, []);
 
-        // Keyword search
-        if (keyword) {
-            const searchTerm = keyword.toLowerCase();
-            result = result.filter(
-                (v) =>
-                    v.businessName.toLowerCase().includes(searchTerm) ||
-                    v.description.toLowerCase().includes(searchTerm) ||
-                    v.category.toLowerCase().includes(searchTerm)
-            );
-        }
-
-        // Category filter
-        if (selectedCategory && selectedCategory !== "all") {
-            result = result.filter((v) => v.category === selectedCategory);
-        }
-
-        // Location filter
-        if (selectedLocation && selectedLocation !== "all") {
-            result = result.filter((v) => v.location === selectedLocation || v.serviceAreas.includes(selectedLocation));
-        }
-
-        // Verified filter
-        if (verifiedOnly) {
-            result = result.filter((v) => v.verificationStatus === "verified");
-        }
-
-        // Price range filter
-        result = result.filter((v) => v.pricingRange.min >= priceRange[0] && v.pricingRange.max <= priceRange[1]);
-
-        // Rating filter
-        if (minRating > 0) {
-            result = result.filter((v) => v.ratingAvg >= minRating);
-        }
-
-        // Sort
-        switch (sortBy) {
-            case "rating":
-                result.sort((a, b) => b.ratingAvg - a.ratingAvg);
-                break;
-            case "reviews":
-                result.sort((a, b) => b.ratingCount - a.ratingCount);
-                break;
-            case "latest":
-                result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                break;
-            case "price-low":
-                result.sort((a, b) => a.pricingRange.min - b.pricingRange.min);
-                break;
-            case "price-high":
-                result.sort((a, b) => b.pricingRange.max - a.pricingRange.max);
-                break;
-        }
-
-        return result;
-    }, [keyword, selectedCategory, selectedLocation, verifiedOnly, priceRange, minRating, sortBy]);
+    useEffect(() => {
+        let active = true;
+        const loadVendors = async () => {
+            const params: Record<string, string> = {};
+            if (keyword) params.q = keyword;
+            if (selectedCategory && selectedCategory !== "all") params.category = selectedCategory;
+            if (selectedLocation && selectedLocation !== "all") params.location = selectedLocation;
+            if (verifiedOnly) params.verified = "true";
+            if (minRating > 0) params.minRating = String(minRating);
+            if (priceRange[0] > 0) params.priceMin = String(priceRange[0]);
+            if (priceRange[1] < 500000) params.priceMax = String(priceRange[1]);
+            if (sortBy) params.sortBy = sortBy;
+            setSearchParams(params, { replace: true });
+            setIsLoading(true);
+            try {
+                const res = await MarketplaceService.getApiVendors({
+                    q: keyword || undefined,
+                    category: selectedCategory && selectedCategory !== "all" ? selectedCategory : undefined,
+                    location: selectedLocation && selectedLocation !== "all" ? selectedLocation : undefined,
+                    verified: verifiedOnly || undefined,
+                    minRating: minRating > 0 ? minRating : undefined,
+                    priceMin: priceRange[0] > 0 ? priceRange[0] : undefined,
+                    priceMax: priceRange[1] < 500000 ? priceRange[1] : undefined,
+                    sortBy: sortBy || undefined,
+                    page: 1,
+                    limit: 50
+                });
+                if (!active) return;
+                setVendors(res?.items || []);
+                setTotal(res?.total || 0);
+            } catch {
+                if (!active) return;
+                setVendors([]);
+                setTotal(0);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        loadVendors();
+        return () => {
+            active = false;
+        };
+    }, [keyword, selectedCategory, selectedLocation, verifiedOnly, priceRange, minRating, sortBy, setSearchParams]);
 
     const clearFilters = () => {
         setKeyword("");
@@ -112,17 +126,21 @@ export default function VendorsPage() {
             <div>
                 <label className="text-sm font-medium text-foreground mb-3 block">Category</label>
                 <div className="flex flex-wrap gap-2">
-                    {vendorCategories.map((cat) => (
-                        <Badge
-                            key={cat.value}
-                            variant={selectedCategory === cat.value ? "default" : "outline"}
-                            className="cursor-pointer"
-                            onClick={() => setSelectedCategory(selectedCategory === cat.value ? "" : cat.value)}
-                        >
-                            <span className="mr-1">{cat.icon}</span>
-                            {cat.label}
-                        </Badge>
-                    ))}
+                    {categories.map((cat) => {
+                        const value = cat.slug || cat.name || cat._id;
+                        const meta = getCategoryMeta(cat.slug || cat.name);
+                        return (
+                            <Badge
+                                key={cat._id || value}
+                                variant={selectedCategory === value ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => setSelectedCategory(selectedCategory === value ? "" : value)}
+                            >
+                                <span className="mr-1">{meta.icon}</span>
+                                {meta.label || cat.name}
+                            </Badge>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -135,9 +153,9 @@ export default function VendorsPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Locations</SelectItem>
-                        {nepalLocations.map((loc) => (
-                            <SelectItem key={loc} value={loc}>
-                                {loc}
+                        {locations.map((loc) => (
+                            <SelectItem key={loc._id || loc.name} value={loc.name}>
+                                {loc.name}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -289,13 +307,15 @@ export default function VendorsPage() {
 
                         {/* Results Count */}
                         <p className="text-sm text-muted-foreground mb-6">
-                            Showing {filteredVendors.length} vendor{filteredVendors.length !== 1 ? "s" : ""}
+                            {isLoading
+                                ? "Loading vendors..."
+                                : `Showing ${vendors.length} of ${total} vendor${total !== 1 ? "s" : ""}`}
                         </p>
 
                         {/* Vendor Grid */}
-                        {filteredVendors.length > 0 ? (
+                        {vendors.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {filteredVendors.map((vendor, index) => (
+                                {vendors.map((vendor, index) => (
                                     <VendorCard key={vendor._id} vendor={vendor} index={index} />
                                 ))}
                             </div>

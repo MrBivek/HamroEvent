@@ -1,8 +1,33 @@
+import { useEffect, useState } from "react";
 import { BarChart3, Download, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { AdminService } from "@/services/AdminService";
 
 export default function AdminReports() {
+    const [bookingsByCategory, setBookingsByCategory] = useState<any[]>([]);
+    const [monthlyBookings, setMonthlyBookings] = useState<number[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await AdminService.getApiAdminAnalytics();
+                if (!active) return;
+                setBookingsByCategory(res?.bookingsByCategory || []);
+                setMonthlyBookings(res?.monthlyBookings || []);
+            } catch {
+                if (!active) return;
+                setBookingsByCategory([]);
+                setMonthlyBookings([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -23,13 +48,7 @@ export default function AdminReports() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            {[
-                                { category: "Photography", count: 450, percent: 35 },
-                                { category: "Venue", count: 320, percent: 25 },
-                                { category: "Catering", count: 280, percent: 22 },
-                                { category: "Decoration", count: 150, percent: 12 },
-                                { category: "Others", count: 80, percent: 6 }
-                            ].map((item) => (
+                            {bookingsByCategory.map((item) => (
                                 <div key={item.category}>
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="text-foreground">{item.category}</span>
@@ -55,11 +74,11 @@ export default function AdminReports() {
                     </CardHeader>
                     <CardContent>
                         <div className="h-48 flex items-end justify-between gap-2">
-                            {[45, 62, 55, 78, 85, 92, 88, 95, 102, 98, 110, 125].map((val, i) => (
+                            {monthlyBookings.map((val, i) => (
                                 <div key={i} className="flex-1 flex flex-col items-center">
                                     <div
                                         className="w-full gradient-primary rounded-t"
-                                        style={{ height: `${(val / 125) * 100}%` }}
+                                        style={{ height: `${monthlyBookings.length ? (val / Math.max(...monthlyBookings, 1)) * 100 : 0}%` }}
                                     />
                                     <span className="text-xs text-muted-foreground mt-1">
                                         {["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][i]}

@@ -1,15 +1,42 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Heart, Star, MapPin, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
-import { mockVendors } from "@/data/mockData.ts";
+import { FavoritesService } from "@/services/FavoritesService";
+import { resolveMediaUrl } from "@/lib/api";
+import type { VendorProfile } from "@/types";
 
 export default function CustomerShortlist() {
-    const { shortlistedVendors, removeFromShortlist, clearShortlist } = useShortlistStore();
-    const vendors = mockVendors.filter((v) => shortlistedVendors.includes(v._id));
+    const { removeFromShortlist, loadShortlist } = useShortlistStore();
+    const [vendors, setVendors] = useState<VendorProfile[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                await loadShortlist();
+                const res = await FavoritesService.getApiFavorites({ page: 1, limit: 50 });
+                if (!active) return;
+                setVendors(res?.items || []);
+            } catch {
+                if (!active) return;
+                setVendors([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [loadShortlist]);
+
+    const handleClearAll = async () => {
+        await Promise.all(vendors.map((vendor) => removeFromShortlist(vendor._id)));
+        setVendors([]);
+    };
 
     return (
         <div className="space-y-6">
@@ -22,7 +49,7 @@ export default function CustomerShortlist() {
                     </p>
                 </div>
                 {vendors.length > 0 && (
-                    <Button variant="outline" onClick={clearShortlist}>
+                    <Button variant="outline" onClick={handleClearAll}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Clear All
                     </Button>
@@ -42,19 +69,22 @@ export default function CustomerShortlist() {
                             <Card variant="interactive" className="overflow-hidden">
                                 <div className="relative aspect-[4/3]">
                                     <img
-                                        src={vendor.portfolioMedia[0]}
+                                        src={resolveMediaUrl(vendor.portfolioMedia[0])}
                                         alt={vendor.businessName}
                                         className="w-full h-full object-cover"
                                     />
                                     <button
-                                        onClick={() => removeFromShortlist(vendor._id)}
+                                        onClick={async () => {
+                                            await removeFromShortlist(vendor._id);
+                                            setVendors((prev) => prev.filter((v) => v._id !== vendor._id));
+                                        }}
                                         className="absolute top-3 right-3 h-9 w-9 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 transition-colors"
                                     >
                                         <Heart className="h-4 w-4 fill-current" />
                                     </button>
                                     <div className="absolute bottom-3 left-3">
                                         <Badge variant="soft" className="capitalize">
-                                            {vendor.category.replace("-", " & ")}
+                                            {(vendor.category || "service").replace("-", " & ")}
                                         </Badge>
                                     </div>
                                 </div>

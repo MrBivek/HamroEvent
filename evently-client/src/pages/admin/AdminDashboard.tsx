@@ -1,33 +1,56 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Users, Store, Calendar, Star, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { AdminService } from "@/services/AdminService";
 
 export default function AdminDashboard() {
-    const stats = [
-        { label: "Total Users", value: "2,456", icon: Users, change: "+12%", color: "bg-primary-soft text-primary" },
+    const [stats, setStats] = useState<any>({
+        totalUsers: 0,
+        activeVendors: 0,
+        totalBookings: 0,
+        avgRating: 0
+    });
+    const [pendingVendors, setPendingVendors] = useState<any[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await AdminService.getApiAdminDashboard();
+                if (!active) return;
+                setStats(res?.stats || stats);
+                setPendingVendors(res?.pendingVendors || []);
+            } catch {
+                if (!active) return;
+                setPendingVendors([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const statCards = [
+        { label: "Total Users", value: stats.totalUsers, icon: Users, change: "", color: "bg-primary-soft text-primary" },
         {
             label: "Active Vendors",
-            value: "342",
+            value: stats.activeVendors,
             icon: Store,
-            change: "+8%",
+            change: "",
             color: "bg-secondary-soft text-secondary"
         },
         {
             label: "Total Bookings",
-            value: "1,893",
+            value: stats.totalBookings,
             icon: Calendar,
-            change: "+23%",
+            change: "",
             color: "bg-success-soft text-success"
         },
-        { label: "Avg Rating", value: "4.7", icon: Star, change: "+0.2", color: "bg-warning-soft text-warning" }
-    ];
-
-    const pendingVendors = [
-        { id: "1", name: "New Photo Studio", category: "Photography", date: "2025-01-05" },
-        { id: "2", name: "Royal Caterers", category: "Catering", date: "2025-01-04" },
-        { id: "3", name: "Event Planners Pro", category: "Decoration", date: "2025-01-03" }
+        { label: "Avg Rating", value: stats.avgRating, icon: Star, change: "", color: "bg-warning-soft text-warning" }
     ];
 
     return (
@@ -39,16 +62,18 @@ export default function AdminDashboard() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat) => (
+                {statCards.map((stat) => (
                     <Card key={stat.label}>
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-3">
                                 <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
                                     <stat.icon className="h-5 w-5" />
                                 </div>
-                                <Badge variant="soft-success" className="text-xs">
-                                    {stat.change}
-                                </Badge>
+                                {stat.change ? (
+                                    <Badge variant="soft-success" className="text-xs">
+                                        {stat.change}
+                                    </Badge>
+                                ) : null}
                             </div>
                             <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                             <div className="text-sm text-muted-foreground">{stat.label}</div>

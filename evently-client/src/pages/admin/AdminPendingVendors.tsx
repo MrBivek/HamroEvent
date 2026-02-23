@@ -1,46 +1,65 @@
+import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Eye, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-
-const pendingVendors = [
-    {
-        id: "1",
-        name: "New Photo Studio",
-        category: "Photography",
-        location: "Kathmandu",
-        submittedAt: "2025-01-05",
-        docs: 2
-    },
-    { id: "2", name: "Royal Caterers", category: "Catering", location: "Lalitpur", submittedAt: "2025-01-04", docs: 3 },
-    {
-        id: "3",
-        name: "Event Planners Pro",
-        category: "Decoration",
-        location: "Bhaktapur",
-        submittedAt: "2025-01-03",
-        docs: 2
-    },
-    {
-        id: "4",
-        name: "Beat Masters DJ",
-        category: "DJ & Music",
-        location: "Pokhara",
-        submittedAt: "2025-01-02",
-        docs: 1
-    }
-];
+import { AdminService } from "@/services/AdminService";
 
 export default function AdminPendingVendors() {
     const { toast } = useToast();
+    const [pendingVendors, setPendingVendors] = useState<any[]>([]);
 
-    const handleApprove = (name: string) => {
-        toast({ title: "Vendor approved", description: `${name} is now verified.` });
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await AdminService.getApiAdminVerificationRequests({ status: "PENDING", page: 1, limit: 50 });
+                if (!active) return;
+                setPendingVendors(res?.items || []);
+            } catch {
+                if (!active) return;
+                setPendingVendors([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const handleApprove = async (id: string, name: string) => {
+        try {
+            await AdminService.patchApiAdminVerificationRequestsDecision({
+                id,
+                requestBody: { decision: "APPROVE" }
+            });
+            setPendingVendors((prev) => prev.filter((v) => v._id !== id));
+            toast({ title: "Vendor approved", description: `${name} is now verified.` });
+        } catch (error: any) {
+            toast({
+                title: "Failed to approve",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
-    const handleReject = (name: string) => {
-        toast({ title: "Vendor rejected", description: `${name} has been notified.`, variant: "destructive" });
+    const handleReject = async (id: string, name: string) => {
+        try {
+            await AdminService.patchApiAdminVerificationRequestsDecision({
+                id,
+                requestBody: { decision: "REJECT" }
+            });
+            setPendingVendors((prev) => prev.filter((v) => v._id !== id));
+            toast({ title: "Vendor rejected", description: `${name} has been notified.`, variant: "destructive" });
+        } catch (error: any) {
+            toast({
+                title: "Failed to reject",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
     return (
@@ -51,22 +70,27 @@ export default function AdminPendingVendors() {
             </div>
 
             <div className="space-y-4">
-                {pendingVendors.map((vendor) => (
-                    <Card key={vendor.id}>
+                {pendingVendors.map((request) => {
+                    const vendor = request.vendor || {};
+                    const requestId = String(request._id || request.id);
+                    return (
+                    <Card key={requestId}>
                         <CardContent className="p-4">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-semibold text-foreground">{vendor.name}</h3>
-                                        <Badge variant="soft">{vendor.category}</Badge>
+                                        <h3 className="font-semibold text-foreground">{vendor.businessName || "Vendor"}</h3>
+                                        <Badge variant="soft">{vendor.category || "service"}</Badge>
                                     </div>
                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                         <span className="flex items-center gap-1">
                                             <MapPin className="h-3.5 w-3.5" />
-                                            {vendor.location}
+                                            {vendor.location || "—"}
                                         </span>
-                                        <span>Submitted: {new Date(vendor.submittedAt).toLocaleDateString()}</span>
-                                        <span>{vendor.docs} documents</span>
+                                        <span>
+                                            Submitted: {new Date(request.submittedAt || request.createdAt).toLocaleDateString()}
+                                        </span>
+                                        <span>{request.documentsCount || 0} documents</span>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -74,7 +98,11 @@ export default function AdminPendingVendors() {
                                         <Eye className="h-4 w-4 mr-1" />
                                         Review
                                     </Button>
-                                    <Button variant="success" size="sm" onClick={() => handleApprove(vendor.name)}>
+                                    <Button
+                                        variant="success"
+                                        size="sm"
+                                        onClick={() => handleApprove(requestId, vendor.businessName || "Vendor")}
+                                    >
                                         <CheckCircle2 className="h-4 w-4 mr-1" />
                                         Approve
                                     </Button>
@@ -82,7 +110,7 @@ export default function AdminPendingVendors() {
                                         variant="outline"
                                         size="sm"
                                         className="text-destructive"
-                                        onClick={() => handleReject(vendor.name)}
+                                        onClick={() => handleReject(requestId, vendor.businessName || "Vendor")}
                                     >
                                         <XCircle className="h-4 w-4 mr-1" />
                                         Reject
@@ -91,7 +119,8 @@ export default function AdminPendingVendors() {
                             </div>
                         </CardContent>
                     </Card>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

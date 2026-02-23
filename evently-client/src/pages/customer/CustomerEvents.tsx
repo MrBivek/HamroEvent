@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, Calendar, MapPin, Users, MoreVertical, Edit, Trash2 } from "lucide-react";
@@ -16,59 +16,72 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-
-const mockEvents = [
-    {
-        id: "1",
-        title: "Wedding Celebration",
-        eventType: "Wedding",
-        date: "2025-02-15",
-        location: "Kathmandu",
-        notes: "Grand wedding celebration with family and friends",
-        budget: 500000,
-        vendorCount: 5,
-        createdAt: "2024-12-01"
-    },
-    {
-        id: "2",
-        title: "Birthday Party",
-        eventType: "Birthday",
-        date: "2025-03-20",
-        location: "Lalitpur",
-        notes: "50th birthday celebration",
-        budget: 100000,
-        vendorCount: 3,
-        createdAt: "2024-12-15"
-    }
-];
+import { EventsService } from "@/services/EventsService";
+import type { Event } from "@/types";
 
 export default function CustomerEvents() {
-    const [events, setEvents] = useState(mockEvents);
+    const [events, setEvents] = useState<Event[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleCreateEvent = (e: React.FormEvent<HTMLFormElement>) => {
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await EventsService.getApiEvents({ page: 1, limit: 50 });
+                if (!active) return;
+                setEvents(res?.items || []);
+            } catch {
+                if (!active) return;
+                setEvents([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        const newEvent = {
-            id: String(events.length + 1),
-            title: formData.get("title") as string,
-            eventType: formData.get("eventType") as string,
-            date: formData.get("date") as string,
-            location: formData.get("location") as string,
-            notes: formData.get("notes") as string,
-            budget: Number(formData.get("budget")) || 0,
-            vendorCount: 0,
-            createdAt: new Date().toISOString()
+        const payload = {
+            title: String(formData.get("title") || ""),
+            eventType: String(formData.get("eventType") || ""),
+            date: String(formData.get("date") || ""),
+            location: String(formData.get("location") || ""),
+            notes: String(formData.get("notes") || ""),
+            budget: Number(formData.get("budget")) || undefined
         };
-        setEvents([newEvent, ...events]);
-        setIsDialogOpen(false);
-        toast({ title: "Event created", description: `${newEvent.title} has been created.` });
+        try {
+            const created = await EventsService.postApiEvents({ requestBody: payload });
+            setEvents([created, ...events]);
+            setIsDialogOpen(false);
+            toast({ title: "Event created", description: `${payload.title} has been created.` });
+        } catch (error: any) {
+            toast({
+                title: "Failed to create event",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
-    const handleDelete = (id: string) => {
-        setEvents(events.filter((e) => e.id !== id));
-        toast({ title: "Event deleted", description: "The event has been removed." });
+    const handleDelete = async (id: string) => {
+        try {
+            await EventsService.deleteApiEvents({ id });
+            setEvents(events.filter((e) => e._id !== id));
+            toast({ title: "Event deleted", description: "The event has been removed." });
+        } catch (error: any) {
+            toast({
+                title: "Failed to delete event",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
     return (
@@ -137,7 +150,7 @@ export default function CustomerEvents() {
                 <div className="grid md:grid-cols-2 gap-4">
                     {events.map((event, index) => (
                         <motion.div
-                            key={event.id}
+                            key={event._id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
@@ -157,19 +170,19 @@ export default function CustomerEvents() {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link to={`/customer/events/${event.id}`}>
-                                                        <Edit className="h-4 w-4 mr-2" /> Edit
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDelete(event.id)}
-                                                    className="text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={`/customer/events/${event._id}`}>
+                                                            <Edit className="h-4 w-4 mr-2" /> Edit
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDelete(event._id)}
+                                                        className="text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
 
@@ -191,7 +204,7 @@ export default function CustomerEvents() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Users className="h-4 w-4" />
-                                            <span>{event.vendorCount} vendors booked</span>
+                                            <span>{event.bookings?.length || 0} vendors booked</span>
                                         </div>
                                     </div>
 
@@ -205,7 +218,7 @@ export default function CustomerEvents() {
                                     )}
 
                                     <Button variant="outline" className="w-full mt-4" asChild>
-                                        <Link to={`/customer/events/${event.id}`}>View Details</Link>
+                                        <Link to={`/customer/events/${event._id}`}>View Details</Link>
                                     </Button>
                                 </CardContent>
                             </Card>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
 import type { VendorProfile } from "@/types";
 import { Heart } from "lucide-react";
+import { resolveMediaUrl } from "@/lib/api";
 
 interface VendorCardProps {
     vendor: VendorProfile;
@@ -22,13 +23,13 @@ export function VendorCard({ vendor, index = 0 }: VendorCardProps) {
         return `NPR ${min.toLocaleString()} - ${max.toLocaleString()}`;
     };
 
-    const handleShortlistClick = (e: React.MouseEvent) => {
+    const handleShortlistClick = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (shortlisted) {
-            removeFromShortlist(vendor._id);
+            await removeFromShortlist(vendor._id);
         } else {
-            addToShortlist(vendor._id);
+            await addToShortlist(vendor._id);
         }
     };
 
@@ -48,10 +49,7 @@ export function VendorCard({ vendor, index = 0 }: VendorCardProps) {
                     {/* Image */}
                     <div className="relative aspect-[4/3] overflow-hidden">
                         <motion.img
-                            src={
-                                vendor.portfolioMedia[0] ||
-                                "https://images.unsplash.com/photo-1519741497674-611481863552?w=800"
-                            }
+                            src={resolveMediaUrl(vendor.portfolioMedia[0])}
                             alt={vendor.businessName}
                             className="w-full h-full object-cover"
                             whileHover={{ scale: 1.05 }}
@@ -93,7 +91,7 @@ export function VendorCard({ vendor, index = 0 }: VendorCardProps) {
                         {/* Category Badge */}
                         <div className="absolute bottom-3 left-3">
                             <Badge variant="soft" className="capitalize backdrop-blur-sm">
-                                {vendor.category.replace("-", " & ")}
+                                {(vendor.category || "service").replace("-", " & ")}
                             </Badge>
                         </div>
                     </div>

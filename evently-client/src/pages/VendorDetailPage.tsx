@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -22,14 +23,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.t
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
-import { mockVendors, mockReviews, vendorCategories } from "@/data/mockData.ts";
+import { MarketplaceService } from "@/services/MarketplaceService";
+import { ReviewsService } from "@/services/ReviewsService";
+import { getCategoryMeta } from "@/data/catalog";
+import { resolveMediaUrl } from "@/lib/api";
+import type { Review, VendorProfile } from "@/types";
 
 export default function VendorDetailPage() {
     const { id } = useParams();
-    const vendor = mockVendors.find((v) => v._id === id);
     const { isShortlisted, addToShortlist, removeFromShortlist } = useShortlistStore();
+    const [vendor, setVendor] = useState<VendorProfile | null>(null);
+    const [vendorReviews, setVendorReviews] = useState<Review[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    if (!vendor) {
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            if (!id) {
+                setIsLoading(false);
+                return;
+            }
+            try {
+                const [vendorRes, reviewsRes] = await Promise.all([
+                    MarketplaceService.getApiVendors1({ id }),
+                    ReviewsService.getApiReviews({ vendorId: id, limit: 50 })
+                ]);
+                if (!active) return;
+                setVendor(vendorRes || null);
+                setVendorReviews(reviewsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setVendor(null);
+                setVendorReviews([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    if (isLoading) {
+        return (
+            <div className="container py-16 text-center">
+                <p className="text-muted-foreground">Loading vendor...</p>
+            </div>
+        );
+    }
+
+    if (!vendor && !isLoading) {
         return (
             <div className="container py-16 text-center">
                 <h1 className="text-2xl font-bold text-foreground mb-4">Vendor not found</h1>
@@ -41,14 +85,17 @@ export default function VendorDetailPage() {
     }
 
     const shortlisted = isShortlisted(vendor._id);
-    const categoryInfo = vendorCategories.find((c) => c.value === vendor.category);
-    const vendorReviews = mockReviews.filter((r) => r.vendorId === vendor._id);
+    const categoryInfo = getCategoryMeta(vendor.category);
+    const galleryImages =
+        vendor.portfolioMedia && vendor.portfolioMedia.length > 0
+            ? vendor.portfolioMedia
+            : [resolveMediaUrl(null)];
 
-    const handleShortlist = () => {
+    const handleShortlist = async () => {
         if (shortlisted) {
-            removeFromShortlist(vendor._id);
+            await removeFromShortlist(vendor._id);
         } else {
-            addToShortlist(vendor._id);
+            await addToShortlist(vendor._id);
         }
     };
 
@@ -57,10 +104,10 @@ export default function VendorDetailPage() {
             {/* Hero Image Gallery */}
             <div className="relative h-64 md:h-96 bg-muted overflow-hidden">
                 <div className="absolute inset-0 grid grid-cols-4 gap-1">
-                    {vendor.portfolioMedia.slice(0, 4).map((img, i) => (
+                    {galleryImages.slice(0, 4).map((img, i) => (
                         <div key={i} className={`relative ${i === 0 ? "col-span-2 row-span-2" : ""}`}>
                             <img
-                                src={img}
+                                src={resolveMediaUrl(img)}
                                 alt={`${vendor.businessName} portfolio ${i + 1}`}
                                 className="w-full h-full object-cover"
                             />
@@ -102,7 +149,7 @@ export default function VendorDetailPage() {
                         <div>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <Badge variant="soft-secondary" className="capitalize">
-                                    {categoryInfo?.icon} {vendor.category.replace("-", " & ")}
+                                    {categoryInfo?.icon} {(vendor.category || "service").replace("-", " & ")}
                                 </Badge>
                                 {vendor.verificationStatus === "verified" && (
                                     <Badge variant="verified" className="gap-1">
@@ -240,7 +287,7 @@ export default function VendorDetailPage() {
                                             className="aspect-square rounded-xl overflow-hidden"
                                         >
                                             <img
-                                                src={img}
+                                                src={resolveMediaUrl(img)}
                                                 alt={`Portfolio ${i + 1}`}
                                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                             />
@@ -257,11 +304,7 @@ export default function VendorDetailPage() {
                                                 <CardContent className="p-6">
                                                     <div className="flex items-start gap-4">
                                                         <img
-                                                            src={
-                                                                review.customer?.name
-                                                                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(review.customer.name)}&background=random`
-                                                                    : ""
-                                                            }
+                                                            src={resolveMediaUrl(null)}
                                                             alt=""
                                                             className="h-10 w-10 rounded-full"
                                                         />

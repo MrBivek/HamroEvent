@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, FolderOpen, Heart, Clock, ArrowRight, Star, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -6,26 +7,45 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
-import { mockVendors } from "@/data/mockData.ts";
-
-const upcomingBookings = [
-    {
-        id: "1",
-        vendorName: "Himalayan Moments Photography",
-        date: "2025-02-15",
-        status: "confirmed",
-        category: "Photography"
-    },
-    { id: "2", vendorName: "Grand Banquet Hall", date: "2025-02-15", status: "pending", category: "Venue" },
-    { id: "3", vendorName: "Spice Route Catering", date: "2025-02-15", status: "accepted", category: "Catering" }
-];
-
-const recentEvents = [{ id: "1", title: "Wedding Celebration", date: "2025-02-15", vendorCount: 5 }];
+import { BookingsService } from "@/services/BookingsService";
+import { EventsService } from "@/services/EventsService";
+import { FavoritesService } from "@/services/FavoritesService";
+import { resolveMediaUrl } from "@/lib/api";
+import type { Booking, Event, VendorProfile } from "@/types";
 
 export default function CustomerDashboard() {
     const { user } = useAuthStore();
-    const { shortlistedVendors } = useShortlistStore();
-    const shortlistedVendorProfiles = mockVendors.filter((v) => shortlistedVendors.includes(v._id));
+    const { shortlistedVendors, loadShortlist } = useShortlistStore();
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
+    const [shortlistedVendorProfiles, setShortlistedVendorProfiles] = useState<VendorProfile[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                await loadShortlist();
+                const [bookingRes, eventRes, favoritesRes] = await Promise.all([
+                    BookingsService.getApiBookings({ page: 1, limit: 20 }),
+                    EventsService.getApiEvents({ page: 1, limit: 10 }),
+                    FavoritesService.getApiFavorites({ page: 1, limit: 20 })
+                ]);
+                if (!active) return;
+                setBookings(bookingRes?.items || []);
+                setEvents(eventRes?.items || []);
+                setShortlistedVendorProfiles(favoritesRes?.items || []);
+            } catch {
+                if (!active) return;
+                setBookings([]);
+                setEvents([]);
+                setShortlistedVendorProfiles([]);
+            }
+        };
+        if (user) load();
+        return () => {
+            active = false;
+        };
+    }, [user, loadShortlist]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -40,6 +60,24 @@ export default function CustomerDashboard() {
         }
     };
 
+    const upcomingBookings = bookings.slice(0, 3).map((booking) => {
+        const bookingAny = booking as any;
+        return {
+            id: booking._id,
+            vendorName: booking.vendor?.businessName || bookingAny.vendorName || "Vendor",
+            date: booking.date,
+            status: booking.status,
+            category: booking.vendor?.category || bookingAny.category || "Service"
+        };
+    });
+
+    const recentEvents = events.slice(0, 3).map((event) => ({
+        id: event._id,
+        title: event.title,
+        date: event.date,
+        vendorCount: event.bookings?.length || 0
+    }));
+
     return (
         <div className="space-y-6">
             {/* Welcome Header */}
@@ -53,9 +91,19 @@ export default function CustomerDashboard() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Active Events", value: "1", icon: FolderOpen, color: "bg-primary-soft text-primary" },
-                    { label: "Pending Bookings", value: "2", icon: Clock, color: "bg-warning-soft text-warning" },
-                    { label: "Confirmed", value: "1", icon: Calendar, color: "bg-success-soft text-success" },
+                    { label: "Active Events", value: String(events.length), icon: FolderOpen, color: "bg-primary-soft text-primary" },
+                    {
+                        label: "Pending Bookings",
+                        value: String(bookings.filter((b) => b.status === "pending").length),
+                        icon: Clock,
+                        color: "bg-warning-soft text-warning"
+                    },
+                    {
+                        label: "Confirmed",
+                        value: String(bookings.filter((b) => b.status === "confirmed").length),
+                        icon: Calendar,
+                        color: "bg-success-soft text-success"
+                    },
                     {
                         label: "Shortlisted",
                         value: shortlistedVendors.length.toString(),
@@ -188,7 +236,7 @@ export default function CustomerDashboard() {
                                     className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                                 >
                                     <img
-                                        src={vendor.portfolioMedia[0]}
+                                        src={resolveMediaUrl(vendor.portfolioMedia[0])}
                                         alt={vendor.businessName}
                                         className="h-12 w-12 rounded-lg object-cover"
                                     />

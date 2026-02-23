@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,7 +33,9 @@ import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-import { vendorCategories, nepalLocations } from "@/data/mockData.ts";
+import { CatalogService } from "@/services/CatalogService";
+import { AuthService } from "@/services/AuthService";
+import { fileToBase64 } from "@/lib/api";
 
 const steps = [
     { id: 1, title: "Account", icon: User, description: "Create your account" },
@@ -54,8 +56,11 @@ export default function VendorRegisterPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [showPassword, setShowPassword] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
+    const [categories, setCategories] = useState<any[]>([]);
+    const [locations, setLocations] = useState<any[]>([]);
 
     // Form states
     const [accountData, setAccountData] = useState({
@@ -82,6 +87,30 @@ export default function VendorRegisterPage() {
     ]);
 
     const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
+    const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const [categoriesRes, locationsRes] = await Promise.all([
+                    CatalogService.getApiCategories({ active: true }),
+                    CatalogService.getApiLocations({ type: "CITY" })
+                ]);
+                if (!active) return;
+                setCategories(categoriesRes?.items || []);
+                setLocations(locationsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setCategories([]);
+                setLocations([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const handleNext = () => {
         if (currentStep < 4) {
@@ -97,16 +126,68 @@ export default function VendorRegisterPage() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        if (accountData.password !== accountData.confirmPassword) {
+            toast({ title: "Passwords do not match", variant: "destructive" });
+            return;
+        }
         if (!agreedToTerms) {
             toast({ title: "Please agree to the terms", variant: "destructive" });
             return;
         }
-        toast({
-            title: "Registration submitted!",
-            description: "Your vendor account is pending verification."
-        });
-        navigate("/login");
+        setIsSubmitting(true);
+        try {
+            const portfolioMedia =
+                portfolioFiles.length > 0
+                    ? await Promise.all(portfolioFiles.map((file) => fileToBase64(file, 10)))
+                    : [];
+            const packagesPayload = packages
+                .filter((pkg) => pkg.name.trim())
+                .map((pkg) => ({
+                    title: pkg.name,
+                    description: pkg.description || undefined,
+                    priceMin: pkg.priceMin ? Number(pkg.priceMin) : undefined,
+                    priceMax: pkg.priceMax ? Number(pkg.priceMax) : undefined,
+                    includes: pkg.inclusions.filter(Boolean)
+                }));
+
+            await AuthService.postApiAuthRegisterVendor({
+                requestBody: {
+                    account: {
+                        fullName: accountData.name,
+                        email: accountData.email,
+                        phone: accountData.phone || undefined,
+                        password: accountData.password,
+                        acceptTerms: agreedToTerms
+                    },
+                    business: {
+                        businessName: businessData.businessName,
+                        category: businessData.category || undefined,
+                        description: businessData.description || undefined,
+                        location: businessData.location || undefined,
+                        serviceAreas: businessData.serviceAreas,
+                        website: businessData.website || undefined,
+                        instagram: businessData.instagram || undefined,
+                        facebook: businessData.facebook || undefined
+                    },
+                    packages: packagesPayload.length > 0 ? packagesPayload : undefined,
+                    portfolioMedia: portfolioMedia.length > 0 ? portfolioMedia : undefined
+                }
+            });
+            toast({
+                title: "Registration submitted!",
+                description: "Your vendor account is pending verification."
+            });
+            navigate("/login");
+        } catch (error: any) {
+            toast({
+                title: "Registration failed",
+                description: error?.body?.message || "Unable to register. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const addPackage = () => {
@@ -148,6 +229,22 @@ export default function VendorRegisterPage() {
                 ? prev.serviceAreas.filter((a) => a !== area)
                 : [...prev.serviceAreas, area]
         }));
+    };
+
+    const handlePortfolioSelect = async (files: FileList | null) => {
+        if (!files) return;
+        const selected = Array.from(files).slice(0, 10);
+        setPortfolioFiles(selected);
+        try {
+            const previews = await Promise.all(selected.map((file) => fileToBase64(file, 10)));
+            setPortfolioImages(previews);
+        } catch (error: any) {
+            toast({
+                title: "Upload failed",
+                description: error?.message || "Unable to read files",
+                variant: "destructive"
+            });
+        }
     };
 
     const slideVariants = {
@@ -393,14 +490,14 @@ export default function VendorRegisterPage() {
                                                         <SelectValue placeholder="Select category" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {vendorCategories.map((cat) => (
-                                                            <SelectItem key={cat.value} value={cat.value}>
-                                                                <span className="flex items-center gap-2">
-                                                                    <span>{cat.icon}</span>
-                                                                    <span>{cat.label}</span>
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
+                                                        {categories.map((cat) => {
+                                                            const value = cat.slug || cat.name || cat._id;
+                                                            return (
+                                                                <SelectItem key={cat._id || value} value={value}>
+                                                                    {cat.name}
+                                                                </SelectItem>
+                                                            );
+                                                        })}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -433,9 +530,9 @@ export default function VendorRegisterPage() {
                                                         <SelectValue placeholder="Select location" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {nepalLocations.map((loc) => (
-                                                            <SelectItem key={loc} value={loc}>
-                                                                {loc}
+                                                        {locations.map((loc) => (
+                                                            <SelectItem key={loc._id || loc.name} value={loc.name}>
+                                                                {loc.name}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -445,18 +542,18 @@ export default function VendorRegisterPage() {
                                             <div className="space-y-2">
                                                 <Label>Service Areas</Label>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {nepalLocations.map((area) => (
+                                                    {locations.map((area) => (
                                                         <Badge
-                                                            key={area}
+                                                            key={area._id || area.name}
                                                             variant={
-                                                                businessData.serviceAreas.includes(area)
+                                                                businessData.serviceAreas.includes(area.name)
                                                                     ? "default"
                                                                     : "outline"
                                                             }
                                                             className="cursor-pointer transition-all hover:scale-105"
-                                                            onClick={() => toggleServiceArea(area)}
+                                                            onClick={() => toggleServiceArea(area.name)}
                                                         >
-                                                            {area}
+                                                            {area.name}
                                                         </Badge>
                                                     ))}
                                                 </div>
@@ -686,7 +783,7 @@ export default function VendorRegisterPage() {
                                             {/* Portfolio Upload */}
                                             <div className="space-y-2">
                                                 <Label>Portfolio Images</Label>
-                                                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer group">
+                                                <div className="relative border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer group">
                                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                                         <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4 group-hover:text-primary transition-colors" />
                                                         <p className="font-medium text-foreground mb-1">
@@ -696,11 +793,33 @@ export default function VendorRegisterPage() {
                                                             Upload up to 10 images (JPG, PNG)
                                                         </p>
                                                     </motion.div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        onChange={(e) => handlePortfolioSelect(e.target.files)}
+                                                    />
                                                 </div>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Note: Portfolio images will be uploaded after registration via your
-                                                    dashboard.
+                                                    Images are uploaded with your registration.
                                                 </p>
+                                                {portfolioImages.length > 0 && (
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {portfolioImages.map((img, index) => (
+                                                            <div
+                                                                key={index}
+                                                                className="aspect-square rounded-lg overflow-hidden border border-border"
+                                                            >
+                                                                <img
+                                                                    src={img}
+                                                                    alt={`Portfolio ${index + 1}`}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Verification Documents */}
@@ -776,11 +895,11 @@ export default function VendorRegisterPage() {
                                 Back
                             </Button>
 
-                            <Button variant="hero" onClick={handleNext} className="gap-2">
+                            <Button variant="hero" onClick={handleNext} className="gap-2" disabled={isSubmitting}>
                                 {currentStep === 4 ? (
                                     <>
                                         <Check className="h-4 w-4" />
-                                        Submit Application
+                                        {isSubmitting ? "Submitting..." : "Submit Application"}
                                     </>
                                 ) : (
                                     <>

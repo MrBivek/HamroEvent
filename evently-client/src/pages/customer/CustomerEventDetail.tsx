@@ -1,36 +1,56 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, DollarSign, Users, Plus, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-
-const mockEvent = {
-    id: "1",
-    title: "Wedding Celebration",
-    eventType: "Wedding",
-    date: "2025-02-15",
-    location: "Kathmandu",
-    notes: "Grand wedding celebration with family and friends. Expecting around 300 guests.",
-    budget: 500000,
-    createdAt: "2024-12-01",
-    bookings: [
-        {
-            id: "1",
-            vendorName: "Himalayan Moments Photography",
-            category: "Photography",
-            status: "confirmed",
-            price: 75000
-        },
-        { id: "2", vendorName: "Grand Banquet Hall", category: "Venue", status: "pending", price: 150000 },
-        { id: "3", vendorName: "Spice Route Catering", category: "Catering", status: "accepted", price: 100000 },
-        { id: "4", vendorName: "Dream Decorators", category: "Decoration", status: "confirmed", price: 50000 },
-        { id: "5", vendorName: "Glow Beauty Studio", category: "Makeup", status: "confirmed", price: 45000 }
-    ]
-};
+import { EventsService } from "@/services/EventsService";
+import type { Event } from "@/types";
 
 export default function CustomerEventDetail() {
     const { id } = useParams();
-    const event = mockEvent; // In real app, fetch by id
+    const [event, setEvent] = useState<Event | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            if (!id) return;
+            try {
+                const res = await EventsService.getApiEvents1({ id });
+                if (!active) return;
+                setEvent(res || null);
+            } catch {
+                if (!active) return;
+                setEvent(null);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    if (isLoading) {
+        return (
+            <div className="container py-16 text-center">
+                <p className="text-muted-foreground">Loading event...</p>
+            </div>
+        );
+    }
+
+    if (!event) {
+        return (
+            <div className="container py-16 text-center">
+                <h1 className="text-2xl font-bold text-foreground mb-4">Event not found</h1>
+                <Button asChild>
+                    <Link to="/customer/events">Back to Events</Link>
+                </Button>
+            </div>
+        );
+    }
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -45,8 +65,8 @@ export default function CustomerEventDetail() {
         }
     };
 
-    const totalSpent = event.bookings.reduce((sum, b) => sum + b.price, 0);
-    const remainingBudget = event.budget - totalSpent;
+    const totalSpent = (event.bookings || []).reduce((sum: number, b: any) => sum + (b.price || 0), 0);
+    const remainingBudget = (event.budget || 0) - totalSpent;
 
     return (
         <div className="space-y-6">
@@ -101,7 +121,7 @@ export default function CustomerEventDetail() {
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Budget</p>
                                 <p className="text-lg font-semibold text-foreground">
-                                    NPR {event.budget.toLocaleString()}
+                                    NPR {(event.budget || 0).toLocaleString()}
                                 </p>
                             </div>
                         </div>
@@ -139,7 +159,7 @@ export default function CustomerEventDetail() {
                                 <p
                                     className={`text-lg font-semibold ${remainingBudget >= 0 ? "text-success" : "text-destructive"}`}
                                 >
-                                    NPR {remainingBudget.toLocaleString()}
+                                        NPR {remainingBudget.toLocaleString()}
                                 </p>
                             </div>
                         </div>
@@ -164,12 +184,12 @@ export default function CustomerEventDetail() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Users className="h-5 w-5" />
-                        Linked Vendors ({event.bookings.length})
+                        Linked Vendors ({event.bookings?.length || 0})
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {event.bookings.map((booking) => (
+                        {(event.bookings || []).map((booking: any) => (
                             <div
                                 key={booking.id}
                                 className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
@@ -185,7 +205,7 @@ export default function CustomerEventDetail() {
                                 </div>
                                 <div className="text-right">
                                     <p className="font-semibold text-foreground">
-                                        NPR {booking.price.toLocaleString()}
+                                        NPR {(booking.price || 0).toLocaleString()}
                                     </p>
                                     <div className="flex gap-2 mt-2">
                                         <Button variant="ghost" size="sm" asChild>

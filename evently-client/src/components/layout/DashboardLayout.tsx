@@ -42,7 +42,7 @@ const customerNav: NavItem[] = [
     { href: "/customer/events", label: "My Events", icon: FolderOpen },
     { href: "/customer/bookings", label: "Bookings", icon: Calendar },
     { href: "/customer/shortlist", label: "Shortlist", icon: Heart },
-    { href: "/customer/notifications", label: "Notifications", icon: Bell, badge: 3 },
+    { href: "/customer/notifications", label: "Notifications", icon: Bell },
     { href: "/customer/profile", label: "Profile", icon: User }
 ];
 
@@ -50,15 +50,15 @@ const vendorNav: NavItem[] = [
     { href: "/vendor/dashboard", label: "Dashboard", icon: Home },
     { href: "/vendor/profile", label: "Business Profile", icon: Briefcase },
     { href: "/vendor/availability", label: "Availability", icon: Clock },
-    { href: "/vendor/bookings", label: "Bookings", icon: Calendar, badge: 2 },
+    { href: "/vendor/bookings", label: "Bookings", icon: Calendar },
     { href: "/vendor/payments", label: "Payments", icon: CreditCard },
     { href: "/vendor/verification", label: "Verification", icon: BadgeCheck },
-    { href: "/vendor/notifications", label: "Notifications", icon: Bell, badge: 5 }
+    { href: "/vendor/notifications", label: "Notifications", icon: Bell }
 ];
 
 const adminNav: NavItem[] = [
     { href: "/admin/dashboard", label: "Dashboard", icon: Home },
-    { href: "/admin/vendors/pending", label: "Pending Vendors", icon: FileCheck, badge: 4 },
+    { href: "/admin/vendors/pending", label: "Pending Vendors", icon: FileCheck },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/reviews", label: "Reviews", icon: Star },
     { href: "/admin/reports", label: "Reports", icon: BarChart3 },

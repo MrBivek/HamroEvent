@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Plus, X, Clock, MapPin, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -18,63 +18,93 @@ import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { motion, AnimatePresence } from "framer-motion";
-
-const mockBookings = [
-    {
-        id: "1",
-        customer: "Sita Sharma",
-        event: "Wedding",
-        date: new Date(2025, 1, 15),
-        time: "10:00 AM - 6:00 PM",
-        location: "Kathmandu",
-        status: "confirmed"
-    },
-    {
-        id: "2",
-        customer: "Ram Thapa",
-        event: "Birthday",
-        date: new Date(2025, 2, 20),
-        time: "2:00 PM - 8:00 PM",
-        location: "Pokhara",
-        status: "confirmed"
-    },
-    {
-        id: "3",
-        customer: "Maya Gurung",
-        event: "Corporate",
-        date: new Date(2025, 3, 10),
-        time: "9:00 AM - 5:00 PM",
-        location: "Lalitpur",
-        status: "pending"
-    }
-];
-
-const mockBlockedDates = [
-    { date: new Date(2025, 1, 20), reason: "Personal" },
-    { date: new Date(2025, 2, 5), reason: "Vacation" }
-];
+import { AvailabilityService } from "@/services/AvailabilityService";
+import { VendorBookingsService } from "@/services/VendorBookingsService";
+import type { Booking } from "@/types";
 
 export default function VendorAvailability() {
     const { toast } = useToast();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-    const [blockedDates, setBlockedDates] = useState(mockBlockedDates);
+    const [blockedDates, setBlockedDates] = useState<{ date: Date; reason?: string }[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
     const [blockReason, setBlockReason] = useState("");
     const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
 
-    const bookedDates = mockBookings.map((b) => b.date);
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+                const [availabilityRes, bookingsRes] = await Promise.all([
+                    AvailabilityService.getApiVendorsMeAvailability({
+                        from: start.toISOString().slice(0, 10),
+                        to: end.toISOString().slice(0, 10),
+                        limit: 200
+                    }),
+                    VendorBookingsService.getApiVendorsMeBookings({ page: 1, limit: 100 })
+                ]);
+                if (!active) return;
+                const items = availabilityRes?.items || [];
+                const blocked = items
+                    .filter((item: any) => item.isAvailable === false)
+                    .map((item: any) => ({
+                        date: new Date(item.date),
+                        reason: item.note || ""
+                    }));
+                setBlockedDates(blocked);
+                setBookings(bookingsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setBlockedDates([]);
+                setBookings([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [currentMonth]);
 
-    const handleBlockDate = () => {
+    const bookedDates = bookings
+        .filter((b: any) => ["accepted", "confirmed"].includes(b.status))
+        .map((b: any) => new Date(b.date));
+
+    const handleBlockDate = async () => {
         if (!selectedDate) return;
-        setBlockedDates([...blockedDates, { date: selectedDate, reason: blockReason }]);
-        setBlockReason("");
-        setIsBlockDialogOpen(false);
-        toast({ title: "Date Blocked", description: `${selectedDate.toLocaleDateString()} has been blocked.` });
+        try {
+            const dateStr = selectedDate.toISOString().slice(0, 10);
+            await AvailabilityService.putApiVendorsMeAvailability({
+                date: dateStr,
+                requestBody: { isAvailable: false, note: blockReason || undefined }
+            });
+            setBlockedDates([...blockedDates, { date: selectedDate, reason: blockReason }]);
+            setBlockReason("");
+            setIsBlockDialogOpen(false);
+            toast({ title: "Date Blocked", description: `${selectedDate.toLocaleDateString()} has been blocked.` });
+        } catch (error: any) {
+            toast({
+                title: "Failed to block date",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
-    const handleUnblockDate = (dateToUnblock: Date) => {
-        setBlockedDates(blockedDates.filter((b) => b.date.getTime() !== dateToUnblock.getTime()));
-        toast({ title: "Date Unblocked" });
+    const handleUnblockDate = async (dateToUnblock: Date) => {
+        try {
+            const dateStr = dateToUnblock.toISOString().slice(0, 10);
+            await AvailabilityService.deleteApiVendorsMeAvailability({ date: dateStr });
+            setBlockedDates(blockedDates.filter((b) => b.date.getTime() !== dateToUnblock.getTime()));
+            toast({ title: "Date Unblocked" });
+        } catch (error: any) {
+            toast({
+                title: "Failed to unblock date",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
     const getDateStatus = (date: Date) => {
@@ -86,12 +116,12 @@ export default function VendorAvailability() {
     };
 
     const getBookingForDate = (date: Date) => {
-        return mockBookings.find((b) => b.date.toDateString() === date.toDateString());
+        return bookings.find((b: any) => new Date(b.date).toDateString() === date.toDateString());
     };
 
-    const upcomingBookings = mockBookings
-        .filter((b) => b.date >= new Date())
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
+    const upcomingBookings = bookings
+        .filter((b: any) => new Date(b.date) >= new Date())
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 5);
 
     return (
@@ -204,23 +234,27 @@ export default function VendorAvailability() {
                                     <div className="space-y-2">
                                         <Badge variant="success">Booked</Badge>
                                         {(() => {
-                                            const booking = getBookingForDate(selectedDate);
-                                            return booking ? (
+                                            const booking = getBookingForDate(selectedDate) as any;
+                                            if (!booking) return null;
+                                            const customerName =
+                                                booking.customer?.name || booking.customerName || "Customer";
+                                            const timeRange = booking.timeRange || { start: "--", end: "--" };
+                                            return (
                                                 <div className="text-sm space-y-1 text-muted-foreground">
                                                     <p className="flex items-center gap-2">
-                                                        <User className="h-4 w-4" /> {booking.customer}
+                                                        <User className="h-4 w-4" /> {customerName}
                                                     </p>
                                                     <p className="flex items-center gap-2">
-                                                        <Clock className="h-4 w-4" /> {booking.time}
+                                                        <Clock className="h-4 w-4" /> {timeRange.start} - {timeRange.end}
                                                     </p>
                                                     <p className="flex items-center gap-2">
-                                                        <MapPin className="h-4 w-4" /> {booking.location}
+                                                        <MapPin className="h-4 w-4" /> {booking.location || ""}
                                                     </p>
                                                     <Button variant="outline" size="sm" className="mt-2" asChild>
-                                                        <Link to={`/vendor/bookings/${booking.id}`}>View Booking</Link>
+                                                        <Link to={`/vendor/bookings/${booking._id}`}>View Booking</Link>
                                                     </Button>
                                                 </div>
-                                            ) : null;
+                                            );
                                         })()}
                                     </div>
                                 ) : getDateStatus(selectedDate) === "blocked" ? (
@@ -264,18 +298,18 @@ export default function VendorAvailability() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <AnimatePresence>
-                                {upcomingBookings.map((booking, index) => (
+                                {upcomingBookings.map((booking: any, index: number) => (
                                     <motion.div
-                                        key={booking.id}
+                                        key={booking._id}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}
                                         className="p-3 rounded-lg border border-border hover:border-primary/30 transition-colors cursor-pointer"
                                     >
-                                        <Link to={`/vendor/bookings/${booking.id}`}>
+                                        <Link to={`/vendor/bookings/${booking._id}`}>
                                             <div className="flex items-center justify-between mb-1">
                                                 <p className="font-medium text-foreground text-sm">
-                                                    {booking.customer}
+                                                    {booking.customer?.name || booking.customerName || "Customer"}
                                                 </p>
                                                 <Badge
                                                     variant={booking.status === "confirmed" ? "success" : "warning"}
@@ -284,13 +318,15 @@ export default function VendorAvailability() {
                                                     {booking.status}
                                                 </Badge>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">{booking.event}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {booking.date.toLocaleDateString("en-US", {
+                                                {booking.eventType || booking.event || "Event"}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {new Date(booking.date).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric"
                                                 })}{" "}
-                                                • {booking.time.split(" - ")[0]}
+                                                • {(booking.timeRange?.start || "--")}
                                             </p>
                                         </Link>
                                     </motion.div>

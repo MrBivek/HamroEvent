@@ -1,81 +1,72 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, Calendar, MessageSquare, Star, AlertCircle, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { motion } from "framer-motion";
-
-const mockNotifications = [
-    {
-        id: "1",
-        type: "booking",
-        title: "New Booking Request",
-        body: "Sita Sharma requested a booking for February 15, 2025",
-        link: "/vendor/bookings/1",
-        isRead: false,
-        createdAt: "2025-01-20T10:00:00Z"
-    },
-    {
-        id: "2",
-        type: "message",
-        title: "New Message",
-        body: "Ram Thapa sent you a message about their event",
-        link: "/vendor/bookings/2",
-        isRead: false,
-        createdAt: "2025-01-19T15:30:00Z"
-    },
-    {
-        id: "3",
-        type: "review",
-        title: "New Review",
-        body: "Maya Gurung left you a 5-star review!",
-        link: "/vendor/profile",
-        isRead: true,
-        createdAt: "2025-01-18T09:00:00Z"
-    },
-    {
-        id: "4",
-        type: "payment",
-        title: "Payment Received",
-        body: "You received NPR 75,000 for Wedding Photography",
-        link: "/vendor/payments",
-        isRead: true,
-        createdAt: "2025-01-17T12:00:00Z"
-    },
-    {
-        id: "5",
-        type: "system",
-        title: "Profile Verified",
-        body: "Congratulations! Your vendor profile has been verified.",
-        link: "/vendor/profile",
-        isRead: true,
-        createdAt: "2025-01-15T10:00:00Z"
-    }
-];
+import { NotificationsService } from "@/services/NotificationsService";
+import type { Notification } from "@/types";
 
 export default function VendorNotifications() {
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await NotificationsService.getApiNotifications({ page: 1, limit: 50 });
+                if (!active) return;
+                setNotifications(res?.items || []);
+            } catch {
+                if (!active) return;
+                setNotifications([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-    const markAsRead = (id: string) => {
-        setNotifications(notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    const markAsRead = async (id: string) => {
+        setNotifications(notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+        try {
+            await NotificationsService.postApiNotificationsRead({ id });
+        } catch {
+            // ignore
+        }
     };
 
-    const markAllAsRead = () => {
+    const markAllAsRead = async () => {
         setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+        try {
+            await NotificationsService.postApiNotificationsReadAll();
+        } catch {
+            // ignore
+        }
     };
 
     const getIcon = (type: string) => {
         switch (type) {
             case "booking":
+            case "booking-requested":
+            case "booking-accepted":
+            case "booking-rejected":
+            case "booking-confirmed":
                 return Calendar;
             case "message":
                 return MessageSquare;
             case "review":
+            case "review-received":
                 return Star;
             case "payment":
+            case "payment-received":
                 return DollarSign;
             default:
                 return Bell;
@@ -85,12 +76,18 @@ export default function VendorNotifications() {
     const getIconColor = (type: string) => {
         switch (type) {
             case "booking":
+            case "booking-requested":
+            case "booking-accepted":
+            case "booking-rejected":
+            case "booking-confirmed":
                 return "bg-primary-soft text-primary";
             case "message":
                 return "bg-accent-soft text-accent";
             case "review":
+            case "review-received":
                 return "bg-warning-soft text-warning";
             case "payment":
+            case "payment-received":
                 return "bg-success-soft text-success";
             default:
                 return "bg-muted text-muted-foreground";
@@ -135,17 +132,18 @@ export default function VendorNotifications() {
 
                 <TabsContent value="all" className="mt-6 space-y-3">
                     {notifications.map((notification, index) => {
+                        const id = String(notification._id);
                         const Icon = getIcon(notification.type);
                         return (
                             <motion.div
-                                key={notification.id}
+                                key={id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
                             >
                                 <Card
                                     className={`hover-lift cursor-pointer transition-all ${!notification.isRead ? "border-primary/30 bg-primary/5" : ""}`}
-                                    onClick={() => markAsRead(notification.id)}
+                                    onClick={() => markAsRead(id)}
                                 >
                                     <CardContent className="p-4 flex items-start gap-4">
                                         <div
@@ -174,7 +172,7 @@ export default function VendorNotifications() {
                                                 className="shrink-0"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    markAsRead(notification.id);
+                                                    markAsRead(id);
                                                 }}
                                             >
                                                 <Check className="h-4 w-4" />
@@ -202,14 +200,14 @@ export default function VendorNotifications() {
                                 const Icon = getIcon(notification.type);
                                 return (
                                     <motion.div
-                                        key={notification.id}
+                                        key={notification._id}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
                                     >
                                         <Card
                                             className="hover-lift cursor-pointer border-primary/30 bg-primary/5"
-                                            onClick={() => markAsRead(notification.id)}
+                                            onClick={() => markAsRead(notification._id)}
                                         >
                                             <CardContent className="p-4 flex items-start gap-4">
                                                 <div
@@ -234,12 +232,12 @@ export default function VendorNotifications() {
 
                 <TabsContent value="bookings" className="mt-6 space-y-3">
                     {notifications
-                        .filter((n) => n.type === "booking")
+                        .filter((n) => n.type?.includes("booking"))
                         .map((notification, index) => {
                             const Icon = getIcon(notification.type);
                             return (
                                 <motion.div
-                                    key={notification.id}
+                                    key={notification._id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.05 }}
@@ -269,12 +267,12 @@ export default function VendorNotifications() {
 
                 <TabsContent value="messages" className="mt-6 space-y-3">
                     {notifications
-                        .filter((n) => n.type === "message")
+                        .filter((n) => n.type?.includes("message"))
                         .map((notification, index) => {
                             const Icon = getIcon(notification.type);
                             return (
                                 <motion.div
-                                    key={notification.id}
+                                    key={notification._id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.05 }}

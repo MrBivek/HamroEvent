@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
+import { AuthService } from "@/services/AuthService";
 
 export default function CustomerRegisterPage() {
     const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
@@ -28,10 +29,27 @@ export default function CustomerRegisterPage() {
             return;
         }
         setIsLoading(true);
-        setTimeout(() => {
+        try {
+            await AuthService.postApiAuthRegisterCustomer({
+                requestBody: {
+                    fullName: formData.name,
+                    email: formData.email,
+                    phone: formData.phone || undefined,
+                    password: formData.password,
+                    acceptTerms: agreedToTerms
+                }
+            });
             toast({ title: "Account created!", description: "Please log in to continue" });
             navigate("/login");
-        }, 500);
+        } catch (error: any) {
+            toast({
+                title: "Registration failed",
+                description: error?.body?.message || "Unable to create account. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

@@ -1,45 +1,60 @@
+import { useEffect, useState } from "react";
 import { Star, Eye, EyeOff, Flag } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-
-const reviews = [
-    {
-        id: "1",
-        customer: "Sita Sharma",
-        vendor: "Himalayan Photography",
-        rating: 5,
-        comment: "Amazing service! Highly recommend.",
-        isHidden: false,
-        date: "2025-01-05"
-    },
-    {
-        id: "2",
-        customer: "Ram Thapa",
-        vendor: "Grand Banquet",
-        rating: 2,
-        comment: "Poor service, very unprofessional.",
-        isHidden: false,
-        date: "2025-01-04",
-        flagged: true
-    },
-    {
-        id: "3",
-        customer: "Maya Gurung",
-        vendor: "Spice Catering",
-        rating: 4,
-        comment: "Good food, slightly delayed.",
-        isHidden: true,
-        date: "2025-01-03"
-    }
-];
+import { AdminService } from "@/services/AdminService";
 
 export default function AdminReviews() {
     const { toast } = useToast();
+    const [reviews, setReviews] = useState<any[]>([]);
 
-    const handleHide = (id: string) => toast({ title: "Review hidden" });
-    const handleUnhide = (id: string) => toast({ title: "Review restored" });
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await AdminService.getApiAdminReviews({ page: 1, limit: 50 });
+                if (!active) return;
+                setReviews(res?.items || []);
+            } catch {
+                if (!active) return;
+                setReviews([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const handleHide = async (id: string) => {
+        try {
+            await AdminService.patchApiAdminReviews({ id, requestBody: { isHidden: true } });
+            setReviews((prev) => prev.map((r) => (r._id === id ? { ...r, isHidden: true } : r)));
+            toast({ title: "Review hidden" });
+        } catch (error: any) {
+            toast({
+                title: "Failed to hide review",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleUnhide = async (id: string) => {
+        try {
+            await AdminService.patchApiAdminReviews({ id, requestBody: { isHidden: false } });
+            setReviews((prev) => prev.map((r) => (r._id === id ? { ...r, isHidden: false } : r)));
+            toast({ title: "Review restored" });
+        } catch (error: any) {
+            toast({
+                title: "Failed to restore review",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -50,14 +65,14 @@ export default function AdminReviews() {
 
             <div className="space-y-4">
                 {reviews.map((review) => (
-                    <Card key={review.id} className={review.isHidden ? "opacity-60" : ""}>
+                    <Card key={review._id} className={review.isHidden ? "opacity-60" : ""}>
                         <CardContent className="p-4">
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="font-medium text-foreground">{review.customer}</span>
+                                        <span className="font-medium text-foreground">{review.customerName || "Customer"}</span>
                                         <span className="text-muted-foreground">→</span>
-                                        <span className="text-foreground">{review.vendor}</span>
+                                        <span className="text-foreground">{review.vendorName || "Vendor"}</span>
                                         {review.flagged && (
                                             <Badge variant="destructive">
                                                 <Flag className="h-3 w-3 mr-1" />
@@ -76,17 +91,17 @@ export default function AdminReviews() {
                                     </div>
                                     <p className="text-muted-foreground">{review.comment}</p>
                                     <p className="text-xs text-muted-foreground mt-2">
-                                        {new Date(review.date).toLocaleDateString()}
+                                        {new Date(review.createdAt).toLocaleDateString()}
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
                                     {review.isHidden ? (
-                                        <Button variant="outline" size="sm" onClick={() => handleUnhide(review.id)}>
+                                        <Button variant="outline" size="sm" onClick={() => handleUnhide(review._id)}>
                                             <Eye className="h-4 w-4 mr-1" />
                                             Show
                                         </Button>
                                     ) : (
-                                        <Button variant="outline" size="sm" onClick={() => handleHide(review.id)}>
+                                        <Button variant="outline" size="sm" onClick={() => handleHide(review._id)}>
                                             <EyeOff className="h-4 w-4 mr-1" />
                                             Hide
                                         </Button>

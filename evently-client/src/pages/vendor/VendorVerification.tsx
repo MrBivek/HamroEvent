@@ -1,12 +1,40 @@
+import { useEffect, useState } from "react";
 import { Upload, BadgeCheck, Clock, XCircle, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { mockVendors } from "@/data/mockData.ts";
+import { VendorsService } from "@/services/VendorsService";
+import { DocumentsService } from "@/services/DocumentsService";
+import { VendorVerificationService } from "@/services/VendorVerificationService";
+import { fileToBase64 } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast.ts";
 
 export default function VendorVerification() {
-    const vendor = mockVendors[0];
-    const status = vendor.verificationStatus;
+    const { toast } = useToast();
+    const [vendor, setVendor] = useState<any | null>(null);
+    const [status, setStatus] = useState<string>("pending");
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await VendorsService.getApiVendorsMe();
+                if (!active) return;
+                setVendor(res);
+                setStatus(res?.verificationStatus || res?.verifiedStatus || "pending");
+            } catch {
+                if (!active) return;
+                setVendor(null);
+                setStatus("pending");
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const getStatusDisplay = () => {
         switch (status) {
@@ -20,6 +48,47 @@ export default function VendorVerification() {
     };
 
     const statusInfo = getStatusDisplay();
+
+    const handleFileSelect = (files: FileList | null) => {
+        if (!files) return;
+        setSelectedFiles(Array.from(files));
+    };
+
+    const handleSubmit = async () => {
+        if (selectedFiles.length === 0) {
+            toast({ title: "Please select documents", variant: "destructive" });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const uploadedIds: string[] = [];
+            for (const file of selectedFiles) {
+                const data = await fileToBase64(file, 10);
+                const doc = await DocumentsService.postApiVendorsMeDocuments({
+                    requestBody: {
+                        name: file.name,
+                        type: file.type,
+                        data
+                    }
+                });
+                if (doc?._id) uploadedIds.push(doc._id);
+            }
+            await VendorVerificationService.postApiVendorsMeVerificationRequests({
+                requestBody: { documentIds: uploadedIds }
+            });
+            toast({ title: "Verification submitted", description: "We are reviewing your documents." });
+            setStatus("pending");
+            setSelectedFiles([]);
+        } catch (error: any) {
+            toast({
+                title: "Submission failed",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="max-w-2xl space-y-6">
@@ -64,10 +133,23 @@ export default function VendorVerification() {
                         <p className="text-sm text-muted-foreground mb-4">
                             Business registration, ID proof, or trade license
                         </p>
-                        <Button variant="outline">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Choose Files
+                        <Button variant="outline" asChild>
+                            <label className="cursor-pointer">
+                                <FileText className="h-4 w-4 mr-2" />
+                                Choose Files
+                                <input
+                                    type="file"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => handleFileSelect(e.target.files)}
+                                />
+                            </label>
                         </Button>
+                        {selectedFiles.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                                {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
+                            </p>
+                        )}
                     </div>
 
                     <div className="text-sm text-muted-foreground">
@@ -79,8 +161,13 @@ export default function VendorVerification() {
                         </ul>
                     </div>
 
-                    <Button variant="hero" className="w-full" disabled={status === "verified"}>
-                        Submit for Verification
+                    <Button
+                        variant="hero"
+                        className="w-full"
+                        disabled={status === "verified" || isSubmitting}
+                        onClick={handleSubmit}
+                    >
+                        {isSubmitting ? "Submitting..." : "Submit for Verification"}
                     </Button>
                 </CardContent>
             </Card>

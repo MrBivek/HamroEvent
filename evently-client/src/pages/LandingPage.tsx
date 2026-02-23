@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Star, Users, Calendar, Shield, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
@@ -6,7 +7,11 @@ import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { HeroSearch } from "@/components/search/HeroSearch.tsx";
 import { VendorCard } from "@/components/vendors/VendorCard.tsx";
-import { vendorCategories, mockVendors } from "@/data/mockData.ts";
+import { CatalogService } from "@/services/CatalogService";
+import { MarketplaceService } from "@/services/MarketplaceService";
+import { getCategoryMeta } from "@/data/catalog";
+import { VENDOR_PLACEHOLDER } from "@/lib/api";
+import type { VendorProfile } from "@/types";
 
 const stats = [
     { value: "500+", label: "Verified Vendors" },
@@ -37,14 +42,14 @@ const testimonials = [
     {
         name: "Priya Thapa",
         role: "Bride",
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100",
+        image: VENDOR_PLACEHOLDER,
         text: "Evently made planning our wedding so much easier! We found amazing vendors all in one place.",
         rating: 5
     },
     {
         name: "Rajesh Shrestha",
         role: "Corporate Event Manager",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
+        image: VENDOR_PLACEHOLDER,
         text: "The platform helped us organize a seamless corporate conference. Highly recommended!",
         rating: 5
     }
@@ -72,7 +77,31 @@ const itemVariants = {
 };
 
 export default function LandingPage() {
-    const featuredVendors = mockVendors.filter((v) => v.verificationStatus === "verified").slice(0, 4);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [featuredVendors, setFeaturedVendors] = useState<VendorProfile[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const [categoriesRes, vendorsRes] = await Promise.all([
+                    CatalogService.getApiCategories({ active: true }),
+                    MarketplaceService.getApiVendors({ verified: true, limit: 4 })
+                ]);
+                if (!active) return;
+                setCategories(categoriesRes?.items || []);
+                setFeaturedVendors(vendorsRes?.items || []);
+            } catch {
+                if (!active) return;
+                setCategories([]);
+                setFeaturedVendors([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     return (
         <div className="min-h-screen overflow-hidden">
@@ -178,27 +207,31 @@ export default function LandingPage() {
                         viewport={{ once: true }}
                         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
                     >
-                        {vendorCategories.map((category, index) => (
-                            <motion.div key={category.value} variants={itemVariants}>
-                                <Link to={`/vendors?category=${category.value}`}>
-                                    <Card variant="interactive" className="h-full hover-lift group">
-                                        <CardContent className="p-6 text-center">
-                                            <motion.div
-                                                whileHover={{ scale: 1.2, rotate: 5 }}
-                                                transition={{ type: "spring", stiffness: 300 }}
-                                                className="text-4xl mb-3"
-                                            >
-                                                {category.icon}
-                                            </motion.div>
-                                            <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                                                {category.label}
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground">{category.description}</p>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
-                            </motion.div>
-                        ))}
+                        {categories.map((category: any) => {
+                            const value = category.slug || category.name || category._id;
+                            const meta = getCategoryMeta(category.slug || category.name);
+                            return (
+                                <motion.div key={category._id || value} variants={itemVariants}>
+                                    <Link to={`/vendors?category=${value}`}>
+                                        <Card variant="interactive" className="h-full hover-lift group">
+                                            <CardContent className="p-6 text-center">
+                                                <motion.div
+                                                    whileHover={{ scale: 1.2, rotate: 5 }}
+                                                    transition={{ type: "spring", stiffness: 300 }}
+                                                    className="text-4xl mb-3"
+                                                >
+                                                    {meta.icon}
+                                                </motion.div>
+                                                <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                                                    {meta.label || category.name}
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground">{meta.description}</p>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                </motion.div>
+                            );
+                        })}
                     </motion.div>
                 </div>
             </section>

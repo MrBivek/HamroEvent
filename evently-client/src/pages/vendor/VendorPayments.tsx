@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     DollarSign,
     TrendingUp,
@@ -17,43 +17,70 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.t
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
 import { motion } from "framer-motion";
-
-const mockTransactions = [
-    {
-        id: "1",
-        booking: "Wedding - Sita Sharma",
-        amount: 75000,
-        status: "completed",
-        date: "2025-01-15",
-        type: "credit"
-    },
-    { id: "2", booking: "Birthday - Ram Thapa", amount: 35000, status: "pending", date: "2025-01-18", type: "credit" },
-    { id: "3", booking: "Withdrawal to Bank", amount: 50000, status: "completed", date: "2025-01-10", type: "debit" },
-    {
-        id: "4",
-        booking: "Corporate Event - Tech Corp",
-        amount: 120000,
-        status: "completed",
-        date: "2025-01-08",
-        type: "credit"
-    },
-    { id: "5", booking: "Platform Fee", amount: 5000, status: "completed", date: "2025-01-05", type: "debit" }
-];
-
-const mockPayouts = [
-    { id: "1", amount: 50000, status: "completed", date: "2025-01-10", bank: "**** 1234" },
-    { id: "2", amount: 80000, status: "processing", date: "2025-01-20", bank: "**** 1234" }
-];
+import { VendorPaymentsService } from "@/services/VendorPaymentsService";
+import { useToast } from "@/hooks/use-toast.ts";
 
 export default function VendorPayments() {
     const [period, setPeriod] = useState("month");
+    const { toast } = useToast();
+    const [summary, setSummary] = useState<any>({
+        totalEarnings: 0,
+        pendingPayout: 0,
+        availableBalance: 0,
+        thisMonth: 0,
+        growth: 0
+    });
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [payouts, setPayouts] = useState<any[]>([]);
 
-    const stats = {
-        totalEarnings: 350000,
-        pendingPayout: 85000,
-        availableBalance: 110000,
-        thisMonth: 75000,
-        growth: 12.5
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const [summaryRes, txRes, payoutRes] = await Promise.all([
+                    VendorPaymentsService.getApiVendorsMePaymentsSummary(),
+                    VendorPaymentsService.getApiVendorsMePaymentsTransactions(),
+                    VendorPaymentsService.getApiVendorsMePaymentsPayouts()
+                ]);
+                if (!active) return;
+                setSummary(summaryRes || summary);
+                setTransactions(txRes?.items || []);
+                setPayouts(payoutRes?.items || []);
+            } catch {
+                if (!active) return;
+                setSummary({
+                    totalEarnings: 0,
+                    pendingPayout: 0,
+                    availableBalance: 0,
+                    thisMonth: 0,
+                    growth: 0
+                });
+                setTransactions([]);
+                setPayouts([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const handleRequestPayout = async () => {
+        if (summary.availableBalance <= 0) return;
+        try {
+            await VendorPaymentsService.postApiVendorsMePaymentsPayouts({
+                requestBody: { amount: summary.availableBalance, bankLast4: "1234" }
+            });
+            const payoutRes = await VendorPaymentsService.getApiVendorsMePaymentsPayouts();
+            setPayouts(payoutRes?.items || []);
+            toast({ title: "Payout requested", description: "Your payout request was submitted." });
+        } catch (error: any) {
+            toast({
+                title: "Failed to request payout",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
     };
 
     return (
@@ -91,11 +118,11 @@ export default function VendorPayments() {
                                 </div>
                                 <div className="flex items-center gap-1 text-success text-sm">
                                     <ArrowUpRight className="h-3 w-3" />
-                                    <span>{stats.growth}%</span>
+                                    <span>{summary.growth}%</span>
                                 </div>
                             </div>
                             <div className="text-2xl font-bold text-foreground">
-                                NPR {stats.totalEarnings.toLocaleString()}
+                                NPR {summary.totalEarnings.toLocaleString()}
                             </div>
                             <div className="text-sm text-muted-foreground">Total Earnings</div>
                         </CardContent>
@@ -109,7 +136,7 @@ export default function VendorPayments() {
                                 <Wallet className="h-5 w-5 text-primary" />
                             </div>
                             <div className="text-2xl font-bold text-foreground">
-                                NPR {stats.availableBalance.toLocaleString()}
+                                NPR {summary.availableBalance.toLocaleString()}
                             </div>
                             <div className="text-sm text-muted-foreground">Available Balance</div>
                         </CardContent>
@@ -123,7 +150,7 @@ export default function VendorPayments() {
                                 <Clock className="h-5 w-5 text-warning" />
                             </div>
                             <div className="text-2xl font-bold text-foreground">
-                                NPR {stats.pendingPayout.toLocaleString()}
+                                NPR {summary.pendingPayout.toLocaleString()}
                             </div>
                             <div className="text-sm text-muted-foreground">Pending Payout</div>
                         </CardContent>
@@ -137,7 +164,7 @@ export default function VendorPayments() {
                                 <TrendingUp className="h-5 w-5 text-accent" />
                             </div>
                             <div className="text-2xl font-bold text-foreground">
-                                NPR {stats.thisMonth.toLocaleString()}
+                                NPR {summary.thisMonth.toLocaleString()}
                             </div>
                             <div className="text-sm text-muted-foreground">This Month</div>
                         </CardContent>
@@ -163,9 +190,11 @@ export default function VendorPayments() {
                         </div>
                         <div className="text-right">
                             <div className="text-3xl font-bold text-foreground mb-2">
-                                NPR {stats.availableBalance.toLocaleString()}
+                                NPR {summary.availableBalance.toLocaleString()}
                             </div>
-                            <Button variant="default">Request Payout</Button>
+                            <Button variant="default" onClick={handleRequestPayout} disabled={summary.availableBalance <= 0}>
+                                Request Payout
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -179,7 +208,7 @@ export default function VendorPayments() {
                 </TabsList>
 
                 <TabsContent value="transactions" className="mt-6 space-y-3">
-                    {mockTransactions.map((tx, index) => (
+                    {transactions.map((tx, index) => (
                         <motion.div
                             key={tx.id}
                             initial={{ opacity: 0, x: -20 }}
@@ -227,7 +256,7 @@ export default function VendorPayments() {
                 </TabsContent>
 
                 <TabsContent value="payouts" className="mt-6 space-y-3">
-                    {mockPayouts.map((payout, index) => (
+                    {payouts.map((payout, index) => (
                         <motion.div
                             key={payout.id}
                             initial={{ opacity: 0, x: -20 }}

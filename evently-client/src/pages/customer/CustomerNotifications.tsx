@@ -1,60 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Bell, Check, CheckCheck, Calendar, MessageSquare, BadgeCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-
-const mockNotifications = [
-    {
-        id: "1",
-        type: "booking-confirmed",
-        title: "Booking Confirmed",
-        body: "Your booking with Himalayan Moments Photography has been confirmed for Feb 15, 2025.",
-        link: "/customer/bookings/1",
-        isRead: false,
-        createdAt: "2025-01-07T09:00:00Z"
-    },
-    {
-        id: "2",
-        type: "booking-accepted",
-        title: "Booking Accepted",
-        body: "Grand Banquet Hall has accepted your booking request.",
-        link: "/customer/bookings/2",
-        isRead: false,
-        createdAt: "2025-01-06T14:00:00Z"
-    },
-    {
-        id: "3",
-        type: "message",
-        title: "New Message",
-        body: "You have a new message from Spice Route Catering.",
-        link: "/customer/bookings/3",
-        isRead: true,
-        createdAt: "2025-01-05T16:00:00Z"
-    },
-    {
-        id: "4",
-        type: "booking-requested",
-        title: "Booking Pending",
-        body: "Your booking request to Dream Decorators is pending review.",
-        link: "/customer/bookings/4",
-        isRead: true,
-        createdAt: "2025-01-04T10:00:00Z"
-    }
-];
+import { NotificationsService } from "@/services/NotificationsService";
+import type { Notification } from "@/types";
 
 export default function CustomerNotifications() {
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await NotificationsService.getApiNotifications({ page: 1, limit: 50 });
+                if (!active) return;
+                setNotifications(res?.items || []);
+            } catch {
+                if (!active) return;
+                setNotifications([]);
+            } finally {
+                if (active) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-    const markAsRead = (id: string) => {
-        setNotifications(notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    const markAsRead = async (id: string) => {
+        setNotifications(notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+        try {
+            await NotificationsService.postApiNotificationsRead({ id });
+        } catch {
+            // ignore
+        }
     };
 
-    const markAllAsRead = () => {
+    const markAllAsRead = async () => {
         setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+        try {
+            await NotificationsService.postApiNotificationsReadAll();
+        } catch {
+            // ignore
+        }
     };
 
     const getIcon = (type: string) => {
@@ -95,13 +89,15 @@ export default function CustomerNotifications() {
                 <CardContent className="p-0">
                     {notifications.length > 0 ? (
                         <div className="divide-y divide-border">
-                            {notifications.map((notification, index) => (
+                            {notifications.map((notification, index) => {
+                                const id = String(notification._id);
+                                return (
                                 <motion.button
-                                    key={notification.id}
+                                    key={id}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.05 }}
-                                    onClick={() => markAsRead(notification.id)}
+                                    onClick={() => markAsRead(id)}
                                     className={`w-full flex items-start gap-4 p-4 text-left transition-colors hover:bg-muted/50 ${
                                         !notification.isRead ? "bg-primary-soft/30" : ""
                                     }`}
@@ -127,7 +123,8 @@ export default function CustomerNotifications() {
                                         </p>
                                     </div>
                                 </motion.button>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="py-16 text-center">

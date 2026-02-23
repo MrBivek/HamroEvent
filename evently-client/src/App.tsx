@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster.tsx";
 import { Toaster as Sonner } from "@/components/ui/sonner.tsx";
 import { TooltipProvider } from "@/components/ui/tooltip.tsx";
@@ -36,75 +37,88 @@ import AdminReviews from "@/pages/admin/AdminReviews.tsx";
 import AdminReports from "@/pages/admin/AdminReports.tsx";
 import AdminAuditLogs from "@/pages/admin/AdminAuditLogs.tsx";
 import NotFound from "@/pages/NotFound.tsx";
+import { useAuthStore } from "@/store/authStore.ts";
+import { useShortlistStore } from "@/store/shortlistStore.ts";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-    <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-                <Routes>
-                    {/* Public routes */}
-                    <Route element={<PublicLayout />}>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/vendors" element={<VendorsPage />} />
-                        <Route path="/vendors/:id" element={<VendorDetailPage />} />
-                        <Route path="/about" element={<AboutPage />} />
-                        <Route path="/contact" element={<ContactPage />} />
-                    </Route>
+const App = () => {
+    const { user } = useAuthStore();
+    const { loadShortlist } = useShortlistStore();
 
-                    {/* Auth routes */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register/customer" element={<CustomerRegisterPage />} />
-                    <Route path="/register/vendor" element={<VendorRegisterPage />} />
+    useEffect(() => {
+        if (user?.role === "customer") {
+            loadShortlist();
+        }
+    }, [user, loadShortlist]);
 
-                    {/* Customer routes */}
-                    <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
-                        <Route element={<DashboardLayout />}>
-                            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-                            <Route path="/customer/events" element={<CustomerEvents />} />
-                            <Route path="/customer/events/:id" element={<CustomerEventDetail />} />
-                            <Route path="/customer/bookings" element={<CustomerBookings />} />
-                            <Route path="/customer/bookings/:id" element={<CustomerBookingDetail />} />
-                            <Route path="/customer/shortlist" element={<CustomerShortlist />} />
-                            <Route path="/customer/profile" element={<CustomerProfile />} />
-                            <Route path="/customer/notifications" element={<CustomerNotifications />} />
+    return (
+        <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                    <Routes>
+                        {/* Public routes */}
+                        <Route element={<PublicLayout />}>
+                            <Route path="/" element={<LandingPage />} />
+                            <Route path="/vendors" element={<VendorsPage />} />
+                            <Route path="/vendors/:id" element={<VendorDetailPage />} />
+                            <Route path="/about" element={<AboutPage />} />
+                            <Route path="/contact" element={<ContactPage />} />
                         </Route>
-                    </Route>
 
-                    {/* Vendor routes */}
-                    <Route element={<ProtectedRoute allowedRoles={["vendor"]} />}>
-                        <Route element={<DashboardLayout />}>
-                            <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                            <Route path="/vendor/profile" element={<VendorProfilePage />} />
-                            <Route path="/vendor/availability" element={<VendorAvailability />} />
-                            <Route path="/vendor/bookings" element={<VendorBookings />} />
-                            <Route path="/vendor/bookings/:id" element={<VendorBookingDetail />} />
-                            <Route path="/vendor/payments" element={<VendorPayments />} />
-                            <Route path="/vendor/verification" element={<VendorVerification />} />
-                            <Route path="/vendor/notifications" element={<VendorNotifications />} />
+                        {/* Auth routes */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register/customer" element={<CustomerRegisterPage />} />
+                        <Route path="/register/vendor" element={<VendorRegisterPage />} />
+
+                        {/* Customer routes */}
+                        <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
+                            <Route element={<DashboardLayout />}>
+                                <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                                <Route path="/customer/events" element={<CustomerEvents />} />
+                                <Route path="/customer/events/:id" element={<CustomerEventDetail />} />
+                                <Route path="/customer/bookings" element={<CustomerBookings />} />
+                                <Route path="/customer/bookings/:id" element={<CustomerBookingDetail />} />
+                                <Route path="/customer/shortlist" element={<CustomerShortlist />} />
+                                <Route path="/customer/profile" element={<CustomerProfile />} />
+                                <Route path="/customer/notifications" element={<CustomerNotifications />} />
+                            </Route>
                         </Route>
-                    </Route>
 
-                    {/* Admin routes */}
-                    <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-                        <Route element={<DashboardLayout />}>
-                            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                            <Route path="/admin/vendors/pending" element={<AdminPendingVendors />} />
-                            <Route path="/admin/users" element={<AdminUsers />} />
-                            <Route path="/admin/reviews" element={<AdminReviews />} />
-                            <Route path="/admin/reports" element={<AdminReports />} />
-                            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+                        {/* Vendor routes */}
+                        <Route element={<ProtectedRoute allowedRoles={["vendor"]} />}>
+                            <Route element={<DashboardLayout />}>
+                                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                                <Route path="/vendor/profile" element={<VendorProfilePage />} />
+                                <Route path="/vendor/availability" element={<VendorAvailability />} />
+                                <Route path="/vendor/bookings" element={<VendorBookings />} />
+                                <Route path="/vendor/bookings/:id" element={<VendorBookingDetail />} />
+                                <Route path="/vendor/payments" element={<VendorPayments />} />
+                                <Route path="/vendor/verification" element={<VendorVerification />} />
+                                <Route path="/vendor/notifications" element={<VendorNotifications />} />
+                            </Route>
                         </Route>
-                    </Route>
 
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
-            </BrowserRouter>
-        </TooltipProvider>
-    </QueryClientProvider>
-);
+                        {/* Admin routes */}
+                        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+                            <Route element={<DashboardLayout />}>
+                                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                <Route path="/admin/vendors/pending" element={<AdminPendingVendors />} />
+                                <Route path="/admin/users" element={<AdminUsers />} />
+                                <Route path="/admin/reviews" element={<AdminReviews />} />
+                                <Route path="/admin/reports" element={<AdminReports />} />
+                                <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+                            </Route>
+                        </Route>
+
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                </BrowserRouter>
+            </TooltipProvider>
+        </QueryClientProvider>
+    );
+};
 
 export default App;

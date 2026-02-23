@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input.tsx";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
-import { mockUsers } from "@/data/mockData.ts";
 import { useToast } from "@/hooks/use-toast.ts";
+import { AuthService } from "@/services/AuthService";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -22,28 +22,27 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-
-        // Mock login - find user by email
-        setTimeout(() => {
-            const user = mockUsers.find((u) => u.email === email);
-            if (user) {
-                login(user, "mock-jwt-token");
-                toast({ title: "Welcome back!", description: `Logged in as ${user.name}` });
-                const dashboards = {
-                    customer: "/customer/dashboard",
-                    vendor: "/vendor/dashboard",
-                    admin: "/admin/dashboard"
-                };
-                navigate(dashboards[user.role]);
-            } else {
-                toast({
-                    title: "Login failed",
-                    description: "Invalid credentials. Try: sita@example.com",
-                    variant: "destructive"
-                });
-            }
+        try {
+            const result = await AuthService.postApiAuthLogin({
+                requestBody: { email, password }
+            });
+            login(result.user, result.token);
+            toast({ title: "Welcome back!", description: `Logged in as ${result.user.name}` });
+            const dashboards = {
+                customer: "/customer/dashboard",
+                vendor: "/vendor/dashboard",
+                admin: "/admin/dashboard"
+            };
+            navigate(dashboards[result.user.role]);
+        } catch (error: any) {
+            toast({
+                title: "Login failed",
+                description: error?.body?.message || "Invalid credentials. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
             setIsLoading(false);
-        }, 500);
+        }
     };
 
     return (

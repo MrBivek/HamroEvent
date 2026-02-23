@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Search, MoreVertical, UserCheck, UserX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -9,21 +10,44 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu.tsx";
-
-const users = [
-    { id: "1", name: "Sita Sharma", email: "sita@example.com", role: "customer", isActive: true, joined: "2024-01-15" },
-    {
-        id: "2",
-        name: "Raj Photography",
-        email: "raj@photography.com",
-        role: "vendor",
-        isActive: true,
-        joined: "2024-01-10"
-    },
-    { id: "3", name: "Maya Gurung", email: "maya@example.com", role: "customer", isActive: false, joined: "2024-02-20" }
-];
+import { AdminService } from "@/services/AdminService";
+import { useToast } from "@/hooks/use-toast.ts";
 
 export default function AdminUsers() {
+    const [users, setUsers] = useState<any[]>([]);
+    const [query, setQuery] = useState("");
+    const { toast } = useToast();
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const res = await AdminService.getApiAdminUsers({ q: query || undefined, page: 1, limit: 50 });
+                if (!active) return;
+                setUsers(res?.items || []);
+            } catch {
+                if (!active) return;
+                setUsers([]);
+            }
+        };
+        load();
+        return () => {
+            active = false;
+        };
+    }, [query]);
+
+    const handleToggle = async (id: string, isActive: boolean) => {
+        try {
+            await AdminService.patchApiAdminUsers({ id, requestBody: { isActive } });
+            setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, isActive } : u)));
+        } catch (error: any) {
+            toast({
+                title: "Update failed",
+                description: error?.body?.message || "Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -33,7 +57,12 @@ export default function AdminUsers() {
                 </div>
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search users..." className="pl-10" />
+                    <Input
+                        placeholder="Search users..."
+                        className="pl-10"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
                 </div>
             </div>
 
@@ -52,7 +81,7 @@ export default function AdminUsers() {
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-muted/30">
+                                    <tr key={user._id} className="hover:bg-muted/30">
                                         <td className="p-4">
                                             <div>
                                                 <p className="font-medium text-foreground">{user.name}</p>
@@ -70,7 +99,7 @@ export default function AdminUsers() {
                                             </Badge>
                                         </td>
                                         <td className="p-4 text-muted-foreground">
-                                            {new Date(user.joined).toLocaleDateString()}
+                                            {new Date(user.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="p-4 text-right">
                                             <DropdownMenu>
@@ -80,11 +109,14 @@ export default function AdminUsers() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleToggle(user._id, true)}>
                                                         <UserCheck className="h-4 w-4 mr-2" />
                                                         Activate
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive">
+                                                    <DropdownMenuItem
+                                                        className="text-destructive"
+                                                        onClick={() => handleToggle(user._id, false)}
+                                                    >
                                                         <UserX className="h-4 w-4 mr-2" />
                                                         Deactivate
                                                     </DropdownMenuItem>
