@@ -3,15 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { VendorProfile } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class VendorsService {
     /**
      * Get my vendor profile (Vendor only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static getApiVendorsMe(): CancelablePromise<any> {
+    public static getApiVendorsMe(): CancelablePromise<VendorProfile> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me",
@@ -22,10 +23,10 @@ export class VendorsService {
     }
     /**
      * Update my vendor profile (Vendor only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static patchApiVendorsMe(): CancelablePromise<any> {
+    public static patchApiVendorsMe(): CancelablePromise<VendorProfile> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/vendors/me"
@@ -33,7 +34,7 @@ export class VendorsService {
     }
     /**
      * Upload portfolio images (Vendor only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static postApiVendorsMePortfolio({
@@ -49,7 +50,7 @@ export class VendorsService {
                 mimeType?: string;
             }>;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<VendorProfile> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/portfolio",
@@ -59,7 +60,7 @@ export class VendorsService {
     }
     /**
      * Remove a portfolio image (Vendor only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static deleteApiVendorsMePortfolio({
@@ -68,7 +69,7 @@ export class VendorsService {
         requestBody: {
             url: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<VendorProfile> {
         return __request(OpenAPI, {
             method: "DELETE",
             url: "/api/vendors/me/portfolio",

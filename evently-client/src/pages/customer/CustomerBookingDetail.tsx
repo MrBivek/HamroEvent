@@ -19,13 +19,16 @@ import { Input } from "@/components/ui/input.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { BookingsService } from "@/services/BookingsService";
 import { ConversationsService } from "@/services/ConversationsService";
-import { resolveMediaUrl } from "@/lib/api";
-import type { Booking } from "@/types";
+import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
+import type { Booking, BookingMessage, ConversationMessage } from "@/types";
+
+type ChatMessage = BookingMessage | ConversationMessage;
 
 export default function CustomerBookingDetail() {
     const { id } = useParams();
     const [newMessage, setNewMessage] = useState("");
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [booking, setBooking] = useState<Booking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
@@ -69,7 +72,7 @@ export default function CustomerBookingDetail() {
         }
     };
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "confirmed":
                 return "success";
@@ -99,10 +102,10 @@ export default function CustomerBookingDetail() {
             setMessages([...messages, message]);
             setNewMessage("");
             toast({ title: "Message sent" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to send message",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -131,17 +134,27 @@ export default function CustomerBookingDetail() {
         );
     }
 
-    const bookingAny = booking as any;
-    const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "Vendor";
-    const vendorImage = bookingAny.vendorImage || booking.vendor?.portfolioMedia?.[0];
-    const category = bookingAny.category || booking.vendor?.category || "Service";
-    const packageName = bookingAny.packageName || bookingAny.packageTitle || booking.packageId || "Package";
-    const price = bookingAny.price || 0;
-    const timeRange = bookingAny.timeRange || { start: "--", end: "--" };
-    const location = bookingAny.location || booking.location || "";
-    const vendorPhone = bookingAny.vendorPhone || booking.vendor?.contact?.phone || "";
-    const vendorEmail = bookingAny.vendorEmail || booking.vendor?.contact?.email || "";
-    const history = bookingAny.history || [];
+    const vendorName = booking.vendorName || booking.vendor?.businessName || "Vendor";
+    const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
+    const category = booking.category || booking.vendor?.category || "Service";
+    const packageName = booking.packageName || booking.packageId || "Package";
+    const price = booking.price || 0;
+    const timeRange = booking.timeRange || { start: "--", end: "--" };
+    const location = booking.location || "";
+    const vendorPhone = booking.vendorPhone || booking.vendor?.contact?.phone || "";
+    const vendorEmail = booking.vendorEmail || booking.vendor?.contact?.email || "";
+    const history = booking.history || [];
+
+    const getMessageSender = (msg: ChatMessage) => {
+        if ("sender" in msg) return msg.sender;
+        return msg.senderId === booking.customerId ? "customer" : "vendor";
+    };
+
+    const getMessageId = (msg: ChatMessage, index: number) => {
+        if ("id" in msg) return msg.id;
+        if ("_id" in msg) return msg._id;
+        return String(index);
+    };
 
     return (
         <div className="space-y-6">
@@ -174,7 +187,7 @@ export default function CustomerBookingDetail() {
                                                 {category} • {packageName}
                                             </p>
                                         </div>
-                                        <Badge variant={getStatusVariant(booking.status) as any} className="capitalize">
+                                        <Badge variant={getStatusVariant(booking.status)} className="capitalize">
                                             {booking.status}
                                         </Badge>
                                     </div>
@@ -207,11 +220,11 @@ export default function CustomerBookingDetail() {
                                 </div>
                             </div>
 
-                            {bookingAny.notes && (
+                            {booking.notes && (
                                 <div className="mt-4 pt-4 border-t border-border">
                                     <p className="text-sm text-muted-foreground">
                                         <span className="font-medium text-foreground">Notes: </span>
-                                        {bookingAny.notes}
+                                        {booking.notes}
                                     </p>
                                 </div>
                             )}
@@ -251,10 +264,10 @@ export default function CustomerBookingDetail() {
                         <CardContent>
                             <div className="space-y-4 max-h-80 overflow-y-auto mb-4">
                                 {messages.map((msg, index) => {
-                                    const sender = msg.senderRole || msg.sender;
+                                    const sender = getMessageSender(msg);
                                     return (
                                         <div
-                                            key={msg._id || msg.id || index}
+                                            key={getMessageId(msg, index)}
                                             className={`flex ${sender === "customer" ? "justify-end" : "justify-start"}`}
                                         >
                                             <div
@@ -305,13 +318,11 @@ export default function CustomerBookingDetail() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {history.map((entry: any, i: number) => (
+                                {history.map((entry, i) => (
                                     <div key={i} className="flex gap-3">
                                         <div className="flex flex-col items-center">
                                             {getStatusIcon(entry.status)}
-                                            {i < history.length - 1 && (
-                                                <div className="w-px flex-1 bg-border mt-2" />
-                                            )}
+                                            {i < history.length - 1 && <div className="w-px flex-1 bg-border mt-2" />}
                                         </div>
                                         <div className="pb-4">
                                             <p className="font-medium text-foreground capitalize">{entry.status}</p>

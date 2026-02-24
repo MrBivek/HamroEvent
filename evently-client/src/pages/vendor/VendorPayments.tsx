@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SVGProps } from "react";
 import {
     DollarSign,
     TrendingUp,
@@ -19,19 +19,21 @@ import { Progress } from "@/components/ui/progress.tsx";
 import { motion } from "framer-motion";
 import { VendorPaymentsService } from "@/services/VendorPaymentsService";
 import { useToast } from "@/hooks/use-toast.ts";
+import { getErrorMessage } from "@/lib/api";
+import type { VendorPaymentSummary, VendorPaymentTransaction, VendorPayout } from "@/types";
 
 export default function VendorPayments() {
     const [period, setPeriod] = useState("month");
     const { toast } = useToast();
-    const [summary, setSummary] = useState<any>({
+    const [summary, setSummary] = useState<VendorPaymentSummary>({
         totalEarnings: 0,
         pendingPayout: 0,
         availableBalance: 0,
         thisMonth: 0,
         growth: 0
     });
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [payouts, setPayouts] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<VendorPaymentTransaction[]>([]);
+    const [payouts, setPayouts] = useState<VendorPayout[]>([]);
 
     useEffect(() => {
         let active = true;
@@ -74,10 +76,10 @@ export default function VendorPayments() {
             const payoutRes = await VendorPaymentsService.getApiVendorsMePaymentsPayouts();
             setPayouts(payoutRes?.items || []);
             toast({ title: "Payout requested", description: "Your payout request was submitted." });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to request payout",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -192,7 +194,11 @@ export default function VendorPayments() {
                             <div className="text-3xl font-bold text-foreground mb-2">
                                 NPR {summary.availableBalance.toLocaleString()}
                             </div>
-                            <Button variant="default" onClick={handleRequestPayout} disabled={summary.availableBalance <= 0}>
+                            <Button
+                                variant="default"
+                                onClick={handleRequestPayout}
+                                disabled={summary.availableBalance <= 0}
+                            >
                                 Request Payout
                             </Button>
                         </div>
@@ -297,7 +303,7 @@ export default function VendorPayments() {
     );
 }
 
-function Clock(props: any) {
+function Clock(props: SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}

@@ -87,9 +87,7 @@ export default function VendorDetailPage() {
     const shortlisted = isShortlisted(vendor._id);
     const categoryInfo = getCategoryMeta(vendor.category);
     const galleryImages =
-        vendor.portfolioMedia && vendor.portfolioMedia.length > 0
-            ? vendor.portfolioMedia
-            : [resolveMediaUrl(null)];
+        vendor.portfolioMedia && vendor.portfolioMedia.length > 0 ? vendor.portfolioMedia : [resolveMediaUrl(null)];
 
     const handleShortlist = async () => {
         if (shortlisted) {

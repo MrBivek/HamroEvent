@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { VendorsService } from "@/services/VendorsService";
 import { DocumentsService } from "@/services/DocumentsService";
 import { VendorVerificationService } from "@/services/VendorVerificationService";
-import { fileToBase64 } from "@/lib/api";
+import { fileToBase64, getErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast.ts";
+import type { VendorProfile } from "@/types";
 
 export default function VendorVerification() {
     const { toast } = useToast();
-    const [vendor, setVendor] = useState<any | null>(null);
+    const [vendor, setVendor] = useState<VendorProfile | null>(null);
     const [status, setStatus] = useState<string>("pending");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,10 +80,10 @@ export default function VendorVerification() {
             toast({ title: "Verification submitted", description: "We are reviewing your documents." });
             setStatus("pending");
             setSelectedFiles([]);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Submission failed",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         } finally {

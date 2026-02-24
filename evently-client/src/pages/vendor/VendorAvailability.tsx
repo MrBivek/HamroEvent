@@ -20,7 +20,8 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { motion, AnimatePresence } from "framer-motion";
 import { AvailabilityService } from "@/services/AvailabilityService";
 import { VendorBookingsService } from "@/services/VendorBookingsService";
-import type { Booking } from "@/types";
+import { getErrorMessage } from "@/lib/api";
+import type { AvailabilityEntry, Booking } from "@/types";
 
 export default function VendorAvailability() {
     const { toast } = useToast();
@@ -48,8 +49,8 @@ export default function VendorAvailability() {
                 if (!active) return;
                 const items = availabilityRes?.items || [];
                 const blocked = items
-                    .filter((item: any) => item.isAvailable === false)
-                    .map((item: any) => ({
+                    .filter((item: AvailabilityEntry) => item.isAvailable === false)
+                    .map((item: AvailabilityEntry) => ({
                         date: new Date(item.date),
                         reason: item.note || ""
                     }));
@@ -68,8 +69,8 @@ export default function VendorAvailability() {
     }, [currentMonth]);
 
     const bookedDates = bookings
-        .filter((b: any) => ["accepted", "confirmed"].includes(b.status))
-        .map((b: any) => new Date(b.date));
+        .filter((b) => ["accepted", "confirmed"].includes(b.status))
+        .map((b) => new Date(b.date));
 
     const handleBlockDate = async () => {
         if (!selectedDate) return;
@@ -83,10 +84,10 @@ export default function VendorAvailability() {
             setBlockReason("");
             setIsBlockDialogOpen(false);
             toast({ title: "Date Blocked", description: `${selectedDate.toLocaleDateString()} has been blocked.` });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to block date",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -98,10 +99,10 @@ export default function VendorAvailability() {
             await AvailabilityService.deleteApiVendorsMeAvailability({ date: dateStr });
             setBlockedDates(blockedDates.filter((b) => b.date.getTime() !== dateToUnblock.getTime()));
             toast({ title: "Date Unblocked" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to unblock date",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -116,12 +117,12 @@ export default function VendorAvailability() {
     };
 
     const getBookingForDate = (date: Date) => {
-        return bookings.find((b: any) => new Date(b.date).toDateString() === date.toDateString());
+        return bookings.find((b) => new Date(b.date).toDateString() === date.toDateString());
     };
 
     const upcomingBookings = bookings
-        .filter((b: any) => new Date(b.date) >= new Date())
-        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .filter((b) => new Date(b.date) >= new Date())
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 5);
 
     return (
@@ -234,7 +235,7 @@ export default function VendorAvailability() {
                                     <div className="space-y-2">
                                         <Badge variant="success">Booked</Badge>
                                         {(() => {
-                                            const booking = getBookingForDate(selectedDate) as any;
+                                            const booking = getBookingForDate(selectedDate);
                                             if (!booking) return null;
                                             const customerName =
                                                 booking.customer?.name || booking.customerName || "Customer";
@@ -245,7 +246,8 @@ export default function VendorAvailability() {
                                                         <User className="h-4 w-4" /> {customerName}
                                                     </p>
                                                     <p className="flex items-center gap-2">
-                                                        <Clock className="h-4 w-4" /> {timeRange.start} - {timeRange.end}
+                                                        <Clock className="h-4 w-4" /> {timeRange.start} -{" "}
+                                                        {timeRange.end}
                                                     </p>
                                                     <p className="flex items-center gap-2">
                                                         <MapPin className="h-4 w-4" /> {booking.location || ""}
@@ -298,7 +300,7 @@ export default function VendorAvailability() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <AnimatePresence>
-                                {upcomingBookings.map((booking: any, index: number) => (
+                                {upcomingBookings.map((booking, index: number) => (
                                     <motion.div
                                         key={booking._id}
                                         initial={{ opacity: 0, x: -10 }}
@@ -326,7 +328,7 @@ export default function VendorAvailability() {
                                                     month: "short",
                                                     day: "numeric"
                                                 })}{" "}
-                                                • {(booking.timeRange?.start || "--")}
+                                                • {booking.timeRange?.start || "--"}
                                             </p>
                                         </Link>
                                     </motion.div>

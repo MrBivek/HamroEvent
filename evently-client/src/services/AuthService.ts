@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { AuthLoginResponse, AuthRegisterResponse, VendorRegisterResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AuthService {
     /**
      * Register a customer account
-     * @returns any Customer created
+     * @returns Customer created
      * @throws ApiError
      */
     public static postApiAuthRegisterCustomer({
@@ -22,7 +23,7 @@ export class AuthService {
             password: string;
             acceptTerms?: boolean;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<AuthRegisterResponse> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/auth/register/customer",
@@ -35,7 +36,7 @@ export class AuthService {
     }
     /**
      * Register a vendor account (creates user + vendor profile + optional packages)
-     * @returns any Vendor onboarding created
+     * @returns Vendor onboarding created
      * @throws ApiError
      */
     public static postApiAuthRegisterVendor({
@@ -73,7 +74,7 @@ export class AuthService {
             }>;
             portfolioMedia?: Array<string>;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<VendorRegisterResponse> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/auth/register/vendor",
@@ -86,7 +87,7 @@ export class AuthService {
     }
     /**
      * Login (Customer/Vendor/Admin)
-     * @returns any JWT token + user
+     * @returns JWT token + user
      * @throws ApiError
      */
     public static postApiAuthLogin({
@@ -96,7 +97,7 @@ export class AuthService {
             email: string;
             password: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<AuthLoginResponse> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/auth/login",

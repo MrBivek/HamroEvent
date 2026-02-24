@@ -11,7 +11,7 @@ import { VendorsService } from "@/services/VendorsService";
 import { PackagesService } from "@/services/PackagesService";
 import { OpenAPI } from "@/core/OpenAPI";
 import { request } from "@/core/request";
-import { fileToBase64, resolveMediaUrl } from "@/lib/api";
+import { fileToBase64, getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import type { ServicePackage, VendorProfile } from "@/types";
 
 export default function VendorProfile() {
@@ -74,10 +74,10 @@ export default function VendorProfile() {
                 mediaType: "application/json"
             });
             toast({ title: "Profile saved", description: "Your changes have been saved." });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to save",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         } finally {
@@ -90,10 +90,10 @@ export default function VendorProfile() {
             await PackagesService.deleteApiVendorsMePackages({ id });
             setPackages((prev) => prev.filter((pkg) => pkg._id !== id));
             toast({ title: "Package removed" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to delete package",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -111,10 +111,10 @@ export default function VendorProfile() {
             );
             const updated = await VendorsService.postApiVendorsMePortfolio({ requestBody: { images } });
             setVendor(updated);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Upload failed",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -124,10 +124,10 @@ export default function VendorProfile() {
         try {
             const updated = await VendorsService.deleteApiVendorsMePortfolio({ requestBody: { url } });
             setVendor(updated);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to remove image",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -205,7 +205,10 @@ export default function VendorProfile() {
                     </div>
                     <div className="space-y-2">
                         <Label>Email</Label>
-                        <Input value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                        <Input
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        />
                     </div>
                 </CardContent>
             </Card>

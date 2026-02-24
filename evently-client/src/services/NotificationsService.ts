@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { ApiOkResponse, Notification, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class NotificationsService {
     /**
      * List my notifications
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiNotifications({
@@ -19,7 +20,7 @@ export class NotificationsService {
         unread?: boolean;
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Notification>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/notifications",
@@ -32,10 +33,10 @@ export class NotificationsService {
     }
     /**
      * Mark notification as read
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static postApiNotificationsRead({ id }: { id: string }): CancelablePromise<any> {
+    public static postApiNotificationsRead({ id }: { id: string }): CancelablePromise<Notification> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/notifications/{id}/read",
@@ -49,10 +50,10 @@ export class NotificationsService {
     }
     /**
      * Mark all notifications as read
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static postApiNotificationsReadAll(): CancelablePromise<any> {
+    public static postApiNotificationsReadAll(): CancelablePromise<ApiOkResponse> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/notifications/read-all"

@@ -11,6 +11,7 @@ import { BookingsService } from "@/services/BookingsService";
 import { EventsService } from "@/services/EventsService";
 import { FavoritesService } from "@/services/FavoritesService";
 import { resolveMediaUrl } from "@/lib/api";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
 import type { Booking, Event, VendorProfile } from "@/types";
 
 export default function CustomerDashboard() {
@@ -47,7 +48,7 @@ export default function CustomerDashboard() {
         };
     }, [user, loadShortlist]);
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "confirmed":
                 return "success";
@@ -60,22 +61,19 @@ export default function CustomerDashboard() {
         }
     };
 
-    const upcomingBookings = bookings.slice(0, 3).map((booking) => {
-        const bookingAny = booking as any;
-        return {
-            id: booking._id,
-            vendorName: booking.vendor?.businessName || bookingAny.vendorName || "Vendor",
-            date: booking.date,
-            status: booking.status,
-            category: booking.vendor?.category || bookingAny.category || "Service"
-        };
-    });
+    const upcomingBookings = bookings.slice(0, 3).map((booking) => ({
+        id: booking._id,
+        vendorName: booking.vendor?.businessName || booking.vendorName || "Vendor",
+        date: booking.date,
+        status: booking.status,
+        category: booking.vendor?.category || booking.category || "Service"
+    }));
 
     const recentEvents = events.slice(0, 3).map((event) => ({
         id: event._id,
         title: event.title,
         date: event.date,
-        vendorCount: event.bookings?.length || 0
+        vendorCount: event.vendorCount ?? event.bookings?.length ?? 0
     }));
 
     return (
@@ -91,7 +89,12 @@ export default function CustomerDashboard() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Active Events", value: String(events.length), icon: FolderOpen, color: "bg-primary-soft text-primary" },
+                    {
+                        label: "Active Events",
+                        value: String(events.length),
+                        icon: FolderOpen,
+                        color: "bg-primary-soft text-primary"
+                    },
                     {
                         label: "Pending Bookings",
                         value: String(bookings.filter((b) => b.status === "pending").length),
@@ -163,7 +166,7 @@ export default function CustomerDashboard() {
                                         <span>{booking.category}</span>
                                     </div>
                                 </div>
-                                <Badge variant={getStatusVariant(booking.status) as any} className="capitalize">
+                                <Badge variant={getStatusVariant(booking.status)} className="capitalize">
                                     {booking.status}
                                 </Badge>
                             </Link>

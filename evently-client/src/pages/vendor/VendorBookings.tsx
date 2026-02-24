@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { VendorBookingsService } from "@/services/VendorBookingsService";
+import { getErrorMessage } from "@/lib/api";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
 import type { Booking } from "@/types";
 
 export default function VendorBookings() {
@@ -43,10 +45,10 @@ export default function VendorBookings() {
             });
             setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, status: res.status } : b)));
             toast({ title: "Booking accepted" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to accept booking",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -60,16 +62,16 @@ export default function VendorBookings() {
             });
             setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, status: res.status } : b)));
             toast({ title: "Booking rejected" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to reject booking",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
     };
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "confirmed":
                 return "success";
@@ -82,24 +84,22 @@ export default function VendorBookings() {
         }
     };
 
-    const visibleBookings =
-        activeTab === "all" ? bookings : bookings.filter((booking) => booking.status === activeTab);
+    const visibleBookings = activeTab === "all" ? bookings : bookings.filter((booking) => booking.status === activeTab);
 
     const bookingsList =
         visibleBookings.length > 0 ? (
             <div className="space-y-4">
                 {visibleBookings.map((booking) => {
-                    const bookingAny = booking as any;
-                    const customerName = bookingAny.customer?.name || bookingAny.customerName || "Customer";
-                    const eventName = booking.eventType || bookingAny.eventType || "Event";
-                    const price = bookingAny.price || 0;
+                    const customerName = booking.customer?.name || booking.customerName || "Customer";
+                    const eventName = booking.eventType || "Event";
+                    const price = booking.price || 0;
                     return (
                         <Card key={booking._id}>
                             <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-medium text-foreground">{customerName}</span>
-                                        <Badge variant={getStatusVariant(booking.status) as any} className="capitalize">
+                                        <Badge variant={getStatusVariant(booking.status)} className="capitalize">
                                             {booking.status}
                                         </Badge>
                                     </div>

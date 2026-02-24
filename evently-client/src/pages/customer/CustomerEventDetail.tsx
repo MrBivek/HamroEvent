@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.t
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { EventsService } from "@/services/EventsService";
-import type { Event } from "@/types";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
+import type { Booking, Event } from "@/types";
 
 export default function CustomerEventDetail() {
     const { id } = useParams();
@@ -52,7 +53,7 @@ export default function CustomerEventDetail() {
         );
     }
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "confirmed":
                 return "success";
@@ -65,7 +66,7 @@ export default function CustomerEventDetail() {
         }
     };
 
-    const totalSpent = (event.bookings || []).reduce((sum: number, b: any) => sum + (b.price || 0), 0);
+    const totalSpent = (event.bookings || []).reduce((sum: number, b: Booking) => sum + (b.price || 0), 0);
     const remainingBudget = (event.budget || 0) - totalSpent;
 
     return (
@@ -159,7 +160,7 @@ export default function CustomerEventDetail() {
                                 <p
                                     className={`text-lg font-semibold ${remainingBudget >= 0 ? "text-success" : "text-destructive"}`}
                                 >
-                                        NPR {remainingBudget.toLocaleString()}
+                                    NPR {remainingBudget.toLocaleString()}
                                 </p>
                             </div>
                         </div>
@@ -189,15 +190,15 @@ export default function CustomerEventDetail() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {(event.bookings || []).map((booking: any) => (
+                        {(event.bookings || []).map((booking) => (
                             <div
-                                key={booking.id}
+                                key={booking._id || booking.id}
                                 className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                             >
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-medium text-foreground">{booking.vendorName}</span>
-                                        <Badge variant={getStatusVariant(booking.status) as any} className="capitalize">
+                                        <Badge variant={getStatusVariant(booking.status)} className="capitalize">
                                             {booking.status}
                                         </Badge>
                                     </div>
@@ -209,7 +210,7 @@ export default function CustomerEventDetail() {
                                     </p>
                                     <div className="flex gap-2 mt-2">
                                         <Button variant="ghost" size="sm" asChild>
-                                            <Link to={`/customer/bookings/${booking.id}`}>
+                                            <Link to={`/customer/bookings/${booking._id || booking.id}`}>
                                                 <MessageSquare className="h-4 w-4 mr-1" />
                                                 View
                                             </Link>

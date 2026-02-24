@@ -3,9 +3,10 @@ import { FileText, User, Store, Star, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { AdminService } from "@/services/AdminService";
+import type { AuditLog } from "@/types";
 
 export default function AdminAuditLogs() {
-    const [logs, setLogs] = useState<any[]>([]);
+    const [logs, setLogs] = useState<AuditLog[]>([]);
 
     useEffect(() => {
         let active = true;

@@ -92,37 +92,39 @@ export default function CustomerNotifications() {
                             {notifications.map((notification, index) => {
                                 const id = String(notification._id);
                                 return (
-                                <motion.button
-                                    key={id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    onClick={() => markAsRead(id)}
-                                    className={`w-full flex items-start gap-4 p-4 text-left transition-colors hover:bg-muted/50 ${
-                                        !notification.isRead ? "bg-primary-soft/30" : ""
-                                    }`}
-                                >
-                                    <div className="shrink-0 mt-1">{getIcon(notification.type)}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-medium text-foreground">{notification.title}</span>
-                                            {!notification.isRead && (
-                                                <div className="h-2 w-2 rounded-full bg-primary" />
-                                            )}
+                                    <motion.button
+                                        key={id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        onClick={() => markAsRead(id)}
+                                        className={`w-full flex items-start gap-4 p-4 text-left transition-colors hover:bg-muted/50 ${
+                                            !notification.isRead ? "bg-primary-soft/30" : ""
+                                        }`}
+                                    >
+                                        <div className="shrink-0 mt-1">{getIcon(notification.type)}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-medium text-foreground">
+                                                    {notification.title}
+                                                </span>
+                                                {!notification.isRead && (
+                                                    <div className="h-2 w-2 rounded-full bg-primary" />
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                                {notification.body}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {new Date(notification.createdAt).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    hour: "numeric",
+                                                    minute: "2-digit"
+                                                })}
+                                            </p>
                                         </div>
-                                        <p className="text-sm text-muted-foreground line-clamp-2">
-                                            {notification.body}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {new Date(notification.createdAt).toLocaleDateString("en-US", {
-                                                month: "short",
-                                                day: "numeric",
-                                                hour: "numeric",
-                                                minute: "2-digit"
-                                            })}
-                                        </p>
-                                    </div>
-                                </motion.button>
+                                    </motion.button>
                                 );
                             })}
                         </div>

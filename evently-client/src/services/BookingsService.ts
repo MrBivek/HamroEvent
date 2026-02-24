@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { Booking, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class BookingsService {
     /**
      * Create a booking request (Customer only)
-     * @returns any Created
+     * @returns Created
      * @throws ApiError
      */
     public static postApiBookings({
@@ -20,7 +21,7 @@ export class BookingsService {
             eventId: string;
             customerNote?: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<Booking> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/bookings",
@@ -30,7 +31,7 @@ export class BookingsService {
     }
     /**
      * List my bookings (Customer only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiBookings({
@@ -41,7 +42,7 @@ export class BookingsService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Booking>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/bookings",
@@ -54,10 +55,10 @@ export class BookingsService {
     }
     /**
      * Get a booking (Customer only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static getApiBookings1({ id }: { id: string }): CancelablePromise<any> {
+    public static getApiBookings1({ id }: { id: string }): CancelablePromise<Booking> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/bookings/{id}",

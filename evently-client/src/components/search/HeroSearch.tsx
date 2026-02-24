@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { CatalogService } from "@/services/CatalogService";
 import { getCategoryMeta } from "@/data/catalog";
+import type { Category, Location } from "@/types";
 
 interface HeroSearchProps {
     variant?: "hero" | "compact";
@@ -16,8 +17,8 @@ export function HeroSearch({ variant = "hero" }: HeroSearchProps) {
     const [category, setCategory] = useState<string>("");
     const [location, setLocation] = useState<string>("");
     const [keyword, setKeyword] = useState("");
-    const [categories, setCategories] = useState<any[]>([]);
-    const [locations, setLocations] = useState<any[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
 
     useEffect(() => {
         let active = true;
@@ -90,10 +91,10 @@ export function HeroSearch({ variant = "hero" }: HeroSearchProps) {
                                     const meta = getCategoryMeta(cat.slug || cat.name);
                                     return (
                                         <SelectItem key={cat._id || value} value={value}>
-                                        <span className="flex items-center gap-2">
+                                            <span className="flex items-center gap-2">
                                                 <span>{meta.icon}</span>
                                                 <span>{meta.label || cat.name}</span>
-                                        </span>
+                                            </span>
                                         </SelectItem>
                                     );
                                 })}

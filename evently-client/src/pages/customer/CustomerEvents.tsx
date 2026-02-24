@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { EventsService } from "@/services/EventsService";
+import { getErrorMessage } from "@/lib/api";
 import type { Event } from "@/types";
 
 export default function CustomerEvents() {
@@ -61,10 +62,10 @@ export default function CustomerEvents() {
             setEvents([created, ...events]);
             setIsDialogOpen(false);
             toast({ title: "Event created", description: `${payload.title} has been created.` });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to create event",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -75,10 +76,10 @@ export default function CustomerEvents() {
             await EventsService.deleteApiEvents({ id });
             setEvents(events.filter((e) => e._id !== id));
             toast({ title: "Event deleted", description: "The event has been removed." });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to delete event",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -170,19 +171,19 @@ export default function CustomerEvents() {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={`/customer/events/${event._id}`}>
-                                                            <Edit className="h-4 w-4 mr-2" /> Edit
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDelete(event._id)}
-                                                        className="text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link to={`/customer/events/${event._id}`}>
+                                                        <Edit className="h-4 w-4 mr-2" /> Edit
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDelete(event._id)}
+                                                    className="text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
 

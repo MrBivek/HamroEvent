@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { Category, Location, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class CatalogService {
     /**
      * List categories
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiCategories({
@@ -18,7 +19,7 @@ export class CatalogService {
          * If true, only active categories
          */
         active?: boolean;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Category>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/categories",
@@ -29,7 +30,7 @@ export class CatalogService {
     }
     /**
      * List locations
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiLocations({
@@ -49,7 +50,7 @@ export class CatalogService {
          * Filter by parent location id
          */
         parentId?: string;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Location>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/locations",

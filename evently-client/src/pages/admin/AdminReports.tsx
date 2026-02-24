@@ -3,9 +3,10 @@ import { BarChart3, Download, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { AdminService } from "@/services/AdminService";
+import type { AdminAnalyticsResponse } from "@/types";
 
 export default function AdminReports() {
-    const [bookingsByCategory, setBookingsByCategory] = useState<any[]>([]);
+    const [bookingsByCategory, setBookingsByCategory] = useState<AdminAnalyticsResponse["bookingsByCategory"]>([]);
     const [monthlyBookings, setMonthlyBookings] = useState<number[]>([]);
 
     useEffect(() => {
@@ -78,7 +79,9 @@ export default function AdminReports() {
                                 <div key={i} className="flex-1 flex flex-col items-center">
                                     <div
                                         className="w-full gradient-primary rounded-t"
-                                        style={{ height: `${monthlyBookings.length ? (val / Math.max(...monthlyBookings, 1)) * 100 : 0}%` }}
+                                        style={{
+                                            height: `${monthlyBookings.length ? (val / Math.max(...monthlyBookings, 1)) * 100 : 0}%`
+                                        }}
                                     />
                                     <span className="text-xs text-muted-foreground mt-1">
                                         {["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][i]}

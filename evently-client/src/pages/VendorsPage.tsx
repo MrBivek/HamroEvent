@@ -14,7 +14,7 @@ import { VendorCard } from "@/components/vendors/VendorCard.tsx";
 import { CatalogService } from "@/services/CatalogService";
 import { MarketplaceService } from "@/services/MarketplaceService";
 import { getCategoryMeta } from "@/data/catalog";
-import type { VendorProfile } from "@/types";
+import type { Category, Location, VendorProfile } from "@/types";
 
 export default function VendorsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -30,8 +30,8 @@ export default function VendorsPage() {
     const [sortBy, setSortBy] = useState<string>("rating");
     const [vendors, setVendors] = useState<VendorProfile[]>([]);
     const [total, setTotal] = useState<number>(0);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [locations, setLocations] = useState<any[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {

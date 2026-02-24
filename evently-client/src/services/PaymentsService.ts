@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { PaginatedResponse, Payment, Refund } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class PaymentsService {
     /**
      * Initiate payment (Customer only)
-     * @returns any Created
+     * @returns Created
      * @throws ApiError
      */
     public static postApiPayments({
@@ -19,7 +20,7 @@ export class PaymentsService {
             amount: number;
             provider: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<Payment> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/payments",
@@ -29,7 +30,7 @@ export class PaymentsService {
     }
     /**
      * List my payments (Customer only)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiPayments({
@@ -40,7 +41,7 @@ export class PaymentsService {
         bookingId?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Payment>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/payments",
@@ -53,10 +54,10 @@ export class PaymentsService {
     }
     /**
      * Confirm payment (Customer only, mock)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static postApiPaymentsConfirm({ id }: { id: string }): CancelablePromise<any> {
+    public static postApiPaymentsConfirm({ id }: { id: string }): CancelablePromise<Payment> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/payments/{id}/confirm",
@@ -67,7 +68,7 @@ export class PaymentsService {
     }
     /**
      * Create a refund (Admin/Vendor)
-     * @returns any Created
+     * @returns Created
      * @throws ApiError
      */
     public static postApiRefunds({
@@ -78,7 +79,7 @@ export class PaymentsService {
             amount: number;
             reason?: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<Refund> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/refunds",
@@ -88,7 +89,7 @@ export class PaymentsService {
     }
     /**
      * List refunds (Admin/Vendor)
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiRefunds({
@@ -99,7 +100,7 @@ export class PaymentsService {
         bookingId?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Refund>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/refunds",

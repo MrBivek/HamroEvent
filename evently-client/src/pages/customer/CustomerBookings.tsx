@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { BookingsService } from "@/services/BookingsService";
 import { resolveMediaUrl } from "@/lib/api";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
 import type { Booking } from "@/types";
 
 export default function CustomerBookings() {
@@ -37,7 +38,7 @@ export default function CustomerBookings() {
         };
     }, []);
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "confirmed":
                 return "success";
@@ -68,9 +69,8 @@ export default function CustomerBookings() {
     };
 
     const filteredBookings = bookings.filter((booking) => {
-        const bookingAny = booking as any;
-        const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "";
-        const category = bookingAny.category || booking.vendor?.category || "";
+        const vendorName = booking.vendorName || booking.vendor?.businessName || "";
+        const category = booking.category || booking.vendor?.category || "";
         const matchesSearch =
             vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -113,12 +113,11 @@ export default function CustomerBookings() {
                     {filteredBookings.length > 0 ? (
                         <div className="space-y-4">
                             {filteredBookings.map((booking, index) => {
-                                const bookingAny = booking as any;
-                                const vendorName = bookingAny.vendorName || booking.vendor?.businessName || "Vendor";
-                                const vendorImage = bookingAny.vendorImage || booking.vendor?.portfolioMedia?.[0];
-                                const category = bookingAny.category || booking.vendor?.category || "Service";
-                                const price = bookingAny.price || 0;
-                                const location = bookingAny.location || booking.location || "";
+                                const vendorName = booking.vendorName || booking.vendor?.businessName || "Vendor";
+                                const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
+                                const category = booking.category || booking.vendor?.category || "Service";
+                                const price = booking.price || 0;
+                                const location = booking.location || "";
                                 return (
                                     <motion.div
                                         key={booking._id}
@@ -145,7 +144,7 @@ export default function CustomerBookings() {
                                                                 </p>
                                                             </div>
                                                             <Badge
-                                                                variant={getStatusVariant(booking.status) as any}
+                                                                variant={getStatusVariant(booking.status)}
                                                                 className="capitalize gap-1"
                                                             >
                                                                 {getStatusIcon(booking.status)}

@@ -11,7 +11,7 @@ import { CatalogService } from "@/services/CatalogService";
 import { MarketplaceService } from "@/services/MarketplaceService";
 import { getCategoryMeta } from "@/data/catalog";
 import { VENDOR_PLACEHOLDER } from "@/lib/api";
-import type { VendorProfile } from "@/types";
+import type { Category, VendorProfile } from "@/types";
 
 const stats = [
     { value: "500+", label: "Verified Vendors" },
@@ -77,7 +77,7 @@ const itemVariants = {
 };
 
 export default function LandingPage() {
-    const [categories, setCategories] = useState<any[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [featuredVendors, setFeaturedVendors] = useState<VendorProfile[]>([]);
 
     useEffect(() => {
@@ -207,7 +207,7 @@ export default function LandingPage() {
                         viewport={{ once: true }}
                         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
                     >
-                        {categories.map((category: any) => {
+                        {categories.map((category) => {
                             const value = category.slug || category.name || category._id;
                             const meta = getCategoryMeta(category.slug || category.name);
                             return (

@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { AdminService } from "@/services/AdminService";
+import { getErrorMessage } from "@/lib/api";
+import type { Review } from "@/types";
 
 export default function AdminReviews() {
     const { toast } = useToast();
-    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<Review[]>([]);
 
     useEffect(() => {
         let active = true;
@@ -33,10 +35,10 @@ export default function AdminReviews() {
             await AdminService.patchApiAdminReviews({ id, requestBody: { isHidden: true } });
             setReviews((prev) => prev.map((r) => (r._id === id ? { ...r, isHidden: true } : r)));
             toast({ title: "Review hidden" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to hide review",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -47,10 +49,10 @@ export default function AdminReviews() {
             await AdminService.patchApiAdminReviews({ id, requestBody: { isHidden: false } });
             setReviews((prev) => prev.map((r) => (r._id === id ? { ...r, isHidden: false } : r)));
             toast({ title: "Review restored" });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to restore review",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -70,7 +72,9 @@ export default function AdminReviews() {
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="font-medium text-foreground">{review.customerName || "Customer"}</span>
+                                        <span className="font-medium text-foreground">
+                                            {review.customerName || "Customer"}
+                                        </span>
                                         <span className="text-muted-foreground">→</span>
                                         <span className="text-foreground">{review.vendorName || "Vendor"}</span>
                                         {review.flagged && (

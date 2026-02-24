@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useToast } from "@/hooks/use-toast.ts";
 import { AuthService } from "@/services/AuthService";
+import { getErrorMessage } from "@/lib/api";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -34,10 +35,10 @@ export default function LoginPage() {
                 admin: "/admin/dashboard"
             };
             navigate(dashboards[result.user.role]);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Login failed",
-                description: error?.body?.message || "Invalid credentials. Please try again.",
+                description: getErrorMessage(error, "Invalid credentials. Please try again."),
                 variant: "destructive"
             });
         } finally {

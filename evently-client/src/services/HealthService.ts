@@ -8,7 +8,7 @@ import { request as __request } from "../core/request";
 export class HealthService {
     /**
      * Health check
-     * @returns any Server is healthy
+     * @returns Server is healthy
      * @throws ApiError
      */
     public static getHealth(): CancelablePromise<{

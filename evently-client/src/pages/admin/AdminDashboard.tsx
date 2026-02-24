@@ -5,15 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.t
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { AdminService } from "@/services/AdminService";
+import type { AdminDashboardPendingVendor, AdminDashboardStats } from "@/types";
 
 export default function AdminDashboard() {
-    const [stats, setStats] = useState<any>({
+    const [stats, setStats] = useState<AdminDashboardStats>({
         totalUsers: 0,
         activeVendors: 0,
         totalBookings: 0,
         avgRating: 0
     });
-    const [pendingVendors, setPendingVendors] = useState<any[]>([]);
+    const [pendingVendors, setPendingVendors] = useState<AdminDashboardPendingVendor[]>([]);
 
     useEffect(() => {
         let active = true;
@@ -35,7 +36,13 @@ export default function AdminDashboard() {
     }, []);
 
     const statCards = [
-        { label: "Total Users", value: stats.totalUsers, icon: Users, change: "", color: "bg-primary-soft text-primary" },
+        {
+            label: "Total Users",
+            value: stats.totalUsers,
+            icon: Users,
+            change: "",
+            color: "bg-primary-soft text-primary"
+        },
         {
             label: "Active Vendors",
             value: stats.activeVendors,

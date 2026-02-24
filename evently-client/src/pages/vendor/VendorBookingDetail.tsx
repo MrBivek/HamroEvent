@@ -1,18 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import {
-    ArrowLeft,
-    Send,
-    Calendar,
-    MapPin,
-    Clock,
-    User,
-    Package,
-    Check,
-    X,
-    RefreshCw,
-    DollarSign
-} from "lucide-react";
+import { ArrowLeft, Send, Calendar, MapPin, Clock, User, Package, Check, X, RefreshCw, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
@@ -33,13 +21,17 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { motion, AnimatePresence } from "framer-motion";
 import { VendorBookingsService } from "@/services/VendorBookingsService";
 import { ConversationsService } from "@/services/ConversationsService";
-import type { Booking } from "@/types";
+import { getErrorMessage } from "@/lib/api";
+import type { BadgeProps } from "@/components/ui/badge.tsx";
+import type { Booking, BookingMessage, ConversationMessage } from "@/types";
+
+type ChatMessage = BookingMessage | ConversationMessage;
 
 export default function VendorBookingDetail() {
     const { id } = useParams();
     const { toast } = useToast();
     const [message, setMessage] = useState("");
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [status, setStatus] = useState("pending");
     const [rescheduleDate, setRescheduleDate] = useState("");
     const [rescheduleReason, setRescheduleReason] = useState("");
@@ -82,10 +74,10 @@ export default function VendorBookingDetail() {
             });
             setMessages([...messages, msg]);
             setMessage("");
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to send message",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -100,10 +92,10 @@ export default function VendorBookingDetail() {
             });
             setStatus(res?.status || "accepted");
             toast({ title: "Booking Accepted", description: "The customer has been notified." });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to accept booking",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -118,10 +110,10 @@ export default function VendorBookingDetail() {
             });
             setStatus(res?.status || "rejected");
             toast({ title: "Booking Rejected", description: "The customer has been notified." });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Failed to reject booking",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }
@@ -132,7 +124,7 @@ export default function VendorBookingDetail() {
         toast({ title: "Reschedule not available", description: "This feature will be added soon." });
     };
 
-    const getStatusColor = (s: string) => {
+    const getStatusColor = (s: string): BadgeProps["variant"] => {
         switch (s) {
             case "confirmed":
                 return "success";
@@ -169,11 +161,21 @@ export default function VendorBookingDetail() {
         );
     }
 
-    const bookingAny = booking as any;
-    const customer = booking.customer || bookingAny.customer || {};
-    const timeRange = bookingAny.timeRange || { start: "--", end: "--" };
-    const packageName = bookingAny.packageName || bookingAny.packageTitle || "Package";
-    const price = bookingAny.price || 0;
+    const customer = booking.customer;
+    const timeRange = booking.timeRange || { start: "--", end: "--" };
+    const packageName = booking.packageName || "Package";
+    const price = booking.price || 0;
+
+    const getMessageSender = (msg: ChatMessage) => {
+        if ("sender" in msg) return msg.sender;
+        return msg.senderId === booking.customerId ? "customer" : "vendor";
+    };
+
+    const getMessageId = (msg: ChatMessage, index: number) => {
+        if ("id" in msg) return msg.id;
+        if ("_id" in msg) return msg._id;
+        return String(index);
+    };
 
     return (
         <div className="space-y-6">
@@ -187,7 +189,7 @@ export default function VendorBookingDetail() {
                     <h1 className="text-2xl font-bold text-foreground">Booking Details</h1>
                     <p className="text-muted-foreground">Booking #{id}</p>
                 </div>
-                <Badge variant={getStatusColor(status) as any} className="capitalize text-sm px-3 py-1">
+                <Badge variant={getStatusColor(status)} className="capitalize text-sm px-3 py-1">
                     {status.replace("_", " ")}
                 </Badge>
             </div>
@@ -204,7 +206,7 @@ export default function VendorBookingDetail() {
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-12 w-12">
                                     <AvatarFallback className="bg-primary/10 text-primary">
-                                        {String(customer.name || "?")
+                                        {String(customer?.name || "?")
                                             .split(" ")
                                             .map((part: string) => part[0])
                                             .join("")
@@ -212,11 +214,11 @@ export default function VendorBookingDetail() {
                                     </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium text-foreground">{customer.name || "Customer"}</p>
-                                    <p className="text-sm text-muted-foreground">{customer.email || ""}</p>
+                                    <p className="font-medium text-foreground">{customer?.name || "Customer"}</p>
+                                    <p className="text-sm text-muted-foreground">{customer?.email || ""}</p>
                                 </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">{customer.phone || ""}</p>
+                            <p className="text-sm text-muted-foreground">{customer?.phone || ""}</p>
                         </CardContent>
                     </Card>
 
@@ -263,9 +265,7 @@ export default function VendorBookingDetail() {
                             </ul>
                             <div className="flex items-center gap-3 text-sm pt-2">
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-lg font-bold text-foreground">
-                                    NPR {price.toLocaleString()}
-                                </span>
+                                <span className="text-lg font-bold text-foreground">NPR {price.toLocaleString()}</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -333,10 +333,10 @@ export default function VendorBookingDetail() {
                         <div className="space-y-4">
                             <AnimatePresence>
                                 {messages.map((msg, index) => {
-                                    const sender = msg.sender || msg.senderRole || msg.senderId;
+                                    const sender = getMessageSender(msg);
                                     return (
                                         <motion.div
-                                            key={msg._id || msg.id || index}
+                                            key={getMessageId(msg, index)}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.05 }}

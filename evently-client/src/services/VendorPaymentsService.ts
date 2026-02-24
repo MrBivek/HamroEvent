@@ -3,15 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { PaginatedResponse, VendorPaymentSummary, VendorPaymentTransaction, VendorPayout } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class VendorPaymentsService {
     /**
      * Get vendor payment summary
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static getApiVendorsMePaymentsSummary(): CancelablePromise<any> {
+    public static getApiVendorsMePaymentsSummary(): CancelablePromise<VendorPaymentSummary> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/payments/summary"
@@ -19,10 +20,12 @@ export class VendorPaymentsService {
     }
     /**
      * List vendor transactions
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static getApiVendorsMePaymentsTransactions(): CancelablePromise<any> {
+    public static getApiVendorsMePaymentsTransactions(): CancelablePromise<
+        PaginatedResponse<VendorPaymentTransaction>
+    > {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/payments/transactions"
@@ -30,10 +33,10 @@ export class VendorPaymentsService {
     }
     /**
      * List vendor payouts
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static getApiVendorsMePaymentsPayouts(): CancelablePromise<any> {
+    public static getApiVendorsMePaymentsPayouts(): CancelablePromise<PaginatedResponse<VendorPayout>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/payments/payouts"
@@ -41,7 +44,7 @@ export class VendorPaymentsService {
     }
     /**
      * Request a payout
-     * @returns any Created
+     * @returns Created
      * @throws ApiError
      */
     public static postApiVendorsMePaymentsPayouts({
@@ -51,7 +54,7 @@ export class VendorPaymentsService {
             amount: number;
             bankLast4?: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<VendorPayout> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/payments/payouts",

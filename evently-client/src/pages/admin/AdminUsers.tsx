@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu.tsx";
 import { AdminService } from "@/services/AdminService";
 import { useToast } from "@/hooks/use-toast.ts";
+import { getErrorMessage } from "@/lib/api";
+import type { User } from "@/types";
 
 export default function AdminUsers() {
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [query, setQuery] = useState("");
     const { toast } = useToast();
 
@@ -40,10 +42,10 @@ export default function AdminUsers() {
         try {
             await AdminService.patchApiAdminUsers({ id, requestBody: { isActive } });
             setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, isActive } : u)));
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Update failed",
-                description: error?.body?.message || "Please try again.",
+                description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
         }

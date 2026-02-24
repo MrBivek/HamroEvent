@@ -35,7 +35,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast.ts";
 import { CatalogService } from "@/services/CatalogService";
 import { AuthService } from "@/services/AuthService";
-import { fileToBase64 } from "@/lib/api";
+import { fileToBase64, getErrorMessage } from "@/lib/api";
+import type { Category, Location } from "@/types";
 
 const steps = [
     { id: 1, title: "Account", icon: User, description: "Create your account" },
@@ -59,8 +60,8 @@ export default function VendorRegisterPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const { toast } = useToast();
-    const [categories, setCategories] = useState<any[]>([]);
-    const [locations, setLocations] = useState<any[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
 
     // Form states
     const [accountData, setAccountData] = useState({
@@ -179,10 +180,10 @@ export default function VendorRegisterPage() {
                 description: "Your vendor account is pending verification."
             });
             navigate("/login");
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Registration failed",
-                description: error?.body?.message || "Unable to register. Please try again.",
+                description: getErrorMessage(error, "Unable to register. Please try again."),
                 variant: "destructive"
             });
         } finally {
@@ -238,10 +239,10 @@ export default function VendorRegisterPage() {
         try {
             const previews = await Promise.all(selected.map((file) => fileToBase64(file, 10)));
             setPortfolioImages(previews);
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Upload failed",
-                description: error?.message || "Unable to read files",
+                description: getErrorMessage(error, "Unable to read files"),
                 variant: "destructive"
             });
         }

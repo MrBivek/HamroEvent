@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { AuthService } from "@/services/AuthService";
+import { getErrorMessage } from "@/lib/api";
 
 export default function CustomerRegisterPage() {
     const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
@@ -41,10 +42,10 @@ export default function CustomerRegisterPage() {
             });
             toast({ title: "Account created!", description: "Please log in to continue" });
             navigate("/login");
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 title: "Registration failed",
-                description: error?.body?.message || "Unable to create account. Please try again.",
+                description: getErrorMessage(error, "Unable to create account. Please try again."),
                 variant: "destructive"
             });
         } finally {

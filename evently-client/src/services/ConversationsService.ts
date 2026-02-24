@@ -3,12 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
+import type { ApiOkResponse, Conversation, ConversationMessage, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class ConversationsService {
     /**
      * Create or get a conversation
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static postApiConversations({
@@ -19,7 +20,7 @@ export class ConversationsService {
             vendorId?: string;
             customerUserId?: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<Conversation> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/conversations",
@@ -29,7 +30,7 @@ export class ConversationsService {
     }
     /**
      * List my conversations
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiConversations({
@@ -38,7 +39,7 @@ export class ConversationsService {
     }: {
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<Conversation>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/conversations",
@@ -50,7 +51,7 @@ export class ConversationsService {
     }
     /**
      * List messages in a conversation
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
     public static getApiConversationsMessages({
@@ -61,7 +62,7 @@ export class ConversationsService {
         id: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<any> {
+    }): CancelablePromise<PaginatedResponse<ConversationMessage>> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/conversations/{id}/messages",
@@ -76,7 +77,7 @@ export class ConversationsService {
     }
     /**
      * Send a message
-     * @returns any Created
+     * @returns Created
      * @throws ApiError
      */
     public static postApiConversationsMessages({
@@ -87,7 +88,7 @@ export class ConversationsService {
         requestBody: {
             text: string;
         };
-    }): CancelablePromise<any> {
+    }): CancelablePromise<ConversationMessage> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/conversations/{id}/messages",
@@ -100,10 +101,10 @@ export class ConversationsService {
     }
     /**
      * Mark messages as read
-     * @returns any OK
+     * @returns OK
      * @throws ApiError
      */
-    public static postApiConversationsRead({ id }: { id: string }): CancelablePromise<any> {
+    public static postApiConversationsRead({ id }: { id: string }): CancelablePromise<ApiOkResponse> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/conversations/{id}/read",

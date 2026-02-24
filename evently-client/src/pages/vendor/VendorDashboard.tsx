@@ -130,32 +130,39 @@ export default function VendorDashboard() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-            {pendingBookings.map((booking: any) => (
-                <div
-                    key={booking._id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border"
-                >
-                    <div>
-                        <p className="font-medium text-foreground">
-                            {booking.customer?.name || booking.customerName || "Customer"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {booking.eventType || booking.event || "Event"} •{" "}
-                            {booking.packageName || booking.packageTitle || "Package"}
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                            {new Date(booking.date).toLocaleDateString()}
-                        </p>
-                        <div className="flex gap-2 mt-2">
-                            <Button size="sm" variant="success" onClick={() => handleDecision(booking._id, "ACCEPT")}>
-                                Accept
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDecision(booking._id, "REJECT")}>
-                                Decline
-                            </Button>
-                        </div>
+                        {pendingBookings.map((booking) => (
+                            <div
+                                key={booking._id}
+                                className="flex items-center justify-between p-3 rounded-lg border border-border"
+                            >
+                                <div>
+                                    <p className="font-medium text-foreground">
+                                        {booking.customer?.name || booking.customerName || "Customer"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {booking.eventType || "Event"} • {booking.packageName || "Package"}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-muted-foreground">
+                                        {new Date(booking.date).toLocaleDateString()}
+                                    </p>
+                                    <div className="flex gap-2 mt-2">
+                                        <Button
+                                            size="sm"
+                                            variant="success"
+                                            onClick={() => handleDecision(booking._id, "ACCEPT")}
+                                        >
+                                            Accept
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleDecision(booking._id, "REJECT")}
+                                        >
+                                            Decline
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
