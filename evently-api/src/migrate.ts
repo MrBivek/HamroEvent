@@ -38,12 +38,7 @@ async function loadMigration(file: string): Promise<MigrationModule> {
   return mod as MigrationModule;
 }
 
-async function main() {
-  const cmd = process.argv[2] ?? "status";
-
-  await mongoose.connect(env.MONGO_URI);
-  const conn = mongoose.connection;
-
+export async function runMigrations(conn: mongoose.Connection, cmd: "status" | "up" | "down") {
   await ensureMigrationsCollection(conn);
   const applied = await getApplied(conn);
   const files = await listMigrationFiles();
@@ -56,7 +51,6 @@ async function main() {
       }),
     );
     console.table(rows);
-    await mongoose.disconnect();
     return;
   }
 
@@ -71,7 +65,6 @@ async function main() {
         .collection(MIGRATIONS_COLLECTION)
         .insertOne({ name: m.name, appliedAt: new Date() });
     }
-    await mongoose.disconnect();
     return;
   }
 
@@ -85,7 +78,6 @@ async function main() {
 
     if (appliedDocs.length === 0) {
       console.log("No migrations applied.");
-      await mongoose.disconnect();
       return;
     }
 
@@ -104,15 +96,26 @@ async function main() {
     console.log(`Reverting: ${m.name}`);
     await m.down(conn);
     await conn.collection(MIGRATIONS_COLLECTION).deleteOne({ name: m.name });
-
-    await mongoose.disconnect();
     return;
   }
 
   throw new Error(`Unknown Command: ${cmd}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function main() {
+  const cmd = (process.argv[2] ?? "status") as "status" | "up" | "down";
+
+  await mongoose.connect(env.MONGO_URI);
+  const conn = mongoose.connection;
+
+  await runMigrations(conn, cmd);
+  await mongoose.disconnect();
+}
+
+const isDirectRun = import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

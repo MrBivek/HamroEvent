@@ -128,8 +128,8 @@ authRoutes.post("/register/vendor", validateBody(RegisterVendorSchema), controll
  *             type: object
  *             required: [email, password]
  *             properties:
- *               email: { type: string, example: "admin@evently.local" }
- *               password: { type: string, example: "Admin@123456" }
+ *               email: { type: string, example: "admin@event.local" }
+ *               password: { type: string, example: "affinityismyidol" }
  *     responses:
  *       200:
  *         description: JWT token + user

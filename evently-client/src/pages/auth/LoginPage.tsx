@@ -108,14 +108,6 @@ export default function LoginPage() {
                                 Sign up
                             </Link>
                         </p>
-                        <div className="text-center text-xs text-muted-foreground mt-4 space-y-1">
-                            <p>
-                                <strong>Demo credentials:</strong>
-                            </p>
-                            <p>Customer: sita@example.com</p>
-                            <p>Vendor: raj@photography.com</p>
-                            <p>Admin: admin@evently.com</p>
-                        </div>
                         <p className="text-center text-sm text-muted-foreground mt-4">
                             Want to become a vendor?{" "}
                             <Link to="/register/vendor" className="text-primary font-medium hover:underline">

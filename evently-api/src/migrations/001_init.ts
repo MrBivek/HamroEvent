@@ -2,6 +2,35 @@ import type mongoose from "mongoose";
 
 export const name = "001_init_collections_and_indexes";
 
+function defaultIndexName(keys: Record<string, unknown>) {
+  return Object.entries(keys)
+    .map(([field, value]) => `${field}_${value}`)
+    .join("_");
+}
+
+async function createIndexSafe(
+  conn: mongoose.Connection,
+  collection: string,
+  keys: Record<string, unknown>,
+  options?: { name?: string } & Record<string, unknown>,
+) {
+  const coll = conn.collection(collection);
+  try {
+    await coll.createIndex(keys as any, options as any);
+  } catch (err: any) {
+    const code = err?.code;
+    if (code !== 85 && code !== 86) throw err;
+
+    const name = options?.name ?? defaultIndexName(keys);
+    try {
+      await coll.dropIndex(name);
+    } catch {
+      // ignore drop failures
+    }
+    await coll.createIndex(keys as any, options as any);
+  }
+}
+
 export async function up(conn: mongoose.Connection) {
   const collections = [
     "users",
@@ -38,123 +67,129 @@ export async function up(conn: mongoose.Connection) {
   }
 
   // Users
-  await conn.collection("users").createIndex({ email: 1 }, { unique: true });
-  await conn.collection("users").createIndex({ role: 1, status: 1 });
+  await createIndexSafe(conn, "users", { email: 1 }, { unique: true });
+  await createIndexSafe(conn, "users", { role: 1, status: 1 });
 
   // Vendor
-  await conn.collection("vendors").createIndex({ userId: 1 }, { unique: true });
-  await conn.collection("vendors").createIndex({ verifiedStatus: 1 });
-  await conn.collection("vendors").createIndex({ locations: 1 });
+  await createIndexSafe(conn, "vendors", { userId: 1 }, { unique: true });
+  await createIndexSafe(conn, "vendors", { verifiedStatus: 1 });
+  await createIndexSafe(conn, "vendors", { locations: 1 });
 
   // Vendor Staff
-  await conn.collection("vendorStaff").createIndex({ vendorId: 1, userId: 1 }, { unique: true });
+  await createIndexSafe(conn, "vendorStaff", { vendorId: 1, userId: 1 }, { unique: true });
 
   // Categories
-  await conn.collection("categories").createIndex({ slug: 1 }, { unique: true });
-  await conn.collection("categories").createIndex({ isActive: 1 });
+  await createIndexSafe(conn, "categories", { slug: 1 }, { unique: true });
+  await createIndexSafe(conn, "categories", { isActive: 1 });
 
   // Locations
-  await conn.collection("locations").createIndex({ parentId: 1 });
-  await conn.collection("locations").createIndex({ slug: 1 }, { unique: true, sparse: true });
+  await createIndexSafe(conn, "locations", { parentId: 1 });
+  await createIndexSafe(conn, "locations", { slug: 1 }, { unique: true, sparse: true });
 
   // Vendor Services
-  await conn.collection("vendorServices").createIndex({ vendorId: 1, categoryId: 1 });
-  await conn.collection("vendorServices").createIndex({ categoryId: 1 });
-  await conn.collection("vendorServices").createIndex({ tags: 1 });
+  await createIndexSafe(conn, "vendorServices", { vendorId: 1, categoryId: 1 });
+  await createIndexSafe(conn, "vendorServices", { categoryId: 1 });
+  await createIndexSafe(conn, "vendorServices", { tags: 1 });
 
   // Packages
-  await conn.collection("packages").createIndex({ vendorId: 1 });
-  await conn.collection("packages").createIndex({ categoryId: 1, isActive: 1 });
-  await conn
-    .collection("packages")
-    .createIndex(
-      { title: "text", description: "text" },
-      { name: "packages_text_search", default_language: "english" },
-    );
+  await createIndexSafe(conn, "packages", { vendorId: 1 });
+  await createIndexSafe(conn, "packages", { categoryId: 1, isActive: 1 });
+  await createIndexSafe(
+    conn,
+    "packages",
+    { title: "text", description: "text" },
+    { name: "packages_text_search", default_language: "english" },
+  );
 
   // Events
-  await conn.collection("events").createIndex({ userId: 1 });
-  await conn.collection("events").createIndex({ eventDate: 1 });
-  await conn.collection("events").createIndex({ eventType: 1 });
+  await createIndexSafe(conn, "events", { userId: 1 });
+  await createIndexSafe(conn, "events", { eventDate: 1 });
+  await createIndexSafe(conn, "events", { eventType: 1 });
 
   // Bookings
-  await conn.collection("bookings").createIndex({ userId: 1, status: 1, createdAt: -1 });
-  await conn.collection("bookings").createIndex({ vendorId: 1, status: 1, createdAt: -1 });
-  await conn.collection("bookings").createIndex({ eventId: 1 });
+  await createIndexSafe(conn, "bookings", { userId: 1, status: 1, createdAt: -1 });
+  await createIndexSafe(conn, "bookings", { vendorId: 1, status: 1, createdAt: -1 });
+  await createIndexSafe(conn, "bookings", { eventId: 1 });
 
   // Availability
-  await conn.collection("availability").createIndex({ vendorId: 1, date: 1 }, { unique: true });
+  await createIndexSafe(conn, "availability", { vendorId: 1, date: 1 }, { unique: true });
 
   // Quotes
-  await conn.collection("quotes").createIndex({ vendorId: 1, status: 1, createdAt: -1 });
-  await conn.collection("quotes").createIndex({ eventId: 1 });
+  await createIndexSafe(conn, "quotes", { vendorId: 1, status: 1, createdAt: -1 });
+  await createIndexSafe(conn, "quotes", { eventId: 1 });
 
   // Payments
-  await conn.collection("payments").createIndex({ bookingId: 1 });
-  await conn.collection("payments").createIndex({ status: 1 });
-  await conn.collection("payments").createIndex({ providerRef: 1 }, { unique: true, sparse: true });
+  await createIndexSafe(conn, "payments", { bookingId: 1 });
+  await createIndexSafe(conn, "payments", { status: 1 });
+  await createIndexSafe(conn, "payments", { providerRef: 1 }, { unique: true, sparse: true });
 
   // Refunds
-  await conn.collection("refunds").createIndex({ paymentId: 1 });
-  await conn.collection("refunds").createIndex({ bookingId: 1 });
-  await conn.collection("refunds").createIndex({ providerRef: 1 }, { unique: true, sparse: true });
+  await createIndexSafe(conn, "refunds", { paymentId: 1 });
+  await createIndexSafe(conn, "refunds", { bookingId: 1 });
+  await createIndexSafe(conn, "refunds", { providerRef: 1 }, { unique: true, sparse: true });
 
   // Reviews
-  await conn.collection("reviews").createIndex({ bookingId: 1 }, { unique: true });
-  await conn.collection("reviews").createIndex({ vendorId: 1, createdAt: -1 });
+  await createIndexSafe(conn, "reviews", { bookingId: 1 }, { unique: true });
+  await createIndexSafe(conn, "reviews", { vendorId: 1, createdAt: -1 });
 
   // Verification Requests
-  await conn.collection("verificationRequests").createIndex({ vendorId: 1, status: 1 });
-  await conn.collection("verificationRequests").createIndex({ status: 1 });
+  await createIndexSafe(conn, "verificationRequests", { vendorId: 1, status: 1 });
+  await createIndexSafe(conn, "verificationRequests", { status: 1 });
 
   // Documents
-  await conn.collection("documents").createIndex({ ownerType: 1, ownerId: 1 });
-  await conn.collection("documents").createIndex({ uploadedBy: 1 });
+  await createIndexSafe(conn, "documents", { ownerType: 1, ownerId: 1 });
+  await createIndexSafe(conn, "documents", { uploadedBy: 1 });
 
   // Audit Logs
-  await conn.collection("auditLogs").createIndex({ entityType: 1, entityId: 1, createdAt: -1 });
-  await conn.collection("auditLogs").createIndex({ actorUserId: 1, createdAt: -1 });
+  await createIndexSafe(conn, "auditLogs", { entityType: 1, entityId: 1, createdAt: -1 });
+  await createIndexSafe(conn, "auditLogs", { actorUserId: 1, createdAt: -1 });
 
   // Conversations and Messages
-  await conn.collection("conversations").createIndex({ participants: 1 });
-  await conn.collection("conversations").createIndex({ lastMessageAt: -1 });
-  await conn.collection("messages").createIndex({ conversationId: 1, createdAt: 1 });
-  await conn.collection("messages").createIndex({ senderId: 1, createdAt: -1 });
+  await createIndexSafe(conn, "conversations", { participants: 1 });
+  await createIndexSafe(conn, "conversations", { lastMessageAt: -1 });
+  await createIndexSafe(conn, "messages", { conversationId: 1, createdAt: 1 });
+  await createIndexSafe(conn, "messages", { senderId: 1, createdAt: -1 });
 
   // Notifications
-  await conn.collection("notifications").createIndex({ userId: 1, createdAt: -1 });
-  await conn.collection("notifications").createIndex({ userId: 1, readAt: 1 });
+  await createIndexSafe(conn, "notifications", { userId: 1, createdAt: -1 });
+  await createIndexSafe(conn, "notifications", { userId: 1, readAt: 1 });
 
   // Support Tickets
-  await conn.collection("supportTickets").createIndex({ status: 1, createdAt: -1 });
-  await conn.collection("supportTickets").createIndex({ createdBy: 1, createdAt: -1 });
-  await conn.collection("supportTickets").createIndex({ assignedTo: 1, createdAt: -1 });
+  await createIndexSafe(conn, "supportTickets", { status: 1, createdAt: -1 });
+  await createIndexSafe(conn, "supportTickets", { createdBy: 1, createdAt: -1 });
+  await createIndexSafe(conn, "supportTickets", { assignedTo: 1, createdAt: -1 });
 
   // Media Assets
-  await conn.collection("mediaAssets").createIndex({ ownerType: 1, ownerId: 1 });
+  await createIndexSafe(conn, "mediaAssets", { ownerType: 1, ownerId: 1 });
 
   // Booking Tasks
-  await conn.collection("bookingTasks").createIndex({ bookingId: 1, status: 1 });
-  await conn.collection("bookingTasks").createIndex({ assignedTo: 1, dueAt: 1 });
+  await createIndexSafe(conn, "bookingTasks", { bookingId: 1, status: 1 });
+  await createIndexSafe(conn, "bookingTasks", { assignedTo: 1, dueAt: 1 });
 
   // Discount Codes
-  await conn.collection("discountCodes").createIndex({ code: 1 }, { unique: true });
-  await conn.collection("discountCodes").createIndex({ validTo: 1 });
+  await createIndexSafe(conn, "discountCodes", { code: 1 }, { unique: true });
+  await createIndexSafe(conn, "discountCodes", { validTo: 1 });
 
   // Favorites
-  await conn
-    .collection("favorites")
-    .createIndex({ userId: 1, vendorId: 1 }, { unique: true, sparse: true });
-  await conn
-    .collection("favorites")
-    .createIndex({ userId: 1, packageId: 1 }, { unique: true, sparse: true });
+  await createIndexSafe(
+    conn,
+    "favorites",
+    { userId: 1, vendorId: 1 },
+    { unique: true, sparse: true },
+  );
+  await createIndexSafe(
+    conn,
+    "favorites",
+    { userId: 1, packageId: 1 },
+    { unique: true, sparse: true },
+  );
 
   // Reports
-  await conn.collection("reports").createIndex({ targetType: 1, targetId: 1, status: 1 });
-  await conn.collection("reports").createIndex({ status: 1, createdAt: -1 });
+  await createIndexSafe(conn, "reports", { targetType: 1, targetId: 1, status: 1 });
+  await createIndexSafe(conn, "reports", { status: 1, createdAt: -1 });
 
   // System Settings
-  await conn.collection("systemSettings").createIndex({ key: 1 }, { unique: true });
+  await createIndexSafe(conn, "systemSettings", { key: 1 }, { unique: true });
 }
 
 export async function down(conn: mongoose.Connection) {

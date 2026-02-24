@@ -353,12 +353,6 @@ export default function LandingPage() {
                                         </motion.div>
                                         <p className="text-foreground mb-6 italic">"{testimonial.text}"</p>
                                         <div className="flex items-center gap-3">
-                                            <motion.img
-                                                whileHover={{ scale: 1.1 }}
-                                                src={testimonial.image}
-                                                alt={testimonial.name}
-                                                className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20"
-                                            />
                                             <div>
                                                 <div className="font-semibold text-foreground">{testimonial.name}</div>
                                                 <div className="text-sm text-muted-foreground">{testimonial.role}</div>
