@@ -60,7 +60,7 @@ async function hasBlockingBookings(vendorId: mongoose.Types.ObjectId, date: Date
 
 /**
  * @openapi
- * /api/vendors/me/availability:
+ * /api/vendors/me/availabilities:
  *   get:
  *     tags: [Availability]
  *     summary: List availability for date range (Vendor only)
@@ -82,7 +82,7 @@ async function hasBlockingBookings(vendorId: mongoose.Types.ObjectId, date: Date
  *       200: { description: OK }
  */
 availabilityRoutes.get(
-  "/me/availability",
+  "/me/availabilities",
   requireAuth,
   requireRole(UserRole.VENDOR),
   async (req, res, next) => {

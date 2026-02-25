@@ -24,7 +24,7 @@ export class AvailabilityService {
     }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
-            url: "/api/vendors/me/availability",
+            url: "/api/vendors/me/availabilities",
             query: {
                 from: from,
                 to: to,
