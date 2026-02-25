@@ -29,7 +29,11 @@ export const useShortlistStore = create<ShortlistStore>()(
                     set((state) => ({
                         shortlistedVendors: state.shortlistedVendors.filter((id) => id !== vendorId)
                     }));
-                    toast({ title: "Error", description: "Please log in to shortlist the following venddor.", variant: "destructive" });
+                    toast({
+                        title: "Error",
+                        description: "Please log in to shortlist the following venddor.",
+                        variant: "destructive"
+                    });
                 }
             },
 

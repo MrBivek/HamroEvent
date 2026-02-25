@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { Booking, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class VendorBookingsService {
     /**
      * Vendor inbox - list bookings for my vendor (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendorsMeBookings({
@@ -20,7 +19,7 @@ export class VendorBookingsService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Booking>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/bookings",
@@ -33,10 +32,10 @@ export class VendorBookingsService {
     }
     /**
      * Get a booking (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiVendorsMeBookings1({ id }: { id: string }): CancelablePromise<Booking> {
+    public static getApiVendorsMeBookings1({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/bookings/{id}",
@@ -50,7 +49,7 @@ export class VendorBookingsService {
     }
     /**
      * Accept or reject a booking request (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiVendorsMeBookingsDecision({
@@ -63,7 +62,7 @@ export class VendorBookingsService {
             vendorNote?: string;
             rejectReason?: string;
         };
-    }): CancelablePromise<Booking> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/vendors/me/bookings/{id}/decision",

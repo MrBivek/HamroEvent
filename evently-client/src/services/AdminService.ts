@@ -3,28 +3,15 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type {
-    AdminAnalyticsResponse,
-    AdminDashboardResponse,
-    AdminVendorVerificationResponse,
-    AuditLog,
-    PaginatedResponse,
-    Report,
-    Review,
-    SupportTicket,
-    User,
-    VerificationDecisionResponse,
-    VerificationRequest
-} from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AdminService {
     /**
      * Admin dashboard stats
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiAdminDashboard(): CancelablePromise<AdminDashboardResponse> {
+    public static getApiAdminDashboard(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/dashboard"
@@ -32,7 +19,7 @@ export class AdminService {
     }
     /**
      * Update vendor verification status (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiAdminVendorsVerification({
@@ -44,7 +31,7 @@ export class AdminService {
             status: "PENDING" | "APPROVED" | "REJECTED" | "RESUBMIT_REQUIRED";
             note?: string;
         };
-    }): CancelablePromise<AdminVendorVerificationResponse> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/admin/vendors/{id}/verification",
@@ -57,7 +44,7 @@ export class AdminService {
     }
     /**
      * List users (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminUsers({
@@ -72,7 +59,7 @@ export class AdminService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<User>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/users",
@@ -87,7 +74,7 @@ export class AdminService {
     }
     /**
      * Update a user (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiAdminUsers({
@@ -99,7 +86,7 @@ export class AdminService {
             isActive?: boolean;
             status?: string;
         };
-    }): CancelablePromise<User> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/admin/users/{id}",
@@ -115,7 +102,7 @@ export class AdminService {
     }
     /**
      * List reviews (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminReviews({
@@ -126,7 +113,7 @@ export class AdminService {
         hidden?: boolean;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Review>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/reviews",
@@ -139,10 +126,10 @@ export class AdminService {
     }
     /**
      * Analytics overview (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiAdminAnalytics(): CancelablePromise<AdminAnalyticsResponse> {
+    public static getApiAdminAnalytics(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/analytics"
@@ -150,7 +137,7 @@ export class AdminService {
     }
     /**
      * Moderate a review (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiAdminReviews({
@@ -162,7 +149,7 @@ export class AdminService {
             isHidden: boolean;
             moderationReason?: string;
         };
-    }): CancelablePromise<Review> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/admin/reviews/{id}",
@@ -178,7 +165,7 @@ export class AdminService {
     }
     /**
      * List audit logs (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminAuditLogs({
@@ -193,7 +180,7 @@ export class AdminService {
         targetId?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<AuditLog>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/audit-logs",
@@ -208,7 +195,7 @@ export class AdminService {
     }
     /**
      * List reports (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminReports({
@@ -219,7 +206,7 @@ export class AdminService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Report>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/reports",
@@ -232,7 +219,7 @@ export class AdminService {
     }
     /**
      * List support tickets (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminSupportTickets({
@@ -243,7 +230,7 @@ export class AdminService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<SupportTicket>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/support-tickets",
@@ -256,7 +243,7 @@ export class AdminService {
     }
     /**
      * Update support ticket (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiAdminSupportTickets({
@@ -268,7 +255,7 @@ export class AdminService {
             status?: string;
             assignedTo?: string;
         };
-    }): CancelablePromise<SupportTicket> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/admin/support-tickets/{id}",
@@ -281,7 +268,7 @@ export class AdminService {
     }
     /**
      * List verification requests (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiAdminVerificationRequests({
@@ -292,7 +279,7 @@ export class AdminService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<VerificationRequest>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/verification-requests",
@@ -305,7 +292,7 @@ export class AdminService {
     }
     /**
      * Approve or reject a verification request (Admin only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiAdminVerificationRequestsDecision({
@@ -317,7 +304,7 @@ export class AdminService {
             decision: "APPROVE" | "REJECT" | "RESUBMIT_REQUIRED";
             note?: string;
         };
-    }): CancelablePromise<VerificationDecisionResponse> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/admin/verification-requests/{id}/decision",

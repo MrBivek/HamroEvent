@@ -77,3 +77,12 @@ export const LoginSchema = z.object({
   email: z.string().email(),
   password: Password,
 });
+
+export const RequestOtpSchema = z.object({
+  email: z.string().email(),
+});
+
+export const VerifyOtpSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().min(4).max(8),
+});

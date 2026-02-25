@@ -20,6 +20,7 @@ export interface AuthState {
 
 export interface AuthRegisterResponse {
     user: User;
+    otpSent?: boolean;
 }
 
 export interface VendorRegisterResponse {
@@ -34,6 +35,10 @@ export interface VendorRegisterResponse {
 export interface AuthLoginResponse {
     token: string;
     user: User;
+}
+
+export interface AuthOtpResponse {
+    sent: boolean;
 }
 
 // Vendor Types

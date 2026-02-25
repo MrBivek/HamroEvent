@@ -3,20 +3,15 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { PaginatedResponse, ServicePackage, VendorProfile } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class MarketplaceService {
     /**
      * List active packages for a vendor (public)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiVendorsPackages({
-        vendorId
-    }: {
-        vendorId: string;
-    }): CancelablePromise<PaginatedResponse<ServicePackage>> {
+    public static getApiVendorsPackages({ vendorId }: { vendorId: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/{vendorId}/packages",
@@ -30,7 +25,7 @@ export class MarketplaceService {
     }
     /**
      * List vendors (public)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendors({
@@ -61,7 +56,7 @@ export class MarketplaceService {
         sortBy?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<VendorProfile>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors",
@@ -84,10 +79,10 @@ export class MarketplaceService {
     }
     /**
      * Get vendor public profile (public)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiVendors1({ id }: { id: string }): CancelablePromise<VendorProfile> {
+    public static getApiVendors1({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/{id}",

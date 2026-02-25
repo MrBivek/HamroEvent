@@ -227,7 +227,9 @@ export default function AdminNotifications() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="font-medium text-foreground">{notification.title}</p>
+                                                        <p className="font-medium text-foreground">
+                                                            {notification.title}
+                                                        </p>
                                                         <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                                                     </div>
                                                     <p className="text-sm text-muted-foreground line-clamp-2">
@@ -289,7 +291,9 @@ export default function AdminNotifications() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="font-medium text-foreground">{notification.title}</p>
+                                                        <p className="font-medium text-foreground">
+                                                            {notification.title}
+                                                        </p>
                                                         {!notification.isRead && (
                                                             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                                                         )}

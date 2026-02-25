@@ -15,3 +15,13 @@ export async function login(req: Request, res: Response) {
   const result = await service.login(req.body);
   res.json(result);
 }
+
+export async function requestOtp(req: Request, res: Response) {
+  const result = await service.requestOtp(req.body);
+  res.json(result);
+}
+
+export async function verifyOtp(req: Request, res: Response) {
+  const result = await service.verifyOtp(req.body);
+  res.json(result);
+}

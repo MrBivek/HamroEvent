@@ -90,7 +90,9 @@ export default function VendorRegisterPage() {
     const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
     const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
     const [verificationFiles, setVerificationFiles] = useState<File[]>([]);
-    const [verificationPreviews, setVerificationPreviews] = useState<Array<{ name: string; type: string; preview?: string }>>([]);
+    const [verificationPreviews, setVerificationPreviews] = useState<
+        Array<{ name: string; type: string; preview?: string }>
+    >([]);
 
     useEffect(() => {
         let active = true;
@@ -249,9 +251,7 @@ export default function VendorRegisterPage() {
         setBusinessData((prev) => ({
             ...prev,
             location: value,
-            serviceAreas: prev.serviceAreas.includes(value)
-                ? prev.serviceAreas
-                : [...prev.serviceAreas, value]
+            serviceAreas: prev.serviceAreas.includes(value) ? prev.serviceAreas : [...prev.serviceAreas, value]
         }));
     };
 
@@ -590,7 +590,9 @@ export default function VendorRegisterPage() {
                                                 <div className="flex flex-wrap gap-2">
                                                     {locations.map((area) => {
                                                         const isPrimary = businessData.location === area.name;
-                                                        const isSelected = businessData.serviceAreas.includes(area.name);
+                                                        const isSelected = businessData.serviceAreas.includes(
+                                                            area.name
+                                                        );
                                                         return (
                                                             <Badge
                                                                 key={area._id || area.name}

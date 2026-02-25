@@ -22,12 +22,7 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { AdminService } from "@/services/AdminService";
 import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import type { VerificationRequest, DocumentItem, VendorProfile } from "@/types";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle
-} from "@/components/ui/dialog.tsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
 
 export default function AdminPendingVendors() {
     const { toast } = useToast();
@@ -111,7 +106,10 @@ export default function AdminPendingVendors() {
         const url = resolveMediaUrl(doc.url);
         const isImage = (doc.mimeType || "").startsWith("image/");
         return (
-            <div key={doc._id} className="rounded-lg border border-border p-2 text-center text-xs text-muted-foreground">
+            <div
+                key={doc._id}
+                className="rounded-lg border border-border p-2 text-center text-xs text-muted-foreground"
+            >
                 {isImage ? (
                     <img src={url} alt={doc.name || "Document"} className="w-full h-24 object-cover rounded-md mb-2" />
                 ) : (
@@ -260,10 +258,12 @@ export default function AdminPendingVendors() {
                                                         {vendor.businessName}
                                                     </h3>
                                                     <div className="flex flex-wrap gap-2 mt-2">
-                                                        <Badge variant="soft">{vendor.category
-                                                            ? vendor.category.charAt(0).toUpperCase() +
-                                                            vendor.category.slice(1).toLowerCase()
-                                                        : ""}</Badge>
+                                                        <Badge variant="soft">
+                                                            {vendor.category
+                                                                ? vendor.category.charAt(0).toUpperCase() +
+                                                                  vendor.category.slice(1).toLowerCase()
+                                                                : ""}
+                                                        </Badge>
                                                         <Badge variant="outline">{vendor.location || "—"}</Badge>
                                                         <Badge variant="outline" className="flex items-center gap-1">
                                                             <BadgeCheck className="h-3.5 w-3.5" />
@@ -271,7 +271,9 @@ export default function AdminPendingVendors() {
                                                         </Badge>
                                                     </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">{vendor.description || "—"}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {vendor.description || "—"}
+                                                </p>
                                                 <div className="grid sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <Phone className="h-4 w-4" />
@@ -296,7 +298,8 @@ export default function AdminPendingVendors() {
                                                     <div className="flex items-center gap-2">
                                                         <Star className="h-4 w-4" />
                                                         <span>
-                                                            {vendor.ratingAvg?.toFixed?.(1) ?? "0.0"} ({vendor.ratingCount} reviews)
+                                                            {vendor.ratingAvg?.toFixed?.(1) ?? "0.0"} (
+                                                            {vendor.ratingCount} reviews)
                                                         </span>
                                                     </div>
                                                 </div>
@@ -307,9 +310,7 @@ export default function AdminPendingVendors() {
                                             <div className="rounded-lg border border-border p-3">
                                                 <p className="text-xs text-muted-foreground">Service Areas</p>
                                                 <p className="text-sm text-foreground">
-                                                    {vendor.serviceAreas?.length
-                                                        ? vendor.serviceAreas.join(", ")
-                                                        : "—"}
+                                                    {vendor.serviceAreas?.length ? vendor.serviceAreas.join(", ") : "—"}
                                                 </p>
                                             </div>
                                             <div className="rounded-lg border border-border p-3">
@@ -320,11 +321,15 @@ export default function AdminPendingVendors() {
                                             </div>
                                             <div className="rounded-lg border border-border p-3">
                                                 <p className="text-xs text-muted-foreground">Submitted</p>
-                                                <p className="text-sm text-foreground">{getSubmittedAt(selectedRequest)}</p>
+                                                <p className="text-sm text-foreground">
+                                                    {getSubmittedAt(selectedRequest)}
+                                                </p>
                                             </div>
                                             <div className="rounded-lg border border-border p-3">
                                                 <p className="text-xs text-muted-foreground">Packages</p>
-                                                <p className="text-sm text-foreground">{vendor.packages?.length ?? 0}</p>
+                                                <p className="text-sm text-foreground">
+                                                    {vendor.packages?.length ?? 0}
+                                                </p>
                                             </div>
                                         </div>
 

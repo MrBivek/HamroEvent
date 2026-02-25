@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { Report } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class ReportsService {
     /**
      * Submit a report (authenticated users)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiReports({
@@ -20,7 +19,7 @@ export class ReportsService {
             targetId: string;
             reason: string;
         };
-    }): CancelablePromise<Report> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/reports",

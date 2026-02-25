@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { DocumentItem, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class DocumentsService {
     /**
      * Upload a document record (Vendor only, mock storage)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiVendorsMeDocuments({
@@ -25,7 +24,7 @@ export class DocumentsService {
             data?: string;
             mimeType?: string;
         };
-    }): CancelablePromise<DocumentItem> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/documents",
@@ -35,7 +34,7 @@ export class DocumentsService {
     }
     /**
      * List my documents (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendorsMeDocuments({
@@ -44,7 +43,7 @@ export class DocumentsService {
     }: {
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<DocumentItem>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/documents",

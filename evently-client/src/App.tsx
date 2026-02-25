@@ -13,6 +13,7 @@ import VendorDetailPage from "@/pages/VendorDetailPage.tsx";
 import LoginPage from "@/pages/auth/LoginPage.tsx";
 import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage.tsx";
 import VendorRegisterPage from "@/pages/auth/VendorRegisterPage.tsx";
+import OtpVerificationPage from "@/pages/auth/OtpVerificationPage.tsx";
 import { AboutPage, ContactPage } from "@/pages/StaticPages.tsx";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard.tsx";
 import CustomerEvents from "@/pages/customer/CustomerEvents.tsx";
@@ -73,6 +74,7 @@ const App = () => {
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register/customer" element={<CustomerRegisterPage />} />
                         <Route path="/register/vendor" element={<VendorRegisterPage />} />
+                        <Route path="/verify-otp" element={<OtpVerificationPage />} />
 
                         {/* Customer routes */}
                         <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>

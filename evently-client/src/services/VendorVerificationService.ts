@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { PaginatedResponse, VerificationRequest } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class VendorVerificationService {
     /**
      * Submit a verification request (Vendor only)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiVendorsMeVerificationRequests({
@@ -19,7 +18,7 @@ export class VendorVerificationService {
             documentIds?: Array<string>;
             vendorNote?: string;
         };
-    }): CancelablePromise<VerificationRequest> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/verification-requests",
@@ -32,7 +31,7 @@ export class VendorVerificationService {
     }
     /**
      * List my verification requests (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendorsMeVerificationRequests({
@@ -43,7 +42,7 @@ export class VendorVerificationService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<VerificationRequest>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/verification-requests",
@@ -56,10 +55,10 @@ export class VendorVerificationService {
     }
     /**
      * Get a verification request (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiVendorsMeVerificationRequests1({ id }: { id: string }): CancelablePromise<VerificationRequest> {
+    public static getApiVendorsMeVerificationRequests1({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/verification-requests/{id}",

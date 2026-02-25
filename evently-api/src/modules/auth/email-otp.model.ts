@@ -1,0 +1,24 @@
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
+
+const EmailOtpSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true, index: true, ref: "User" },
+    email: { type: String, required: true, lowercase: true, trim: true, index: true },
+    codeHash: { type: String, required: true },
+    expiresAt: { type: Date, required: true, index: true },
+    attempts: { type: Number, default: 0 },
+    lastSentAt: { type: Date },
+  },
+  { timestamps: true, collection: "emailOtps" },
+);
+
+EmailOtpSchema.index({ email: 1 }, { unique: true });
+EmailOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+export type EmailOtpDoc = InferSchemaType<typeof EmailOtpSchema> & {
+  _id: mongoose.Types.ObjectId;
+};
+
+export const EmailOtpModel =
+  (mongoose.models.EmailOtp as mongoose.Model<EmailOtpDoc>) ||
+  mongoose.model<EmailOtpDoc>("EmailOtp", EmailOtpSchema);

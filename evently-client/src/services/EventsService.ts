@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { ApiOkResponse, Event, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class EventsService {
     /**
      * Create an event (Customer only)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiEvents({
@@ -30,7 +29,7 @@ export class EventsService {
             budget?: number;
             notes?: string;
         };
-    }): CancelablePromise<Event> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/events",
@@ -40,16 +39,10 @@ export class EventsService {
     }
     /**
      * List my events (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiEvents({
-        page = 1,
-        limit = 20
-    }: {
-        page?: number;
-        limit?: number;
-    }): CancelablePromise<PaginatedResponse<Event>> {
+    public static getApiEvents({ page = 1, limit = 20 }: { page?: number; limit?: number }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/events",
@@ -61,10 +54,10 @@ export class EventsService {
     }
     /**
      * Get an event (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiEvents1({ id }: { id: string }): CancelablePromise<Event> {
+    public static getApiEvents1({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/events/{id}",
@@ -78,10 +71,10 @@ export class EventsService {
     }
     /**
      * Update an event (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static patchApiEvents({ id }: { id: string }): CancelablePromise<Event> {
+    public static patchApiEvents({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/events/{id}",
@@ -95,10 +88,10 @@ export class EventsService {
     }
     /**
      * Delete an event (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static deleteApiEvents({ id }: { id: string }): CancelablePromise<ApiOkResponse> {
+    public static deleteApiEvents({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "DELETE",
             url: "/api/events/{id}",

@@ -3,16 +3,15 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { ApiOkResponse, PaginatedResponse, ServicePackage } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class PackagesService {
     /**
      * List my packages (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static getApiVendorsMePackages(): CancelablePromise<PaginatedResponse<ServicePackage>> {
+    public static getApiVendorsMePackages(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/packages",
@@ -24,7 +23,7 @@ export class PackagesService {
     }
     /**
      * Create a package (Vendor only)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiVendorsMePackages({
@@ -38,7 +37,7 @@ export class PackagesService {
             priceMax?: number;
             includes?: Array<string>;
         };
-    }): CancelablePromise<ServicePackage> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/packages",
@@ -52,7 +51,7 @@ export class PackagesService {
     }
     /**
      * Update my package (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiVendorsMePackages({
@@ -68,7 +67,7 @@ export class PackagesService {
             priceMax?: number;
             includes?: Array<string>;
         };
-    }): CancelablePromise<ServicePackage> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/vendors/me/packages/{id}",
@@ -85,10 +84,10 @@ export class PackagesService {
     }
     /**
      * Delete my package (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static deleteApiVendorsMePackages({ id }: { id: string }): CancelablePromise<ApiOkResponse> {
+    public static deleteApiVendorsMePackages({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "DELETE",
             url: "/api/vendors/me/packages/{id}",
@@ -103,10 +102,10 @@ export class PackagesService {
     }
     /**
      * Publish my package (Vendor must be verified APPROVED)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static postApiVendorsMePackagesPublish({ id }: { id: string }): CancelablePromise<ServicePackage> {
+    public static postApiVendorsMePackagesPublish({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/packages/{id}/publish",
@@ -122,10 +121,10 @@ export class PackagesService {
     }
     /**
      * Unpublish my package (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static postApiVendorsMePackagesUnpublish({ id }: { id: string }): CancelablePromise<ServicePackage> {
+    public static postApiVendorsMePackagesUnpublish({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/packages/{id}/unpublish",

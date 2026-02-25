@@ -3,13 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { AuthLoginResponse, AuthRegisterResponse, VendorRegisterResponse } from "../types";
+import type { AuthLoginResponse, AuthOtpResponse, AuthRegisterResponse, VendorRegisterResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AuthService {
     /**
-     * Register a customer account
-     * @returns Customer created
+     * Register a customer account (OTP verification required)
+     * @returns AuthRegisterResponse Customer created (status pending, OTP sent)
      * @throws ApiError
      */
     public static postApiAuthRegisterCustomer({
@@ -36,7 +36,7 @@ export class AuthService {
     }
     /**
      * Register a vendor account (creates user + vendor profile + optional packages)
-     * @returns Vendor onboarding created
+     * @returns VendorRegisterResponse Vendor onboarding created
      * @throws ApiError
      */
     public static postApiAuthRegisterVendor({
@@ -71,12 +71,12 @@ export class AuthService {
                 priceMax?: number;
                 includes?: Array<string>;
                 inclusions?: Array<string>;
-                duration?: string;
-                policies?: string;
-                addOns?: Array<string>;
             }>;
             portfolioMedia?: Array<string>;
             verificationDocuments?: Array<{
+                /**
+                 * Base64 or data URL
+                 */
                 data: string;
                 filename?: string;
                 name?: string;
@@ -97,7 +97,7 @@ export class AuthService {
     }
     /**
      * Login (Customer/Vendor/Admin)
-     * @returns JWT token + user
+     * @returns AuthLoginResponse JWT token + user
      * @throws ApiError
      */
     public static postApiAuthLogin({
@@ -116,6 +116,89 @@ export class AuthService {
             errors: {
                 401: `Invalid credentials`
             }
+        });
+    }
+    /**
+     * Send OTP to verify email
+     * @returns any OTP sent
+     * @throws ApiError
+     */
+    public static postApiAuthRequestOtp({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/request-otp",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+    /**
+     * Verify OTP and activate account
+     * @returns any Verified with JWT token + user
+     * @throws ApiError
+     */
+    public static postApiAuthVerifyOtp({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+            otp: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/verify-otp",
+            body: requestBody,
+            mediaType: "application/json",
+            errors: {
+                400: `Invalid or expired OTP`
+            }
+        });
+    }
+
+    /**
+     * Send OTP to verify email
+     * @returns AuthOtpResponse OTP sent
+     * @throws ApiError
+     */
+    public static postApiAuthRequestOtp({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+        };
+    }): CancelablePromise<AuthOtpResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/request-otp",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+
+    /**
+     * Verify OTP and activate account
+     * @returns AuthLoginResponse Verified with JWT token + user
+     * @throws ApiError
+     */
+    public static postApiAuthVerifyOtp({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+            otp: string;
+        };
+    }): CancelablePromise<AuthLoginResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/verify-otp",
+            body: requestBody,
+            mediaType: "application/json"
         });
     }
 }

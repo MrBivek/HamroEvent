@@ -40,8 +40,8 @@ export default function CustomerRegisterPage() {
                     acceptTerms: agreedToTerms
                 }
             });
-            toast({ title: "Account created!", description: "Please log in to continue" });
-            navigate("/login");
+            toast({ title: "Account created!", description: "We sent an OTP to your email." });
+            navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
         } catch (error) {
             toast({
                 title: "Registration failed",

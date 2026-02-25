@@ -6,29 +6,35 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { VendorsService } from "@/services/VendorsService";
 import { DocumentsService } from "@/services/DocumentsService";
 import { VendorVerificationService } from "@/services/VendorVerificationService";
-import { fileToBase64, getErrorMessage } from "@/lib/api";
+import { fileToBase64, getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast.ts";
-import type { VendorProfile } from "@/types";
+import type { VendorProfile, DocumentItem } from "@/types";
 
 export default function VendorVerification() {
     const { toast } = useToast();
     const [vendor, setVendor] = useState<VendorProfile | null>(null);
     const [status, setStatus] = useState<string>("pending");
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [documents, setDocuments] = useState<DocumentItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         let active = true;
         const load = async () => {
             try {
-                const res = await VendorsService.getApiVendorsMe();
+                const [res, docsRes] = await Promise.all([
+                    VendorsService.getApiVendorsMe(),
+                    DocumentsService.getApiVendorsMeDocuments({ page: 1, limit: 50 })
+                ]);
                 if (!active) return;
                 setVendor(res);
                 setStatus(res?.verificationStatus || res?.verifiedStatus || "pending");
+                setDocuments(docsRes?.items || []);
             } catch {
                 if (!active) return;
                 setVendor(null);
                 setStatus("pending");
+                setDocuments([]);
             }
         };
         load();
@@ -77,6 +83,8 @@ export default function VendorVerification() {
             await VendorVerificationService.postApiVendorsMeVerificationRequests({
                 requestBody: { documentIds: uploadedIds }
             });
+            const docsRes = await DocumentsService.getApiVendorsMeDocuments({ page: 1, limit: 50 });
+            setDocuments(docsRes?.items || []);
             toast({ title: "Verification submitted", description: "We are reviewing your documents." });
             setStatus("pending");
             setSelectedFiles([]);
@@ -128,6 +136,36 @@ export default function VendorVerification() {
                     <CardTitle className="text-lg">Verification Documents</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {documents.length > 0 && (
+                        <div className="space-y-3">
+                            <p className="text-sm font-medium text-foreground">Uploaded Documents</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {documents.map((doc) => {
+                                    const url = resolveMediaUrl(doc.url);
+                                    return (
+                                        <div
+                                            key={doc._id}
+                                            className="rounded-lg border border-border p-2 text-center text-xs text-muted-foreground"
+                                        >
+                                            <img
+                                                src={url}
+                                                alt={doc.name || "Document"}
+                                                className="w-full h-24 object-cover rounded-md mb-2"
+                                            />
+                                            <a
+                                                href={url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="truncate block hover:underline"
+                                            >
+                                                {doc.name || "Document"}
+                                            </a>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                     <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                         <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
                         <p className="font-medium text-foreground mb-1">Upload Documents</p>

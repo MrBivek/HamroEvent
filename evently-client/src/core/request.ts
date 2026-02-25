@@ -17,18 +17,17 @@ export const isDefined = <T>(value: T | null | undefined): value is Exclude<T, n
     return value !== undefined && value !== null;
 };
 
-export const isString = (value: unknown): value is string => {
+export const isString = (value: any): value is string => {
     return typeof value === "string";
 };
 
-export const isStringWithValue = (value: unknown): value is string => {
+export const isStringWithValue = (value: any): value is string => {
     return isString(value) && value !== "";
 };
 
-export const isBlob = (value: unknown): value is Blob => {
+export const isBlob = (value: any): value is Blob => {
     return (
         typeof value === "object" &&
-        value !== null &&
         typeof value.type === "string" &&
         typeof value.stream === "function" &&
         typeof value.arrayBuffer === "function" &&
@@ -39,7 +38,7 @@ export const isBlob = (value: unknown): value is Blob => {
     );
 };
 
-export const isFormData = (value: unknown): value is FormData => {
+export const isFormData = (value: any): value is FormData => {
     return value instanceof FormData;
 };
 
@@ -56,25 +55,23 @@ export const base64 = (str: string): string => {
     }
 };
 
-export const getQueryString = (params: Record<string, unknown>): string => {
+export const getQueryString = (params: Record<string, any>): string => {
     const qs: string[] = [];
 
-    const append = (key: string, value: unknown) => {
+    const append = (key: string, value: any) => {
         qs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
     };
 
-    const process = (key: string, value: unknown) => {
+    const process = (key: string, value: any) => {
         if (isDefined(value)) {
             if (Array.isArray(value)) {
                 value.forEach((v) => {
                     process(key, v);
                 });
             } else if (typeof value === "object") {
-                if (value !== null) {
-                    Object.entries(value as Record<string, unknown>).forEach(([k, v]) => {
-                        process(`${key}[${k}]`, v);
-                    });
-                }
+                Object.entries(value).forEach(([k, v]) => {
+                    process(`${key}[${k}]`, v);
+                });
             } else {
                 append(key, value);
             }
@@ -115,7 +112,7 @@ export const getFormData = (options: ApiRequestOptions): FormData | undefined =>
     if (options.formData) {
         const formData = new FormData();
 
-        const process = (key: string, value: unknown) => {
+        const process = (key: string, value: any) => {
             if (isString(value) || isBlob(value)) {
                 formData.append(key, value);
             } else {
@@ -200,7 +197,7 @@ export const getHeaders = async (
     return headers;
 };
 
-export const getRequestBody = (options: ApiRequestOptions): unknown => {
+export const getRequestBody = (options: ApiRequestOptions): any => {
     if (options.body) {
         return options.body;
     }
@@ -211,7 +208,7 @@ export const sendRequest = async <T>(
     config: OpenAPIConfig,
     options: ApiRequestOptions,
     url: string,
-    body: unknown,
+    body: any,
     formData: FormData | undefined,
     headers: Record<string, string>,
     onCancel: OnCancel,
@@ -242,7 +239,7 @@ export const sendRequest = async <T>(
     }
 };
 
-export const getResponseHeader = (response: AxiosResponse<unknown>, responseHeader?: string): string | undefined => {
+export const getResponseHeader = (response: AxiosResponse<any>, responseHeader?: string): string | undefined => {
     if (responseHeader) {
         const content = response.headers[responseHeader];
         if (isString(content)) {
@@ -252,7 +249,7 @@ export const getResponseHeader = (response: AxiosResponse<unknown>, responseHead
     return undefined;
 };
 
-export const getResponseBody = (response: AxiosResponse<unknown>): unknown => {
+export const getResponseBody = (response: AxiosResponse<any>): any => {
     if (response.status !== 204) {
         return response.data;
     }
@@ -339,7 +336,7 @@ export const request = <T>(
 
                 catchErrorCodes(options, result);
 
-                resolve(result.body as T);
+                resolve(result.body);
             }
         } catch (error) {
             reject(error);

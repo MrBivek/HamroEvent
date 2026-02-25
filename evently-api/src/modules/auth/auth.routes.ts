@@ -1,4 +1,10 @@
-import { LoginSchema, RegisterVendorSchema, RegisterCustomerSchema } from "./auth.schemas.js";
+import {
+  LoginSchema,
+  RegisterVendorSchema,
+  RegisterCustomerSchema,
+  RequestOtpSchema,
+  VerifyOtpSchema,
+} from "./auth.schemas.js";
 import { Router } from "express";
 import * as controller from "./auth.controller.js";
 import { validateBody } from "../../middlewares/validate.js";
@@ -17,7 +23,7 @@ export const authRoutes = Router();
  * /api/auth/register/customer:
  *   post:
  *     tags: [Auth]
- *     summary: Register a customer account
+ *     summary: Register a customer account (OTP verification required)
  *     requestBody:
  *       required: true
  *       content:
@@ -34,7 +40,7 @@ export const authRoutes = Router();
  *               acceptTerms: { type: boolean, example: true }
  *     responses:
  *       201:
- *         description: Customer created
+ *         description: Customer created (status pending, OTP sent)
  *       400:
  *         description: Validation error / duplicate email
  */
@@ -148,3 +154,48 @@ authRoutes.post("/register/vendor", validateBody(RegisterVendorSchema), controll
  *         description: Invalid credentials
  */
 authRoutes.post("/login", validateBody(LoginSchema), controller.login);
+
+/**
+ * @openapi
+ * /api/auth/request-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send OTP to verify email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, example: "customer1@test.com" }
+ *     responses:
+ *       200:
+ *         description: OTP sent
+ */
+authRoutes.post("/request-otp", validateBody(RequestOtpSchema), controller.requestOtp);
+
+/**
+ * @openapi
+ * /api/auth/verify-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify OTP and activate account
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email: { type: string, example: "customer1@test.com" }
+ *               otp: { type: string, example: "123456" }
+ *     responses:
+ *       200:
+ *         description: Verified with JWT token + user
+ *       400:
+ *         description: Invalid or expired OTP
+ */
+authRoutes.post("/verify-otp", validateBody(VerifyOtpSchema), controller.verifyOtp);

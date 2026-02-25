@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { PaginatedResponse, Review } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class ReviewsService {
     /**
      * Create a review (Customer only)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiReviews({
@@ -20,7 +19,7 @@ export class ReviewsService {
             rating: number;
             comment?: string;
         };
-    }): CancelablePromise<Review> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/reviews",
@@ -30,7 +29,7 @@ export class ReviewsService {
     }
     /**
      * List reviews (public)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiReviews({
@@ -41,7 +40,7 @@ export class ReviewsService {
         vendorId?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Review>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/reviews",
@@ -54,7 +53,7 @@ export class ReviewsService {
     }
     /**
      * List my vendor reviews (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendorsMeReviews({
@@ -63,7 +62,7 @@ export class ReviewsService {
     }: {
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Review>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/reviews",

@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { ApiOkResponse, AvailabilityEntry, PaginatedResponse } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AvailabilityService {
     /**
      * List availability for date range (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiVendorsMeAvailability({
@@ -22,7 +21,7 @@ export class AvailabilityService {
         to?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<AvailabilityEntry>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/vendors/me/availability",
@@ -36,7 +35,7 @@ export class AvailabilityService {
     }
     /**
      * Set availability for a date (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static putApiVendorsMeAvailability({
@@ -52,7 +51,7 @@ export class AvailabilityService {
             }>;
             note?: string;
         };
-    }): CancelablePromise<AvailabilityEntry> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PUT",
             url: "/api/vendors/me/availability/{date}",
@@ -68,10 +67,10 @@ export class AvailabilityService {
     }
     /**
      * Remove availability for a date (Vendor only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static deleteApiVendorsMeAvailability({ date }: { date: string }): CancelablePromise<ApiOkResponse> {
+    public static deleteApiVendorsMeAvailability({ date }: { date: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "DELETE",
             url: "/api/vendors/me/availability/{date}",

@@ -31,7 +31,7 @@ export const filesToBase64 = async (files: File[], maxSizeMb = 10) => {
     return results;
 };
 
-type ErrorBody = { message?: unknown };
+type ErrorBody = { message?: unknown; error?: unknown };
 type ErrorWithBody = { body?: unknown };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
@@ -42,9 +42,11 @@ export const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
     if (isRecord(error) && "body" in error) {
         const body = (error as ErrorWithBody).body;
-        if (isRecord(body) && "message" in body) {
+        if (isRecord(body)) {
             const msg = (body as ErrorBody).message;
             if (typeof msg === "string" && msg.trim().length > 0) return msg;
+            const err = (body as ErrorBody).error;
+            if (typeof err === "string" && err.trim().length > 0) return err;
         }
     }
     return fallback;

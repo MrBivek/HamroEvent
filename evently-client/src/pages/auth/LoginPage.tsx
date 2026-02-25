@@ -36,9 +36,18 @@ export default function LoginPage() {
             };
             navigate(dashboards[result.user.role]);
         } catch (error) {
+            const message = getErrorMessage(error, "Invalid credentials. Please try again.");
+            if (message.toLowerCase().includes("account not verified")) {
+                navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+                toast({
+                    title: "Verify your account",
+                    description: "Please enter the OTP sent to your email."
+                });
+                return;
+            }
             toast({
                 title: "Login failed",
-                description: getErrorMessage(error, "Invalid credentials. Please try again."),
+                description: message,
                 variant: "destructive"
             });
         } finally {

@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { PaginatedResponse, Quote } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class QuotesService {
     /**
      * List my quotes (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiQuotes({
@@ -20,7 +19,7 @@ export class QuotesService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<Quote>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/quotes",
@@ -33,10 +32,10 @@ export class QuotesService {
     }
     /**
      * Accept a quote (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static postApiQuotesAccept({ id }: { id: string }): CancelablePromise<Quote> {
+    public static postApiQuotesAccept({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/quotes/{id}/accept",
@@ -47,10 +46,10 @@ export class QuotesService {
     }
     /**
      * Reject a quote (Customer only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
-    public static postApiQuotesReject({ id }: { id: string }): CancelablePromise<Quote> {
+    public static postApiQuotesReject({ id }: { id: string }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/quotes/{id}/reject",
@@ -61,7 +60,7 @@ export class QuotesService {
     }
     /**
      * Send a quote for a booking (Vendor only)
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiVendorsMeBookingsQuote({
@@ -74,7 +73,7 @@ export class QuotesService {
             message?: string;
             expiresAt?: string;
         };
-    }): CancelablePromise<Quote> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/vendors/me/bookings/{id}/quote",
@@ -90,7 +89,7 @@ export class QuotesService {
     }
     /**
      * Update a quote (Vendor only, pending only)
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static patchApiVendorsMeQuotes({
@@ -103,7 +102,7 @@ export class QuotesService {
             message?: string;
             expiresAt?: string;
         };
-    }): CancelablePromise<Quote> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "PATCH",
             url: "/api/vendors/me/quotes/{id}",

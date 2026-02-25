@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { PaginatedResponse, SupportTicket } from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class SupportService {
     /**
      * Create a support ticket
-     * @returns Created
+     * @returns any Created
      * @throws ApiError
      */
     public static postApiSupportTickets({
@@ -19,7 +18,7 @@ export class SupportService {
             subject: string;
             message: string;
         };
-    }): CancelablePromise<SupportTicket> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/support-tickets",
@@ -29,7 +28,7 @@ export class SupportService {
     }
     /**
      * List my support tickets
-     * @returns OK
+     * @returns any OK
      * @throws ApiError
      */
     public static getApiSupportTickets({
@@ -40,7 +39,7 @@ export class SupportService {
         status?: string;
         page?: number;
         limit?: number;
-    }): CancelablePromise<PaginatedResponse<SupportTicket>> {
+    }): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/support-tickets",

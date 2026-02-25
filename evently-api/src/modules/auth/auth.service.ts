@@ -1,12 +1,19 @@
 import bcrypt from "bcrypt";
+import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { UserModel } from "./user.model.js";
 import jwt, { SignOptions } from "jsonwebtoken";
-import { DocumentOwnerType, UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
+import {
+  DocumentOwnerType,
+  UserRole,
+  VerificationStatus,
+  NotificationType,
+  UserStatus,
+} from "../../common/enums.js";
 import { env } from "../../configurations/env.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
-import { BadRequestError, UnauthorizedError } from "../../common/errors.js";
+import { BadRequestError, UnauthorizedError, ForbiddenError } from "../../common/errors.js";
 import { toUiUser } from "../../common/mappers.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
@@ -14,10 +21,50 @@ import { saveBase64File } from "../../common/fileStorage.js";
 import { VerificationRequestModel } from "../verification-requests/verification-request.model.js";
 import { DocumentModel } from "../documents/document.model.js";
 import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
+import { EmailOtpModel } from "./email-otp.model.js";
+import { sendEmail } from "../../common/email.js";
 
 function signToken(userId: string, role: UserRole) {
   const expiresIn = env.JWT_EXPIRES_IN as SignOptions["expiresIn"];
   return jwt.sign({ sub: userId, role }, env.JWT_SECRET, { expiresIn });
+}
+
+function generateOtp(length: number) {
+  const min = 10 ** (length - 1);
+  const max = 10 ** length;
+  return crypto.randomInt(min, max).toString();
+}
+
+function hashOtp(email: string, otp: string) {
+  return crypto.createHmac("sha256", env.JWT_SECRET).update(`${email}:${otp}`).digest("hex");
+}
+
+async function issueOtp(user: { _id: mongoose.Types.ObjectId; email: string }) {
+  const otp = generateOtp(env.OTP_CODE_LENGTH);
+  const codeHash = hashOtp(user.email, otp);
+  const expiresAt = new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000);
+
+  await EmailOtpModel.findOneAndUpdate(
+    { email: user.email },
+    {
+      $set: {
+        userId: user._id,
+        codeHash,
+        expiresAt,
+        attempts: 0,
+        lastSentAt: new Date(),
+      },
+    },
+    { upsert: true, new: true },
+  );
+
+  await sendEmail({
+    to: user.email,
+    subject: "Evently account verification",
+    text: `Your verification code is ${otp}. It expires in ${env.OTP_EXPIRES_MINUTES} minutes.`,
+  });
+
+  return { sent: true };
 }
 
 export async function registerCustomer(input: {
@@ -43,9 +90,12 @@ export async function registerCustomer(input: {
     phone: input.phone,
     passwordHash,
     role: UserRole.CUSTOMER,
+    status: UserStatus.PENDING,
   });
 
-  return { user: toUiUser(user) };
+  await issueOtp(user);
+
+  return { user: toUiUser(user), otpSent: true };
 }
 
 export async function registerVendor(input: {
@@ -249,6 +299,10 @@ export async function login(input: { email: string; password: string }) {
   const user = await UserModel.findOne({ email });
   if (!user) throw new UnauthorizedError("Invalid credentials");
 
+  if (user.status !== UserStatus.ACTIVE) {
+    throw new UnauthorizedError("Account not verified");
+  }
+
   const ok = await bcrypt.compare(input.password, user.passwordHash);
   if (!ok) throw new UnauthorizedError("Invalid credentials");
 
@@ -261,4 +315,54 @@ export async function login(input: { email: string; password: string }) {
     token,
     user: toUiUser(user),
   };
+}
+
+export async function requestOtp(input: { email: string }) {
+  const email = input.email.toLowerCase();
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new BadRequestError("Account not found");
+  if (user.status === UserStatus.SUSPENDED) throw new ForbiddenError("Account is suspended");
+  if (user.status === UserStatus.ACTIVE) {
+    throw new BadRequestError("Account already verified");
+  }
+
+  return issueOtp({ _id: user._id, email: user.email });
+}
+
+export async function verifyOtp(input: { email: string; otp: string }) {
+  const email = input.email.toLowerCase();
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new BadRequestError("Account not found");
+  if (user.status === UserStatus.SUSPENDED) throw new ForbiddenError("Account is suspended");
+  if (user.status === UserStatus.ACTIVE) {
+    const token = signToken(user._id.toString(), user.role);
+    return { token, user: toUiUser(user) };
+  }
+
+  const record = await EmailOtpModel.findOne({ email });
+  if (!record) throw new BadRequestError("OTP expired or not found");
+  if (record.expiresAt.getTime() < Date.now()) {
+    await EmailOtpModel.deleteOne({ _id: record._id });
+    throw new BadRequestError("OTP expired");
+  }
+
+  if ((record.attempts ?? 0) >= 5) {
+    throw new BadRequestError("Too many attempts. Please request a new OTP.");
+  }
+
+  const expected = hashOtp(email, input.otp);
+  if (expected !== record.codeHash) {
+    await EmailOtpModel.updateOne({ _id: record._id }, { $inc: { attempts: 1 } });
+    throw new BadRequestError("Invalid OTP");
+  }
+
+  const updated = await UserModel.findByIdAndUpdate(
+    user._id,
+    { $set: { status: UserStatus.ACTIVE } },
+    { new: true },
+  );
+  await EmailOtpModel.deleteOne({ _id: record._id });
+
+  const token = signToken(user._id.toString(), user.role);
+  return { token, user: toUiUser(updated ?? user) };
 }

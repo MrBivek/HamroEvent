@@ -2,7 +2,12 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, VerificationStatus, NotificationType, DocumentOwnerType } from "../../common/enums.js";
+import {
+  UserRole,
+  VerificationStatus,
+  NotificationType,
+  DocumentOwnerType,
+} from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VerificationRequestModel } from "./verification-request.model.js";
 import {
@@ -102,9 +107,14 @@ adminVerificationRequestsRoutes.get(
         CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
         LocationModel.find({ _id: { $in: locationIds } }).lean(),
         vendorIds.length
-          ? DocumentModel.find({ ownerType: DocumentOwnerType.VENDOR, ownerId: { $in: vendorIds } }).lean()
+          ? DocumentModel.find({
+              ownerType: DocumentOwnerType.VENDOR,
+              ownerId: { $in: vendorIds },
+            }).lean()
           : Promise.resolve([]),
-        vendorIds.length ? PackageModel.find({ vendorId: { $in: vendorIds } }).lean() : Promise.resolve([]),
+        vendorIds.length
+          ? PackageModel.find({ vendorId: { $in: vendorIds } }).lean()
+          : Promise.resolve([]),
         userIds.length ? UserModel.find({ _id: { $in: userIds } }).lean() : Promise.resolve([]),
       ]);
 
@@ -131,7 +141,7 @@ adminVerificationRequestsRoutes.get(
 
       const mapped = items.map((item) => {
         const vendor = vendorMap.get(item.vendorId.toString());
-        const vendorPackages = vendor ? packageMap.get(vendor._id.toString()) ?? [] : [];
+        const vendorPackages = vendor ? (packageMap.get(vendor._id.toString()) ?? []) : [];
         const category = vendor?.categoryId
           ? categoryMap.get(vendor.categoryId.toString())
           : undefined;

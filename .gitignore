@@ -55,3 +55,8 @@ Thumbs.db
 *.pid.lock
 *.tgz
 *.local
+
+*.jpg
+*.jpeg
+*.png
+*.gif
