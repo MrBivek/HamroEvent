@@ -166,48 +166,52 @@ export default function VendorVerification() {
                             </div>
                         </div>
                     )}
-                    <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                        <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                        <p className="font-medium text-foreground mb-1">Upload Documents</p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            Business registration, ID proof, or trade license
-                        </p>
-                        <Button variant="outline" asChild>
-                            <label className="cursor-pointer">
-                                <FileText className="h-4 w-4 mr-2" />
-                                Choose Files
-                                <input
-                                    type="file"
-                                    multiple
-                                    className="hidden"
-                                    onChange={(e) => handleFileSelect(e.target.files)}
-                                />
-                            </label>
-                        </Button>
-                        {selectedFiles.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                                {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
-                            </p>
-                        )}
-                    </div>
+                    {status !== "verified" && (
+                        <>
+                            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                                <p className="font-medium text-foreground mb-1">Upload Documents</p>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Business registration, ID proof, or trade license
+                                </p>
+                                <Button variant="outline" asChild>
+                                    <label className="cursor-pointer">
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Choose Files
+                                        <input
+                                            type="file"
+                                            multiple
+                                            className="hidden"
+                                            onChange={(e) => handleFileSelect(e.target.files)}
+                                        />
+                                    </label>
+                                </Button>
+                                {selectedFiles.length > 0 && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
+                                    </p>
+                                )}
+                            </div>
 
-                    <div className="text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground mb-2">Required Documents:</p>
-                        <ul className="list-disc list-inside space-y-1">
-                            <li>Business Registration Certificate</li>
-                            <li>Owner ID (Citizenship/Passport)</li>
-                            <li>PAN/VAT Certificate (if applicable)</li>
-                        </ul>
-                    </div>
+                            <div className="text-sm text-muted-foreground">
+                                <p className="font-medium text-foreground mb-2">Required Documents:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>Business Registration Certificate</li>
+                                    <li>Owner ID (Citizenship/Passport)</li>
+                                    <li>PAN/VAT Certificate (if applicable)</li>
+                                </ul>
+                            </div>
 
-                    <Button
-                        variant="hero"
-                        className="w-full"
-                        disabled={status === "verified" || isSubmitting}
-                        onClick={handleSubmit}
-                    >
-                        {isSubmitting ? "Submitting..." : "Submit for Verification"}
-                    </Button>
+                            <Button
+                                variant="hero"
+                                className="w-full"
+                                disabled={status === "verified" || isSubmitting}
+                                onClick={handleSubmit}
+                            >
+                                {isSubmitting ? "Submitting..." : "Submit for Verification"}
+                            </Button>
+                      </>
+                    )}
                 </CardContent>
             </Card>
         </div>
