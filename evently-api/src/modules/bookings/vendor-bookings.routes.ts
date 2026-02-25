@@ -109,6 +109,7 @@ vendorBookingsRoutes.get(
           customer,
           packageTitle: pkg?.title,
           packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+          packageInclusions: pkg?.includes ?? [],
         });
       });
 
@@ -173,6 +174,7 @@ vendorBookingsRoutes.get(
           customer,
           packageTitle: pkg?.title,
           packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+          packageInclusions: pkg?.includes ?? [],
           messages,
           messageRoleMap,
         }),

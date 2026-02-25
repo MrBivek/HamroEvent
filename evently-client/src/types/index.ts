@@ -163,6 +163,7 @@ export interface Booking {
     vendorEmail?: string;
     packageName?: string;
     price?: number;
+    packageInclusions?: string[];
     messages?: BookingMessage[];
     customerName?: string;
 }

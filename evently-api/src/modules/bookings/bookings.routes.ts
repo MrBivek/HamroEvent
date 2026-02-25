@@ -143,6 +143,7 @@ bookingsRoutes.post(
           vendorProfile,
           packageTitle: pkg?.title,
           packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+          packageInclusions: pkg?.includes ?? [],
         }),
       );
     } catch (err) {
@@ -241,6 +242,7 @@ bookingsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
         vendorProfile,
         packageTitle: pkg?.title,
         packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        packageInclusions: pkg?.includes ?? [],
       });
     });
 
@@ -316,6 +318,7 @@ bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (r
         vendorProfile,
         packageTitle: pkg?.title,
         packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+        packageInclusions: pkg?.includes ?? [],
         messages,
         messageRoleMap,
       }),

@@ -22,14 +22,25 @@ import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from "@/components/ui/dialog.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
 import { useAuthStore } from "@/store/authStore.ts";
 import { MarketplaceService } from "@/services/MarketplaceService";
+import { EventsService } from "@/services/EventsService";
+import { BookingsService } from "@/services/BookingsService";
 import { ReviewsService } from "@/services/ReviewsService";
 import { getCategoryMeta } from "@/data/catalog";
-import { resolveMediaUrl } from "@/lib/api";
+import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast.ts";
-import type { Review, VendorProfile } from "@/types";
+import type { Review, VendorProfile, Event, Booking } from "@/types";
 
 export default function VendorDetailPage() {
     const { id } = useParams();
@@ -40,6 +51,13 @@ export default function VendorDetailPage() {
     const [vendor, setVendor] = useState<VendorProfile | null>(null);
     const [vendorReviews, setVendorReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [events, setEvents] = useState<Event[]>([]);
+    const [isBookingOpen, setIsBookingOpen] = useState(false);
+    const [selectedEventId, setSelectedEventId] = useState("");
+    const [selectedPackageId, setSelectedPackageId] = useState("none");
+    const [bookingNote, setBookingNote] = useState("");
+    const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+    const canBook = user?.role === "customer";
 
     useEffect(() => {
         let active = true;
@@ -69,6 +87,28 @@ export default function VendorDetailPage() {
             active = false;
         };
     }, [id]);
+
+    useEffect(() => {
+        let active = true;
+        const loadEvents = async () => {
+            if (!canBook) return;
+            try {
+                const res = await EventsService.getApiEvents({ page: 1, limit: 50 });
+                if (!active) return;
+                setEvents(res?.items || []);
+                if (!selectedEventId && res?.items?.length) {
+                    setSelectedEventId(res.items[0]._id);
+                }
+            } catch {
+                if (!active) return;
+                setEvents([]);
+            }
+        };
+        loadEvents();
+        return () => {
+            active = false;
+        };
+    }, [canBook, selectedEventId]);
 
     if (isLoading) {
         return (
@@ -116,6 +156,57 @@ export default function VendorDetailPage() {
             await removeFromShortlist(vendor._id);
         } else {
             await addToShortlist(vendor._id);
+        }
+    };
+
+    const openBooking = (packageId?: string) => {
+        if (!user) {
+            navigate(`/login?redirect=/vendors/${vendor._id}`);
+            return;
+        }
+        if (!canBook) {
+            toast({
+                title: "Booking available for customers only",
+                description: "Switch to a customer account to request bookings.",
+                variant: "default"
+            });
+            return;
+        }
+        setSelectedPackageId(packageId || "none");
+        setIsBookingOpen(true);
+    };
+
+    const handleBookingSubmit = async () => {
+        if (!selectedEventId) {
+            toast({ title: "Select an event", variant: "destructive" });
+            return;
+        }
+        setIsBookingSubmitting(true);
+        try {
+            const created = (await BookingsService.postApiBookings({
+                requestBody: {
+                    vendorId: vendor._id,
+                    eventId: selectedEventId,
+                    packageId: selectedPackageId === "none" ? undefined : selectedPackageId,
+                    customerNote: bookingNote || undefined
+                }
+            })) as Booking;
+            toast({ title: "Booking requested", description: "The vendor has been notified." });
+            setIsBookingOpen(false);
+            setBookingNote("");
+            if (created?._id) {
+                navigate(`/customer/bookings/${created._id}`);
+            } else {
+                navigate("/customer/bookings");
+            }
+        } catch (error) {
+            toast({
+                title: "Failed to request booking",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsBookingSubmitting(false);
         }
     };
 
@@ -287,7 +378,12 @@ export default function VendorDetailPage() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <Button className="mt-3" variant="hero">
+                                                        <Button
+                                                            className="mt-3"
+                                                            variant="hero"
+                                                            onClick={() => openBooking(pkg._id)}
+                                                            disabled={bookingDisabled}
+                                                        >
                                                             Select Package
                                                         </Button>
                                                     </div>
@@ -392,11 +488,9 @@ export default function VendorDetailPage() {
                                         Booking for customers only
                                     </Button>
                                 ) : (
-                                    <Button variant="hero" size="lg" className="w-full" asChild>
-                                        <Link to={`/login?redirect=/vendors/${vendor._id}/book`}>
-                                            <Calendar className="mr-2 h-4 w-4" />
-                                            Request Booking
-                                        </Link>
+                                    <Button variant="hero" size="lg" className="w-full" onClick={() => openBooking()}>
+                                        <Calendar className="mr-2 h-4 w-4" />
+                                        Request Booking
                                     </Button>
                                 )}
 
@@ -477,6 +571,80 @@ export default function VendorDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Request Booking</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Select Event</label>
+                            {events.length === 0 ? (
+                                <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                                    You don’t have any events yet. Create an event first.
+                                    <div className="mt-3">
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link to="/customer/events">Create Event</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose event" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {events.map((event) => (
+                                            <SelectItem key={event._id} value={event._id}>
+                                                {event.title} • {new Date(event.date).toLocaleDateString()}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Package (optional)</label>
+                            <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select package" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No package selected</SelectItem>
+                                    {vendor.packages.map((pkg) => (
+                                        <SelectItem key={pkg._id} value={pkg._id}>
+                                            {pkg.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Note (optional)</label>
+                            <Textarea
+                                placeholder="Share details for the vendor..."
+                                value={bookingNote}
+                                onChange={(e) => setBookingNote(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setIsBookingOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="hero"
+                            onClick={handleBookingSubmit}
+                            disabled={isBookingSubmitting || events.length === 0}
+                        >
+                            {isBookingSubmitting ? "Sending..." : "Send Request"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

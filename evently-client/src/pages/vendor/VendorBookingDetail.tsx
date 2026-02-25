@@ -165,6 +165,7 @@ export default function VendorBookingDetail() {
     const timeRange = booking.timeRange || { start: "--", end: "--" };
     const packageName = booking.packageName || "Package";
     const price = booking.price || 0;
+    const packageInclusions = booking.packageInclusions || [];
 
     const getMessageSender = (msg: ChatMessage) => {
         if ("sender" in msg) return msg.sender;
@@ -251,7 +252,7 @@ export default function VendorBookingDetail() {
                             </div>
                             <div className="flex items-center gap-3 text-sm">
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span>{bookingAny.location || booking.location || ""}</span>
+                                <span>{booking.location || ""}</span>
                             </div>
                             <Separator />
                             <div className="flex items-center gap-3 text-sm">
@@ -259,7 +260,7 @@ export default function VendorBookingDetail() {
                                 <span className="font-medium">{packageName}</span>
                             </div>
                             <ul className="pl-7 text-sm text-muted-foreground space-y-1">
-                                {(bookingAny.packageInclusions || []).map((inc: string, i: number) => (
+                                {packageInclusions.map((inc: string, i: number) => (
                                     <li key={i}>• {inc}</li>
                                 ))}
                             </ul>
@@ -271,13 +272,13 @@ export default function VendorBookingDetail() {
                     </Card>
 
                     {/* Customer Notes */}
-                    {bookingAny.notes && (
+                    {booking.notes && (
                         <Card>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base">Customer Notes</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-sm text-muted-foreground">{bookingAny.notes}</p>
+                                <p className="text-sm text-muted-foreground">{booking.notes}</p>
                             </CardContent>
                         </Card>
                     )}

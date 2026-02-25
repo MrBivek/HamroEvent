@@ -122,6 +122,7 @@ export function buildBookingDto({
   customer,
   packageTitle,
   packagePrice,
+  packageInclusions,
   includeHistory = true,
   messages,
   messageRoleMap,
@@ -132,6 +133,7 @@ export function buildBookingDto({
   customer?: UserDoc | null;
   packageTitle?: string;
   packagePrice?: number;
+  packageInclusions?: string[];
   includeHistory?: boolean;
   messages?: MessageDoc[];
   messageRoleMap?: Map<string, string>;
@@ -163,6 +165,7 @@ export function buildBookingDto({
     vendorEmail: vendorProfile?.contact?.email,
     packageName: packageTitle,
     price: packagePrice,
+    packageInclusions: packageInclusions ?? [],
     messages: messages
       ? messages.map((msg) => ({
           id: msg._id.toString(),
