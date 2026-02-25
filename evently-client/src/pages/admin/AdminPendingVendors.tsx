@@ -145,7 +145,6 @@ export default function AdminPendingVendors() {
 
                 <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {pendingVendors.map((request) => {
-                        const vendor = request.vendor || {};
                         const requestId = String(request._id || request.id);
                         const vendorProfile = request.vendor as VendorProfile | undefined;
                         const documentsCount =
@@ -159,7 +158,7 @@ export default function AdminPendingVendors() {
                                 <div className="relative">
                                     <img
                                         src={getVendorImage(vendorProfile)}
-                                        alt={vendor.businessName || "Vendor"}
+                                        alt={vendorProfile?.businessName || "Vendor"}
                                         className="h-40 w-full object-cover"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -170,24 +169,24 @@ export default function AdminPendingVendors() {
                                     </div>
                                     <div className="absolute bottom-3 left-3">
                                         <p className="text-white font-semibold text-lg drop-shadow">
-                                            {vendor.businessName || "Unknown Vendor"}
+                                            {vendorProfile?.businessName || "Unknown Vendor"}
                                         </p>
                                         <div className="flex items-center gap-2 text-xs text-white/90">
                                             <MapPin className="h-3.5 w-3.5" />
-                                            <span>{vendor.location || "—"}</span>
+                                            <span>{vendorProfile?.location || "—"}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <CardContent className="p-4 space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <Badge variant="outline">{vendor.category || "service"}</Badge>
+                                        <Badge variant="outline">{vendorProfile?.category || "service"}</Badge>
                                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                             <CalendarDays className="h-3.5 w-3.5" />
                                             <span>{getSubmittedAt(request)}</span>
                                         </div>
                                     </div>
                                     <p className="text-sm text-muted-foreground line-clamp-2">
-                                        {vendor.description || "No description provided yet."}
+                                        {vendorProfile?.description || "No description provided yet."}
                                     </p>
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <div className="rounded-md bg-muted/40 p-2 text-center">
@@ -201,7 +200,7 @@ export default function AdminPendingVendors() {
                                         <div className="rounded-md bg-muted/40 p-2 text-center">
                                             <p className="text-muted-foreground">Rating</p>
                                             <p className="font-semibold text-foreground">
-                                                {vendor.ratingAvg?.toFixed?.(1) ?? "0.0"}
+                                                {vendorProfile?.ratingAvg?.toFixed?.(1) ?? "0.0"}
                                             </p>
                                         </div>
                                     </div>
@@ -213,7 +212,9 @@ export default function AdminPendingVendors() {
                                         <Button
                                             variant="success"
                                             size="sm"
-                                            onClick={() => handleApprove(requestId, vendor.businessName || "Vendor")}
+                                            onClick={() =>
+                                                handleApprove(requestId, vendorProfile?.businessName || "Vendor")
+                                            }
                                         >
                                             <CheckCircle2 className="h-4 w-4 mr-1" />
                                             Approve
@@ -222,7 +223,9 @@ export default function AdminPendingVendors() {
                                             variant="outline"
                                             size="sm"
                                             className="text-destructive"
-                                            onClick={() => handleReject(requestId, vendor.businessName || "Vendor")}
+                                            onClick={() =>
+                                                handleReject(requestId, vendorProfile?.businessName || "Vendor")
+                                            }
                                         >
                                             <XCircle className="h-4 w-4 mr-1" />
                                             Reject

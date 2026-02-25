@@ -132,6 +132,7 @@ export function toUiUser(user: UserDoc) {
     email: user.email,
     phone: user.phone,
     isActive: mapUserStatusToIsActive(user.status),
+    status: user.status.toLowerCase(),
     createdAt: user.createdAt?.toISOString(),
   };
 }

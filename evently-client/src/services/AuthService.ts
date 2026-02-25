@@ -120,49 +120,6 @@ export class AuthService {
     }
     /**
      * Send OTP to verify email
-     * @returns any OTP sent
-     * @throws ApiError
-     */
-    public static postApiAuthRequestOtp({
-        requestBody
-    }: {
-        requestBody: {
-            email: string;
-        };
-    }): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: "POST",
-            url: "/api/auth/request-otp",
-            body: requestBody,
-            mediaType: "application/json"
-        });
-    }
-    /**
-     * Verify OTP and activate account
-     * @returns any Verified with JWT token + user
-     * @throws ApiError
-     */
-    public static postApiAuthVerifyOtp({
-        requestBody
-    }: {
-        requestBody: {
-            email: string;
-            otp: string;
-        };
-    }): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: "POST",
-            url: "/api/auth/verify-otp",
-            body: requestBody,
-            mediaType: "application/json",
-            errors: {
-                400: `Invalid or expired OTP`
-            }
-        });
-    }
-
-    /**
-     * Send OTP to verify email
      * @returns AuthOtpResponse OTP sent
      * @throws ApiError
      */

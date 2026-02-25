@@ -8,6 +8,8 @@ export interface User {
     email: string;
     phone?: string;
     isActive: boolean;
+    status?: "active" | "pending" | "suspended" | (string & {});
+    verificationStatus?: VerificationStatus;
     createdAt: string;
 }
 

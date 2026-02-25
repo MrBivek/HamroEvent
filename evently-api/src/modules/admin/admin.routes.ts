@@ -17,7 +17,7 @@ import {
 import { UserModel } from "../auth/user.model.js";
 import { ReviewModel } from "../reviews/review.model.js";
 import { BookingModel } from "../bookings/booking.model.js";
-import { toUiUser } from "../../common/mappers.js";
+import { mapVerificationStatusToUi, toUiUser } from "../../common/mappers.js";
 import { VerificationRequestModel } from "../verification-requests/verification-request.model.js";
 import { CategoryModel } from "../categories/category.model.js";
 
@@ -210,6 +210,12 @@ adminRoutes.patch(
  *         name: status
  *         schema: { type: string }
  *       - in: query
+ *         name: from
+ *         schema: { type: string, example: "2026-02-01" }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, example: "2026-02-25" }
+ *       - in: query
  *         name: page
  *         schema: { type: number, default: 1 }
  *       - in: query
@@ -232,13 +238,47 @@ adminRoutes.get("/users", requireAuth, requireRole(UserRole.ADMIN), async (req, 
         { email: { $regex: q.q, $options: "i" } },
       ];
     }
+    if (q.from || q.to) {
+      const createdAt: Record<string, Date> = {};
+      if (q.from) {
+        const from = new Date(q.from);
+        if (Number.isNaN(from.getTime())) throw new BadRequestError("Invalid from date");
+        if (q.from.length <= 10) from.setHours(0, 0, 0, 0);
+        createdAt.$gte = from;
+      }
+      if (q.to) {
+        const to = new Date(q.to);
+        if (Number.isNaN(to.getTime())) throw new BadRequestError("Invalid to date");
+        if (q.to.length <= 10) to.setHours(23, 59, 59, 999);
+        createdAt.$lte = to;
+      }
+      filter.createdAt = createdAt;
+    }
 
     const [items, total] = await Promise.all([
       UserModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
       UserModel.countDocuments(filter),
     ]);
 
-    res.json({ items: items.map(toUiUser), page: q.page, limit: q.limit, total });
+    const vendorUserIds = items
+      .filter((user) => user.role === UserRole.VENDOR)
+      .map((user) => user._id);
+    const vendors = vendorUserIds.length
+      ? await VendorModel.find({ userId: { $in: vendorUserIds } })
+          .select({ userId: 1, verifiedStatus: 1 })
+          .lean()
+      : [];
+    const vendorMap = new Map(vendors.map((v) => [v.userId.toString(), v]));
+
+    const mapped = items.map((user) => {
+      const base = toUiUser(user as any);
+      const vendor = vendorMap.get(user._id.toString());
+      return vendor
+        ? { ...base, verificationStatus: mapVerificationStatusToUi(vendor.verifiedStatus) }
+        : base;
+    });
+
+    res.json({ items: mapped, page: q.page, limit: q.limit, total });
   } catch (err) {
     next(err);
   }
