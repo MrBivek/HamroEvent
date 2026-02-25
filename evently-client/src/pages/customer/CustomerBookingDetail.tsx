@@ -89,15 +89,18 @@ export default function CustomerBookingDetail() {
         []
     );
 
-    const appendMessage = useCallback((incoming: ChatMessage) => {
-        setMessages((prev) => {
-            const incomingKey = messageKey(incoming);
-            if (prev.some((m) => messageKey(m) === incomingKey)) return prev;
-            return [...prev, incoming].sort(
-                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-            );
-        });
-    }, [messageKey]);
+    const appendMessage = useCallback(
+        (incoming: ChatMessage) => {
+            setMessages((prev) => {
+                const incomingKey = messageKey(incoming);
+                if (prev.some((m) => messageKey(m) === incomingKey)) return prev;
+                return [...prev, incoming].sort(
+                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
+            });
+        },
+        [messageKey]
+    );
 
     useEffect(() => {
         if (!conversationId || !token) return;

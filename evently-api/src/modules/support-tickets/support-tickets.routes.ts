@@ -3,8 +3,8 @@ import { requireAuth } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
 import { SupportTicketModel } from "./support-ticket.model.js";
 import {
-  CreateSupportTicketSchema,
-  SupportTicketListQuerySchema,
+    CreateSupportTicketSchema,
+    SupportTicketListQuerySchema,
 } from "./support-tickets.schemas.js";
 import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
 import { NotificationType } from "../../common/enums.js";
@@ -32,29 +32,29 @@ export const supportTicketsRoutes = Router();
  *       201: { description: Created }
  */
 supportTicketsRoutes.post(
-  "/",
-  requireAuth,
-  validateBody(CreateSupportTicketSchema),
-  async (req, res, next) => {
-    try {
-      const ticket = await SupportTicketModel.create({
-        createdBy: req.auth!.sub,
-        subject: req.body.subject,
-        message: req.body.message,
-      });
+    "/",
+    requireAuth,
+    validateBody(CreateSupportTicketSchema),
+    async (req, res, next) => {
+        try {
+            const ticket = await SupportTicketModel.create({
+                createdBy: req.auth!.sub,
+                subject: req.body.subject,
+                message: req.body.message,
+            });
 
-      await createNotificationsForAdmins({
-        type: NotificationType.SYSTEM,
-        title: "New support ticket",
-        body: req.body.subject,
-        link: "/admin/support-tickets",
-      });
+            await createNotificationsForAdmins({
+                type: NotificationType.SYSTEM,
+                title: "New support ticket",
+                body: req.body.subject,
+                link: "/admin/support-tickets",
+            });
 
-      res.status(201).json(ticket);
-    } catch (err) {
-      next(err);
-    }
-  },
+            res.status(201).json(ticket);
+        } catch (err) {
+            next(err);
+        }
+    },
 );
 
 /**
@@ -78,20 +78,24 @@ supportTicketsRoutes.post(
  *       200: { description: OK }
  */
 supportTicketsRoutes.get("/", requireAuth, async (req, res, next) => {
-  try {
-    const q = SupportTicketListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+    try {
+        const q = SupportTicketListQuerySchema.parse(req.query);
+        const skip = (q.page - 1) * q.limit;
 
-    const filter: Record<string, unknown> = { createdBy: req.auth!.sub };
-    if (q.status) filter.status = q.status;
+        const filter: Record<string, unknown> = { createdBy: req.auth!.sub };
+        if (q.status) filter.status = q.status;
 
-    const [items, total] = await Promise.all([
-      SupportTicketModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-      SupportTicketModel.countDocuments(filter),
-    ]);
+        const [items, total] = await Promise.all([
+            SupportTicketModel.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(q.limit)
+                .lean(),
+            SupportTicketModel.countDocuments(filter),
+        ]);
 
-    res.json({ items, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
+        res.json({ items, page: q.page, limit: q.limit, total });
+    } catch (err) {
+        next(err);
+    }
 });

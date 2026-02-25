@@ -1,32 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-    Search,
-    UserCheck,
-    UserX,
-    Mail,
-    Phone,
-    CalendarDays,
-    ShieldCheck,
-    Users,
-    BadgeCheck
-} from "lucide-react";
+import { Search, UserCheck, UserX, Mail, Phone, CalendarDays, ShieldCheck, Users, BadgeCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select.tsx";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle
-} from "@/components/ui/dialog.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
 import { AdminService } from "@/services/AdminService";
 import { useToast } from "@/hooks/use-toast.ts";
 import { getErrorMessage } from "@/lib/api";
@@ -114,14 +93,7 @@ export default function AdminUsers() {
     };
 
     const activeFilters = useMemo(
-        () =>
-            [
-                query.trim(),
-                roleFilter !== "all",
-                statusFilter !== "all",
-                fromDate,
-                toDate
-            ].filter(Boolean).length,
+        () => [query.trim(), roleFilter !== "all", statusFilter !== "all", fromDate, toDate].filter(Boolean).length,
         [query, roleFilter, statusFilter, fromDate, toDate]
     );
 
@@ -183,7 +155,9 @@ export default function AdminUsers() {
                     </div>
                     {activeFilters > 0 && (
                         <div className="md:col-span-2 xl:col-span-4 flex items-center justify-between text-sm text-muted-foreground">
-                            <p>{activeFilters} filter{activeFilters !== 1 ? "s" : ""} applied</p>
+                            <p>
+                                {activeFilters} filter{activeFilters !== 1 ? "s" : ""} applied
+                            </p>
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -314,10 +288,7 @@ export default function AdminUsers() {
                                 <Badge variant="outline" className="capitalize">
                                     {selectedUser.role}
                                 </Badge>
-                                <Badge
-                                    variant={statusBadge(getAccountStatus(selectedUser))}
-                                    className="capitalize"
-                                >
+                                <Badge variant={statusBadge(getAccountStatus(selectedUser))} className="capitalize">
                                     {getAccountStatus(selectedUser)}
                                 </Badge>
                                 <Badge variant="outline" className="capitalize flex items-center gap-1">

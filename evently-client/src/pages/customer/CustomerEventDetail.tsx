@@ -277,9 +277,7 @@ export default function CustomerEventDetail() {
                                 onChange={(e) => setVendorQuery(e.target.value)}
                             />
                             <Badge variant="soft">
-                                {event.startTime && event.endTime
-                                    ? `${event.startTime}-${event.endTime}`
-                                    : "All day"}
+                                {event.startTime && event.endTime ? `${event.startTime}-${event.endTime}` : "All day"}
                             </Badge>
                         </div>
 
@@ -323,9 +321,7 @@ export default function CustomerEventDetail() {
                                                     <span>{vendor.ratingCount} reviews</span>
                                                 </div>
                                                 <Button variant="outline" className="w-full" asChild>
-                                                    <Link to={`/vendors/${vendor._id}`}>
-                                                        View Vendor
-                                                    </Link>
+                                                    <Link to={`/vendors/${vendor._id}`}>View Vendor</Link>
                                                 </Button>
                                             </CardContent>
                                         </Card>

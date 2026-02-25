@@ -9,48 +9,48 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import { ensureUploadsDir, UPLOADS_DIR } from "./common/fileStorage.js";
 
 export function createApp() {
-  const app = express();
+    const app = express();
 
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: "cross-origin" },
-    }),
-  );
-  app.use(cors({ origin: true, credentials: true }));
-  app.use(compression());
-  app.use(express.json({ limit: "10mb" }));
-  app.use(morgan("dev"));
+    app.use(
+        helmet({
+            crossOriginResourcePolicy: { policy: "cross-origin" },
+        }),
+    );
+    app.use(cors({ origin: true, credentials: true }));
+    app.use(compression());
+    app.use(express.json({ limit: "10mb" }));
+    app.use(morgan("dev"));
 
-  ensureUploadsDir();
-  app.use("/uploads", express.static(UPLOADS_DIR));
+    ensureUploadsDir();
+    app.use("/uploads", express.static(UPLOADS_DIR));
 
-  app.get("/health", (_req, res) => {
-    res.json({ ok: true });
-  });
+    app.get("/health", (_req, res) => {
+        res.json({ ok: true });
+    });
 
-  setupSwagger(app);
+    setupSwagger(app);
 
-  /**
-   * @openapi
-   * /health:
-   *   get:
-   *     tags:
-   *       - Health
-   *     summary: Health check
-   *     responses:
-   *       200:
-   *         description: Server is healthy
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 ok:
-   *                   type: boolean
-   *                   example: true
-   */
-  app.use("/api", apiRouter);
+    /**
+     * @openapi
+     * /health:
+     *   get:
+     *     tags:
+     *       - Health
+     *     summary: Health check
+     *     responses:
+     *       200:
+     *         description: Server is healthy
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 ok:
+     *                   type: boolean
+     *                   example: true
+     */
+    app.use("/api", apiRouter);
 
-  app.use(errorHandler);
-  return app;
+    app.use(errorHandler);
+    return app;
 }

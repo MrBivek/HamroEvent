@@ -301,25 +301,25 @@ export default function CustomerEvents() {
                                     </div>
 
                                     <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>
-                                            {new Date(event.date).toLocaleDateString("en-US", {
-                                                weekday: "long",
-                                                month: "long",
-                                                day: "numeric",
-                                                year: "numeric"
-                                            })}
-                                        </span>
-                                    </div>
-                                    {(event.startTime || event.endTime) && (
                                         <div className="flex items-center gap-2">
-                                            <Clock className="h-4 w-4" />
+                                            <Calendar className="h-4 w-4" />
                                             <span>
-                                                {event.startTime || "--:--"} - {event.endTime || "--:--"}
+                                                {new Date(event.date).toLocaleDateString("en-US", {
+                                                    weekday: "long",
+                                                    month: "long",
+                                                    day: "numeric",
+                                                    year: "numeric"
+                                                })}
                                             </span>
                                         </div>
-                                    )}
+                                        {(event.startTime || event.endTime) && (
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4" />
+                                                <span>
+                                                    {event.startTime || "--:--"} - {event.endTime || "--:--"}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2">
                                             <MapPin className="h-4 w-4" />
                                             <span>{event.location}</span>

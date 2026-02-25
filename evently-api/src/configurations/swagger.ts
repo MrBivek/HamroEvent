@@ -4,33 +4,33 @@ import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
 export function setupSwagger(app: Express) {
-  const spec = swaggerJsdoc({
-    definition: {
-      openapi: "3.0.0",
-      info: {
-        title: "Evently API",
-        version: "1.0.0",
-        description: "API Documentation",
-      },
-      servers: [
-        {
-          url: `http://localhost:${env.PORT}`,
-          description: "Local API Server",
+    const spec = swaggerJsdoc({
+        definition: {
+            openapi: "3.0.0",
+            info: {
+                title: "Evently API",
+                version: "1.0.0",
+                description: "API Documentation",
+            },
+            servers: [
+                {
+                    url: `http://localhost:${env.PORT}`,
+                    description: "Local API Server",
+                },
+            ],
+            components: {
+                securitySchemes: {
+                    bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+                },
+            },
         },
-      ],
-      components: {
-        securitySchemes: {
-          bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-        },
-      },
-    },
-    apis: ["src/**/*.ts"],
-  });
+        apis: ["src/**/*.ts"],
+    });
 
-  app.get("/swagger.json", (_req, res) => res.json(spec));
-  app.use(
-    "/swagger",
-    swaggerUi.serveFiles(spec, { explorer: true }),
-    swaggerUi.setup(spec, { explorer: true }),
-  );
+    app.get("/swagger.json", (_req, res) => res.json(spec));
+    app.use(
+        "/swagger",
+        swaggerUi.serveFiles(spec, { explorer: true }),
+        swaggerUi.setup(spec, { explorer: true }),
+    );
 }

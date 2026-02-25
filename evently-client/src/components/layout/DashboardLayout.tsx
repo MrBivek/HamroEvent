@@ -227,8 +227,7 @@ export function DashboardLayout() {
 
                     <div className="hidden lg:block">
                         <h1 className="text-lg font-semibold text-foreground">
-                            {navItems.find((item) => isNavActive(item.href, location.pathname))?.label ||
-                                "Dashboard"}
+                            {navItems.find((item) => isNavActive(item.href, location.pathname))?.label || "Dashboard"}
                         </h1>
                     </div>
 

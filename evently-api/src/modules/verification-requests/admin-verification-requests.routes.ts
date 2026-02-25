@@ -3,16 +3,16 @@ import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
 import {
-  UserRole,
-  VerificationStatus,
-  NotificationType,
-  DocumentOwnerType,
+    UserRole,
+    VerificationStatus,
+    NotificationType,
+    DocumentOwnerType,
 } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VerificationRequestModel } from "./verification-request.model.js";
 import {
-  VerificationRequestListQuerySchema,
-  AdminDecisionSchema,
+    VerificationRequestListQuerySchema,
+    AdminDecisionSchema,
 } from "./verification-requests.schemas.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
@@ -47,137 +47,142 @@ export const adminVerificationRequestsRoutes = Router();
  *       200: { description: OK }
  */
 adminVerificationRequestsRoutes.get(
-  "/verification-requests",
-  requireAuth,
-  requireRole(UserRole.ADMIN),
-  async (req, res, next) => {
-    try {
-      const q = VerificationRequestListQuerySchema.parse(req.query);
-      const skip = (q.page - 1) * q.limit;
+    "/verification-requests",
+    requireAuth,
+    requireRole(UserRole.ADMIN),
+    async (req, res, next) => {
+        try {
+            const q = VerificationRequestListQuerySchema.parse(req.query);
+            const skip = (q.page - 1) * q.limit;
 
-      const filter: Record<string, unknown> = {};
-      if (q.status) filter.status = q.status;
+            const filter: Record<string, unknown> = {};
+            if (q.status) filter.status = q.status;
 
-      if (!q.status || String(q.status).toUpperCase() === VerificationStatus.PENDING) {
-        const pendingVendors = await VendorModel.find({
-          verifiedStatus: VerificationStatus.PENDING,
-        })
-          .select({ _id: 1 })
-          .lean();
-        if (pendingVendors.length) {
-          const now = new Date();
-          await VerificationRequestModel.bulkWrite(
-            pendingVendors.map((vendor) => ({
-              updateOne: {
-                filter: { vendorId: vendor._id, status: VerificationStatus.PENDING },
-                update: {
-                  $setOnInsert: {
-                    vendorId: vendor._id,
-                    status: VerificationStatus.PENDING,
-                    submittedAt: now,
-                  },
-                },
-                upsert: true,
-              },
-            })),
-          );
+            if (!q.status || String(q.status).toUpperCase() === VerificationStatus.PENDING) {
+                const pendingVendors = await VendorModel.find({
+                    verifiedStatus: VerificationStatus.PENDING,
+                })
+                    .select({ _id: 1 })
+                    .lean();
+                if (pendingVendors.length) {
+                    const now = new Date();
+                    await VerificationRequestModel.bulkWrite(
+                        pendingVendors.map((vendor) => ({
+                            updateOne: {
+                                filter: {
+                                    vendorId: vendor._id,
+                                    status: VerificationStatus.PENDING,
+                                },
+                                update: {
+                                    $setOnInsert: {
+                                        vendorId: vendor._id,
+                                        status: VerificationStatus.PENDING,
+                                        submittedAt: now,
+                                    },
+                                },
+                                upsert: true,
+                            },
+                        })),
+                    );
+                }
+            }
+
+            const [items, total] = await Promise.all([
+                VerificationRequestModel.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(q.limit)
+                    .lean(),
+                VerificationRequestModel.countDocuments(filter),
+            ]);
+
+            const vendorIds = items.map((item) => item.vendorId);
+            const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
+            const categoryIds = vendors
+                .map((v) => v.categoryId)
+                .filter(Boolean) as mongoose.Types.ObjectId[];
+            const locationIds = vendors
+                .map((v) => v.primaryLocationId)
+                .filter(Boolean) as mongoose.Types.ObjectId[];
+            const userIds = vendors.map((v) => v.userId);
+
+            const [categories, locations, documents, packages, users] = await Promise.all([
+                CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
+                LocationModel.find({ _id: { $in: locationIds } }).lean(),
+                vendorIds.length
+                    ? DocumentModel.find({
+                          ownerType: DocumentOwnerType.VENDOR,
+                          ownerId: { $in: vendorIds },
+                      }).lean()
+                    : Promise.resolve([]),
+                vendorIds.length
+                    ? PackageModel.find({ vendorId: { $in: vendorIds } }).lean()
+                    : Promise.resolve([]),
+                userIds.length
+                    ? UserModel.find({ _id: { $in: userIds } }).lean()
+                    : Promise.resolve([]),
+            ]);
+
+            const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
+            const locationMap = new Map(locations.map((l) => [l._id.toString(), l]));
+            const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+            const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+            const packageMap = new Map<string, typeof packages>();
+            for (const pkg of packages) {
+                const key = pkg.vendorId.toString();
+                const bucket = packageMap.get(key) ?? [];
+                bucket.push(pkg);
+                packageMap.set(key, bucket);
+            }
+
+            const documentMap = new Map<string, typeof documents>();
+            for (const doc of documents) {
+                const key = doc.ownerId.toString();
+                const bucket = documentMap.get(key) ?? [];
+                bucket.push(doc);
+                documentMap.set(key, bucket);
+            }
+
+            const mapped = items.map((item) => {
+                const vendor = vendorMap.get(item.vendorId.toString());
+                const vendorPackages = vendor ? (packageMap.get(vendor._id.toString()) ?? []) : [];
+                const category = vendor?.categoryId
+                    ? categoryMap.get(vendor.categoryId.toString())
+                    : undefined;
+                const location = vendor?.primaryLocationId
+                    ? locationMap.get(vendor.primaryLocationId.toString())
+                    : undefined;
+                const vendorDocs = documentMap.get(item.vendorId.toString()) ?? [];
+                const user = vendor ? userMap.get(vendor.userId.toString()) : undefined;
+                return {
+                    ...item,
+                    vendor: vendor
+                        ? buildVendorProfile({
+                              vendor,
+                              user,
+                              category,
+                              location,
+                              packages: vendorPackages,
+                              documents: vendorDocs,
+                              includePackages: true,
+                          })
+                        : undefined,
+                    documents: vendorDocs.map((doc) => ({
+                        _id: doc._id.toString(),
+                        url: doc.url,
+                        name: doc.name,
+                        mimeType: doc.type,
+                    })),
+                    documentsCount: vendorDocs.length,
+                };
+            });
+
+            res.json({ items: mapped, page: q.page, limit: q.limit, total });
+        } catch (err) {
+            next(err);
         }
-      }
-
-      const [items, total] = await Promise.all([
-        VerificationRequestModel.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(q.limit)
-          .lean(),
-        VerificationRequestModel.countDocuments(filter),
-      ]);
-
-      const vendorIds = items.map((item) => item.vendorId);
-      const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
-      const categoryIds = vendors
-        .map((v) => v.categoryId)
-        .filter(Boolean) as mongoose.Types.ObjectId[];
-      const locationIds = vendors
-        .map((v) => v.primaryLocationId)
-        .filter(Boolean) as mongoose.Types.ObjectId[];
-      const userIds = vendors.map((v) => v.userId);
-
-      const [categories, locations, documents, packages, users] = await Promise.all([
-        CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
-        LocationModel.find({ _id: { $in: locationIds } }).lean(),
-        vendorIds.length
-          ? DocumentModel.find({
-              ownerType: DocumentOwnerType.VENDOR,
-              ownerId: { $in: vendorIds },
-            }).lean()
-          : Promise.resolve([]),
-        vendorIds.length
-          ? PackageModel.find({ vendorId: { $in: vendorIds } }).lean()
-          : Promise.resolve([]),
-        userIds.length ? UserModel.find({ _id: { $in: userIds } }).lean() : Promise.resolve([]),
-      ]);
-
-      const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
-      const locationMap = new Map(locations.map((l) => [l._id.toString(), l]));
-      const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
-      const userMap = new Map(users.map((u) => [u._id.toString(), u]));
-
-      const packageMap = new Map<string, typeof packages>();
-      for (const pkg of packages) {
-        const key = pkg.vendorId.toString();
-        const bucket = packageMap.get(key) ?? [];
-        bucket.push(pkg);
-        packageMap.set(key, bucket);
-      }
-
-      const documentMap = new Map<string, typeof documents>();
-      for (const doc of documents) {
-        const key = doc.ownerId.toString();
-        const bucket = documentMap.get(key) ?? [];
-        bucket.push(doc);
-        documentMap.set(key, bucket);
-      }
-
-      const mapped = items.map((item) => {
-        const vendor = vendorMap.get(item.vendorId.toString());
-        const vendorPackages = vendor ? (packageMap.get(vendor._id.toString()) ?? []) : [];
-        const category = vendor?.categoryId
-          ? categoryMap.get(vendor.categoryId.toString())
-          : undefined;
-        const location = vendor?.primaryLocationId
-          ? locationMap.get(vendor.primaryLocationId.toString())
-          : undefined;
-        const vendorDocs = documentMap.get(item.vendorId.toString()) ?? [];
-        const user = vendor ? userMap.get(vendor.userId.toString()) : undefined;
-        return {
-          ...item,
-          vendor: vendor
-            ? buildVendorProfile({
-                vendor,
-                user,
-                category,
-                location,
-                packages: vendorPackages,
-                documents: vendorDocs,
-                includePackages: true,
-              })
-            : undefined,
-          documents: vendorDocs.map((doc) => ({
-            _id: doc._id.toString(),
-            url: doc.url,
-            name: doc.name,
-            mimeType: doc.type,
-          })),
-          documentsCount: vendorDocs.length,
-        };
-      });
-
-      res.json({ items: mapped, page: q.page, limit: q.limit, total });
-    } catch (err) {
-      next(err);
-    }
-  },
+    },
 );
 
 /**
@@ -208,84 +213,88 @@ adminVerificationRequestsRoutes.get(
  *       404: { description: Not found }
  */
 adminVerificationRequestsRoutes.patch(
-  "/verification-requests/:id/decision",
-  requireAuth,
-  requireRole(UserRole.ADMIN),
-  validateBody(AdminDecisionSchema),
-  async (req, res, next) => {
-    try {
-      const id = String(req.params.id);
-      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Verification request not found");
+    "/verification-requests/:id/decision",
+    requireAuth,
+    requireRole(UserRole.ADMIN),
+    validateBody(AdminDecisionSchema),
+    async (req, res, next) => {
+        try {
+            const id = String(req.params.id);
+            if (!mongoose.isValidObjectId(id))
+                throw new NotFoundError("Verification request not found");
 
-      const request = await VerificationRequestModel.findById(id);
-      if (!request) throw new NotFoundError("Verification request not found");
+            const request = await VerificationRequestModel.findById(id);
+            if (!request) throw new NotFoundError("Verification request not found");
 
-      if (request.status !== VerificationStatus.PENDING) {
-        throw new BadRequestError("Only PENDING requests can be decided");
-      }
+            if (request.status !== VerificationStatus.PENDING) {
+                throw new BadRequestError("Only PENDING requests can be decided");
+            }
 
-      let nextStatus: VerificationStatus = VerificationStatus.PENDING;
-      let notificationType: NotificationType = NotificationType.VENDOR_APPROVED;
-      let notificationTitle = "Vendor verification approved";
-      let notificationBody = "Your verification request has been approved.";
+            let nextStatus: VerificationStatus = VerificationStatus.PENDING;
+            let notificationType: NotificationType = NotificationType.VENDOR_APPROVED;
+            let notificationTitle = "Vendor verification approved";
+            let notificationBody = "Your verification request has been approved.";
 
-      if (req.body.decision === "APPROVE") {
-        nextStatus = VerificationStatus.APPROVED;
-        notificationType = NotificationType.VENDOR_APPROVED;
-        notificationTitle = "Vendor verification approved";
-        notificationBody = "Your verification request has been approved.";
-      } else if (req.body.decision === "REJECT") {
-        nextStatus = VerificationStatus.REJECTED;
-        notificationType = NotificationType.VENDOR_REJECTED;
-        notificationTitle = "Vendor verification rejected";
-        notificationBody = "Your verification request was rejected.";
-      } else {
-        nextStatus = VerificationStatus.RESUBMIT_REQUIRED;
-        notificationType = NotificationType.VENDOR_RESUBMIT;
-        notificationTitle = "Verification resubmission required";
-        notificationBody = "Please update your verification documents and resubmit.";
-      }
+            if (req.body.decision === "APPROVE") {
+                nextStatus = VerificationStatus.APPROVED;
+                notificationType = NotificationType.VENDOR_APPROVED;
+                notificationTitle = "Vendor verification approved";
+                notificationBody = "Your verification request has been approved.";
+            } else if (req.body.decision === "REJECT") {
+                nextStatus = VerificationStatus.REJECTED;
+                notificationType = NotificationType.VENDOR_REJECTED;
+                notificationTitle = "Vendor verification rejected";
+                notificationBody = "Your verification request was rejected.";
+            } else {
+                nextStatus = VerificationStatus.RESUBMIT_REQUIRED;
+                notificationType = NotificationType.VENDOR_RESUBMIT;
+                notificationTitle = "Verification resubmission required";
+                notificationBody = "Please update your verification documents and resubmit.";
+            }
 
-      request.status = nextStatus;
-      request.adminNote = req.body.note;
-      request.decidedAt = new Date();
-      request.decidedBy = new mongoose.Types.ObjectId(req.auth!.sub);
-      await request.save();
+            request.status = nextStatus;
+            request.adminNote = req.body.note;
+            request.decidedAt = new Date();
+            request.decidedBy = new mongoose.Types.ObjectId(req.auth!.sub);
+            await request.save();
 
-      const vendor = await VendorModel.findByIdAndUpdate(
-        request.vendorId,
-        { $set: { verifiedStatus: nextStatus, verificationNote: req.body.note } },
-        { new: true },
-      ).lean();
-      if (!vendor) throw new NotFoundError("Vendor not found");
+            const vendor = await VendorModel.findByIdAndUpdate(
+                request.vendorId,
+                { $set: { verifiedStatus: nextStatus, verificationNote: req.body.note } },
+                { new: true },
+            ).lean();
+            if (!vendor) throw new NotFoundError("Vendor not found");
 
-      if (nextStatus !== VerificationStatus.APPROVED) {
-        await PackageModel.updateMany({ vendorId: vendor._id }, { $set: { isActive: false } });
-      }
+            if (nextStatus !== VerificationStatus.APPROVED) {
+                await PackageModel.updateMany(
+                    { vendorId: vendor._id },
+                    { $set: { isActive: false } },
+                );
+            }
 
-      await createAuditLog({
-        actorUserId: req.auth!.sub,
-        action: "VENDOR_VERIFICATION_DECISION",
-        targetType: "Vendor",
-        targetId: vendor._id,
-        metadata: {
-          decision: req.body.decision,
-          note: req.body.note ?? null,
-          requestId: request._id.toString(),
-        },
-      });
+            await createAuditLog({
+                actorUserId: req.auth!.sub,
+                action: "VENDOR_VERIFICATION_DECISION",
+                targetType: "Vendor",
+                targetId: vendor._id,
+                metadata: {
+                    decision: req.body.decision,
+                    note: req.body.note ?? null,
+                    requestId: request._id.toString(),
+                },
+            });
 
-      await createNotification({
-        userId: vendor.userId.toString(),
-        type: notificationType,
-        title: notificationTitle,
-        body: notificationBody,
-        link: "/vendor/verification",
-      });
+            await createNotification({
+                userId: vendor.userId.toString(),
+                type: notificationType,
+                title: notificationTitle,
+                body: notificationBody,
+                link: "/vendor/verification",
+            });
 
-      res.json({ request: request.toObject(), vendor });
-    } catch (err) {
-      next(err);
-    }
-  },
+            res.json({ request: request.toObject(), vendor });
+        } catch (err) {
+            next(err);
+        }
+    },
 );

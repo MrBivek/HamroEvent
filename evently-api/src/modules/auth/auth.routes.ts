@@ -1,9 +1,9 @@
 import {
-  LoginSchema,
-  RegisterVendorSchema,
-  RegisterCustomerSchema,
-  RequestOtpSchema,
-  VerifyOtpSchema,
+    LoginSchema,
+    RegisterVendorSchema,
+    RegisterCustomerSchema,
+    RequestOtpSchema,
+    VerifyOtpSchema,
 } from "./auth.schemas.js";
 import { Router } from "express";
 import * as controller from "./auth.controller.js";
@@ -45,9 +45,9 @@ export const authRoutes = Router();
  *         description: Validation error / duplicate email
  */
 authRoutes.post(
-  "/register/customer",
-  validateBody(RegisterCustomerSchema),
-  controller.registerCustomer,
+    "/register/customer",
+    validateBody(RegisterCustomerSchema),
+    controller.registerCustomer,
 );
 
 /**

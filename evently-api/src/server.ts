@@ -7,23 +7,23 @@ import { runMigrations } from "./migrate.js";
 import { initSocket } from "./socket.js";
 
 async function bootstrap() {
-  await connectDb();
-  if (env.MIGRATE_ON_START) {
-    console.log("Running migrations...");
-    await runMigrations(mongoose.connection, "up");
-  }
+    await connectDb();
+    if (env.MIGRATE_ON_START) {
+        console.log("Running migrations...");
+        await runMigrations(mongoose.connection, "up");
+    }
 
-  const app = createApp();
-  const server = createServer(app);
-  initSocket(server);
+    const app = createApp();
+    const server = createServer(app);
+    initSocket(server);
 
-  server.listen(env.PORT, () => {
-    console.log(`API Running on http://localhost:${env.PORT}`);
-    console.log(`API Documentation on http://localhost:${env.PORT}/swagger`);
-  });
+    server.listen(env.PORT, () => {
+        console.log(`API Running on http://localhost:${env.PORT}`);
+        console.log(`API Documentation on http://localhost:${env.PORT}/swagger`);
+    });
 }
 
 bootstrap().catch((err) => {
-  console.error(err);
-  process.exit(1);
+    console.error(err);
+    process.exit(1);
 });

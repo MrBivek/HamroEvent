@@ -210,7 +210,7 @@ export default function VendorVerification() {
                             >
                                 {isSubmitting ? "Submitting..." : "Submit for Verification"}
                             </Button>
-                      </>
+                        </>
                     )}
                 </CardContent>
             </Card>

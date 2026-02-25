@@ -35,41 +35,41 @@ export const documentsRoutes = Router();
  *       201: { description: Created }
  */
 documentsRoutes.post(
-  "/me/documents",
-  requireAuth,
-  requireRole(UserRole.VENDOR),
-  validateBody(CreateDocumentSchema),
-  async (req, res, next) => {
-    try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-      if (!vendor) throw new NotFoundError("Vendor profile not found");
+    "/me/documents",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    validateBody(CreateDocumentSchema),
+    async (req, res, next) => {
+        try {
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      let url = req.body.url;
-      if (!url && req.body.data) {
-        const saved = saveBase64File({
-          data: req.body.data,
-          folder: `documents/${vendor._id.toString()}`,
-          filenamePrefix: "doc",
-          mimeTypeHint: req.body.mimeType,
-        });
-        url = saved.url;
-      }
-      if (!url) throw new BadRequestError("Document data or url missing");
+            let url = req.body.url;
+            if (!url && req.body.data) {
+                const saved = saveBase64File({
+                    data: req.body.data,
+                    folder: `documents/${vendor._id.toString()}`,
+                    filenamePrefix: "doc",
+                    mimeTypeHint: req.body.mimeType,
+                });
+                url = saved.url;
+            }
+            if (!url) throw new BadRequestError("Document data or url missing");
 
-      const doc = await DocumentModel.create({
-        ownerType: DocumentOwnerType.VENDOR,
-        ownerId: vendor._id,
-        name: req.body.name,
-        type: req.body.type,
-        url,
-        uploadedBy: new mongoose.Types.ObjectId(req.auth!.sub),
-      });
+            const doc = await DocumentModel.create({
+                ownerType: DocumentOwnerType.VENDOR,
+                ownerId: vendor._id,
+                name: req.body.name,
+                type: req.body.type,
+                url,
+                uploadedBy: new mongoose.Types.ObjectId(req.auth!.sub),
+            });
 
-      res.status(201).json(doc);
-    } catch (err) {
-      next(err);
-    }
-  },
+            res.status(201).json(doc);
+        } catch (err) {
+            next(err);
+        }
+    },
 );
 
 /**
@@ -90,26 +90,26 @@ documentsRoutes.post(
  *       200: { description: OK }
  */
 documentsRoutes.get(
-  "/me/documents",
-  requireAuth,
-  requireRole(UserRole.VENDOR),
-  async (req, res, next) => {
-    try {
-      const q = DocumentListQuerySchema.parse(req.query);
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-      if (!vendor) throw new NotFoundError("Vendor profile not found");
+    "/me/documents",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    async (req, res, next) => {
+        try {
+            const q = DocumentListQuerySchema.parse(req.query);
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-      const skip = (q.page - 1) * q.limit;
-      const filter = { ownerType: DocumentOwnerType.VENDOR, ownerId: vendor._id };
+            const skip = (q.page - 1) * q.limit;
+            const filter = { ownerType: DocumentOwnerType.VENDOR, ownerId: vendor._id };
 
-      const [items, total] = await Promise.all([
-        DocumentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
-        DocumentModel.countDocuments(filter),
-      ]);
+            const [items, total] = await Promise.all([
+                DocumentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+                DocumentModel.countDocuments(filter),
+            ]);
 
-      res.json({ items, page: q.page, limit: q.limit, total });
-    } catch (err) {
-      next(err);
-    }
-  },
+            res.json({ items, page: q.page, limit: q.limit, total });
+        } catch (err) {
+            next(err);
+        }
+    },
 );

@@ -32,25 +32,26 @@ export const reportsRoutes = Router();
  *       201: { description: Created }
  */
 reportsRoutes.post("/", requireAuth, validateBody(CreateReportSchema), async (req, res, next) => {
-  try {
-    if (!mongoose.isValidObjectId(req.body.targetId)) throw new BadRequestError("Invalid targetId");
+    try {
+        if (!mongoose.isValidObjectId(req.body.targetId))
+            throw new BadRequestError("Invalid targetId");
 
-    const report = await ReportModel.create({
-      createdBy: req.auth!.sub,
-      targetType: req.body.targetType,
-      targetId: new mongoose.Types.ObjectId(req.body.targetId),
-      reason: req.body.reason,
-    });
+        const report = await ReportModel.create({
+            createdBy: req.auth!.sub,
+            targetType: req.body.targetType,
+            targetId: new mongoose.Types.ObjectId(req.body.targetId),
+            reason: req.body.reason,
+        });
 
-    await createNotificationsForAdmins({
-      type: NotificationType.SYSTEM,
-      title: "New report submitted",
-      body: `${req.body.targetType} reported`,
-      link: "/admin/reports",
-    });
+        await createNotificationsForAdmins({
+            type: NotificationType.SYSTEM,
+            title: "New report submitted",
+            body: `${req.body.targetType} reported`,
+            link: "/admin/reports",
+        });
 
-    res.status(201).json(report);
-  } catch (err) {
-    next(err);
-  }
+        res.status(201).json(report);
+    } catch (err) {
+        next(err);
+    }
 });

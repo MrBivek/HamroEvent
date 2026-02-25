@@ -48,42 +48,44 @@ export const eventsRoutes = Router();
  *       201: { description: Created }
  */
 eventsRoutes.post(
-  "/",
-  requireAuth,
-  requireRole(UserRole.CUSTOMER),
-  validateBody(CreateEventSchema),
-  async (req, res, next) => {
-    try {
-      const body: any = { ...req.body };
+    "/",
+    requireAuth,
+    requireRole(UserRole.CUSTOMER),
+    validateBody(CreateEventSchema),
+    async (req, res, next) => {
+        try {
+            const body: any = { ...req.body };
 
-      body.userId = new mongoose.Types.ObjectId(req.auth!.sub);
-      const dateValue = body.eventDate ?? body.date;
-      if (!dateValue) throw new BadRequestError("Event date is required");
-      body.eventDate = new Date(dateValue);
-      body.locationText = body.locationText ?? body.location;
-      if (typeof body.budget === "number") {
-        body.budgetMin = body.budget;
-        body.budgetMax = body.budget;
-      }
-      if (body.startTime || body.endTime) {
-        const range = normalizeTimeRange(body.startTime, body.endTime);
-        if (!range) {
-          throw new BadRequestError("Invalid time range. Use HH:mm and ensure end is after start.");
+            body.userId = new mongoose.Types.ObjectId(req.auth!.sub);
+            const dateValue = body.eventDate ?? body.date;
+            if (!dateValue) throw new BadRequestError("Event date is required");
+            body.eventDate = new Date(dateValue);
+            body.locationText = body.locationText ?? body.location;
+            if (typeof body.budget === "number") {
+                body.budgetMin = body.budget;
+                body.budgetMax = body.budget;
+            }
+            if (body.startTime || body.endTime) {
+                const range = normalizeTimeRange(body.startTime, body.endTime);
+                if (!range) {
+                    throw new BadRequestError(
+                        "Invalid time range. Use HH:mm and ensure end is after start.",
+                    );
+                }
+            }
+
+            if (body.locationId && mongoose.isValidObjectId(body.locationId)) {
+                body.locationId = new mongoose.Types.ObjectId(body.locationId);
+            } else {
+                delete body.locationId;
+            }
+
+            const event = await EventModel.create(body);
+            res.status(201).json(buildEventDto(event));
+        } catch (err) {
+            next(err);
         }
-      }
-
-      if (body.locationId && mongoose.isValidObjectId(body.locationId)) {
-        body.locationId = new mongoose.Types.ObjectId(body.locationId);
-      } else {
-        delete body.locationId;
-      }
-
-      const event = await EventModel.create(body);
-      res.status(201).json(buildEventDto(event));
-    } catch (err) {
-      next(err);
-    }
-  },
+    },
 );
 
 /**
@@ -104,32 +106,32 @@ eventsRoutes.post(
  *       200: { description: OK }
  */
 eventsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const q = EventListQuerySchema.parse(req.query);
-    const skip = (q.page - 1) * q.limit;
+    try {
+        const q = EventListQuerySchema.parse(req.query);
+        const skip = (q.page - 1) * q.limit;
 
-    const filter = { userId: new mongoose.Types.ObjectId(req.auth!.sub) };
+        const filter = { userId: new mongoose.Types.ObjectId(req.auth!.sub) };
 
-    const [items, total] = await Promise.all([
-      EventModel.find(filter).sort({ eventDate: -1 }).skip(skip).limit(q.limit).lean(),
-      EventModel.countDocuments(filter),
-    ]);
+        const [items, total] = await Promise.all([
+            EventModel.find(filter).sort({ eventDate: -1 }).skip(skip).limit(q.limit).lean(),
+            EventModel.countDocuments(filter),
+        ]);
 
-    const eventIds = items.map((event) => event._id);
-    const counts = await BookingModel.aggregate([
-      { $match: { eventId: { $in: eventIds } } },
-      { $group: { _id: "$eventId", count: { $sum: 1 } } },
-    ]);
-    const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
+        const eventIds = items.map((event) => event._id);
+        const counts = await BookingModel.aggregate([
+            { $match: { eventId: { $in: eventIds } } },
+            { $group: { _id: "$eventId", count: { $sum: 1 } } },
+        ]);
+        const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
 
-    const mapped = items.map((event) =>
-      buildEventDto(event, countMap.get(event._id.toString()) ?? 0),
-    );
+        const mapped = items.map((event) =>
+            buildEventDto(event, countMap.get(event._id.toString()) ?? 0),
+        );
 
-    res.json({ items: mapped, page: q.page, limit: q.limit, total });
-  } catch (err) {
-    next(err);
-  }
+        res.json({ items: mapped, page: q.page, limit: q.limit, total });
+    } catch (err) {
+        next(err);
+    }
 });
 
 /**
@@ -149,57 +151,61 @@ eventsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
  *       404: { description: Not found }
  */
 eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const id = String(req.params.id);
-    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+    try {
+        const id = String(req.params.id);
+        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-    const event = await EventModel.findOne({
-      _id: new mongoose.Types.ObjectId(id),
-      userId: new mongoose.Types.ObjectId(req.auth!.sub),
-    }).lean();
+        const event = await EventModel.findOne({
+            _id: new mongoose.Types.ObjectId(id),
+            userId: new mongoose.Types.ObjectId(req.auth!.sub),
+        }).lean();
 
-    if (!event) throw new NotFoundError("Event not found");
+        if (!event) throw new NotFoundError("Event not found");
 
-    const bookings = await BookingModel.find({ eventId: event._id }).lean();
-    const vendorIds = bookings.map((b) => b.vendorId);
-    const packageIds = bookings
-      .map((b) => b.packageId)
-      .filter(Boolean) as mongoose.Types.ObjectId[];
+        const bookings = await BookingModel.find({ eventId: event._id }).lean();
+        const vendorIds = bookings.map((b) => b.vendorId);
+        const packageIds = bookings
+            .map((b) => b.packageId)
+            .filter(Boolean) as mongoose.Types.ObjectId[];
 
-    const [vendors, packages] = await Promise.all([
-      VendorModel.find({ _id: { $in: vendorIds } }).lean(),
-      packageIds.length
-        ? PackageModel.find({ _id: { $in: packageIds } }).lean()
-        : Promise.resolve([]),
-    ]);
-    const categoryIds = vendors
-      .map((v) => v.categoryId)
-      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
-    const categories = categoryIds.length
-      ? await CategoryModel.find({ _id: { $in: categoryIds } }).lean()
-      : [];
+        const [vendors, packages] = await Promise.all([
+            VendorModel.find({ _id: { $in: vendorIds } }).lean(),
+            packageIds.length
+                ? PackageModel.find({ _id: { $in: packageIds } }).lean()
+                : Promise.resolve([]),
+        ]);
+        const categoryIds = vendors
+            .map((v) => v.categoryId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+        const categories = categoryIds.length
+            ? await CategoryModel.find({ _id: { $in: categoryIds } }).lean()
+            : [];
 
-    const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
-    const packageMap = new Map(packages.map((p) => [p._id.toString(), p]));
-    const categoryMap = new Map(categories.map((c) => [c._id.toString(), c.slug]));
+        const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+        const packageMap = new Map(packages.map((p) => [p._id.toString(), p]));
+        const categoryMap = new Map(categories.map((c) => [c._id.toString(), c.slug]));
 
-    const bookingDtos = bookings.map((booking) => {
-      const vendor = vendorMap.get(booking.vendorId.toString());
-      const pkg = booking.packageId ? packageMap.get(booking.packageId.toString()) : undefined;
-      const categorySlug = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : "";
-      return {
-        id: booking._id.toString(),
-        vendorName: vendor?.businessName ?? "",
-        category: categorySlug ?? "",
-        status: mapBookingStatusToUi(booking.status),
-        price: pkg?.priceMin ?? 0,
-      };
-    });
+        const bookingDtos = bookings.map((booking) => {
+            const vendor = vendorMap.get(booking.vendorId.toString());
+            const pkg = booking.packageId
+                ? packageMap.get(booking.packageId.toString())
+                : undefined;
+            const categorySlug = vendor?.categoryId
+                ? categoryMap.get(vendor.categoryId.toString())
+                : "";
+            return {
+                id: booking._id.toString(),
+                vendorName: vendor?.businessName ?? "",
+                category: categorySlug ?? "",
+                status: mapBookingStatusToUi(booking.status),
+                price: pkg?.priceMin ?? 0,
+            };
+        });
 
-    res.json({ ...buildEventDto(event), bookings: bookingDtos });
-  } catch (err) {
-    next(err);
-  }
+        res.json({ ...buildEventDto(event), bookings: bookingDtos });
+    } catch (err) {
+        next(err);
+    }
 });
 
 /**
@@ -219,59 +225,61 @@ eventsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req
  *       404: { description: Not found }
  */
 eventsRoutes.patch(
-  "/:id",
-  requireAuth,
-  requireRole(UserRole.CUSTOMER),
-  validateBody(UpdateEventSchema),
-  async (req, res, next) => {
-    try {
-      const id = String(req.params.id);
-      if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+    "/:id",
+    requireAuth,
+    requireRole(UserRole.CUSTOMER),
+    validateBody(UpdateEventSchema),
+    async (req, res, next) => {
+        try {
+            const id = String(req.params.id);
+            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-      const updates: any = { ...req.body };
+            const updates: any = { ...req.body };
 
-      if (updates.date && !updates.eventDate) updates.eventDate = updates.date;
-      if (updates.eventDate) updates.eventDate = new Date(updates.eventDate);
-      if (updates.location) {
-        updates.locationText = updates.location;
-        delete updates.location;
-      }
-      if (typeof updates.budget === "number") {
-        updates.budgetMin = updates.budget;
-        updates.budgetMax = updates.budget;
-      }
+            if (updates.date && !updates.eventDate) updates.eventDate = updates.date;
+            if (updates.eventDate) updates.eventDate = new Date(updates.eventDate);
+            if (updates.location) {
+                updates.locationText = updates.location;
+                delete updates.location;
+            }
+            if (typeof updates.budget === "number") {
+                updates.budgetMin = updates.budget;
+                updates.budgetMax = updates.budget;
+            }
 
-      if ("locationId" in updates) {
-        if (updates.locationId && mongoose.isValidObjectId(updates.locationId)) {
-          updates.locationId = new mongoose.Types.ObjectId(updates.locationId);
-        } else {
-          delete updates.locationId;
+            if ("locationId" in updates) {
+                if (updates.locationId && mongoose.isValidObjectId(updates.locationId)) {
+                    updates.locationId = new mongoose.Types.ObjectId(updates.locationId);
+                } else {
+                    delete updates.locationId;
+                }
+            }
+            if ("startTime" in updates || "endTime" in updates) {
+                const start = updates.startTime ?? null;
+                const end = updates.endTime ?? null;
+                const range = normalizeTimeRange(start, end);
+                if (!range) {
+                    throw new BadRequestError(
+                        "Invalid time range. Use HH:mm and ensure end is after start.",
+                    );
+                }
+            }
+
+            const event = await EventModel.findOneAndUpdate(
+                {
+                    _id: new mongoose.Types.ObjectId(id),
+                    userId: new mongoose.Types.ObjectId(req.auth!.sub),
+                },
+                { $set: updates },
+                { new: true },
+            ).lean();
+
+            if (!event) throw new NotFoundError("Event not found");
+            res.json(buildEventDto(event));
+        } catch (err) {
+            next(err);
         }
-      }
-      if ("startTime" in updates || "endTime" in updates) {
-        const start = updates.startTime ?? null;
-        const end = updates.endTime ?? null;
-        const range = normalizeTimeRange(start, end);
-        if (!range) {
-          throw new BadRequestError("Invalid time range. Use HH:mm and ensure end is after start.");
-        }
-      }
-
-      const event = await EventModel.findOneAndUpdate(
-        {
-          _id: new mongoose.Types.ObjectId(id),
-          userId: new mongoose.Types.ObjectId(req.auth!.sub),
-        },
-        { $set: updates },
-        { new: true },
-      ).lean();
-
-      if (!event) throw new NotFoundError("Event not found");
-      res.json(buildEventDto(event));
-    } catch (err) {
-      next(err);
-    }
-  },
+    },
 );
 
 /**
@@ -291,17 +299,17 @@ eventsRoutes.patch(
  *       404: { description: Not found }
  */
 eventsRoutes.delete("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  try {
-    const id = String(req.params.id);
-    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
+    try {
+        const id = String(req.params.id);
+        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Event not found");
 
-    const result = await EventModel.deleteOne({
-      _id: new mongoose.Types.ObjectId(id),
-      userId: new mongoose.Types.ObjectId(req.auth!.sub),
-    });
-    if (result.deletedCount !== 1) throw new NotFoundError("Event not found");
-    res.json({ deleted: true });
-  } catch (err) {
-    next(err);
-  }
+        const result = await EventModel.deleteOne({
+            _id: new mongoose.Types.ObjectId(id),
+            userId: new mongoose.Types.ObjectId(req.auth!.sub),
+        });
+        if (result.deletedCount !== 1) throw new NotFoundError("Event not found");
+        res.json({ deleted: true });
+    } catch (err) {
+        next(err);
+    }
 });

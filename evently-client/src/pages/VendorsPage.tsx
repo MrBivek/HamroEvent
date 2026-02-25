@@ -319,7 +319,12 @@ export default function VendorsPage() {
                         {vendors.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {vendors.map((vendor, index) => (
-                                    <VendorCard key={vendor._id} vendor={vendor} index={index} canShortlist={canShortlist} />
+                                    <VendorCard
+                                        key={vendor._id}
+                                        vendor={vendor}
+                                        index={index}
+                                        canShortlist={canShortlist}
+                                    />
                                 ))}
                             </div>
                         ) : (
