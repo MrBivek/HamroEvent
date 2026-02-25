@@ -1,17 +1,39 @@
-import { VendorModel } from "../modules/vendors/vendor.model.js";
+import mongoose, { type HydratedDocument } from "mongoose";
+import { VendorModel, type VendorDoc } from "../modules/vendors/vendor.model.js";
 import { UserModel } from "../modules/auth/user.model.js";
 
 type ResolveVendorOptions = {
   lean?: boolean;
 };
 
+type VendorHydrated = HydratedDocument<VendorDoc>;
+
+export async function resolveVendorForUser(
+  userId: string,
+  options: { lean: true },
+): Promise<VendorDoc | null>;
+export async function resolveVendorForUser(
+  userId: string,
+  options?: ResolveVendorOptions,
+): Promise<VendorHydrated | null>;
 export async function resolveVendorForUser(userId: string, options: ResolveVendorOptions = {}) {
-  if (options.lean) {
-    const vendor = await VendorModel.findOne({ userId }).lean();
-    if (vendor) return vendor;
+  const wantLean = options.lean === true;
+  const findDoc = (query: Record<string, unknown>) => VendorModel.findOne(query);
+
+  if (wantLean) {
+    const direct = await findDoc({ userId });
+    if (direct) return direct.toObject();
+    if (mongoose.isValidObjectId(userId)) {
+      const byObjectId = await findDoc({ userId: new mongoose.Types.ObjectId(userId) });
+      if (byObjectId) return byObjectId.toObject();
+    }
   } else {
-    const vendor = await VendorModel.findOne({ userId });
-    if (vendor) return vendor;
+    const direct = await findDoc({ userId });
+    if (direct) return direct;
+    if (mongoose.isValidObjectId(userId)) {
+      const byObjectId = await findDoc({ userId: new mongoose.Types.ObjectId(userId) });
+      if (byObjectId) return byObjectId;
+    }
   }
 
   const user = await UserModel.findById(userId).lean();
@@ -29,8 +51,12 @@ export async function resolveVendorForUser(userId: string, options: ResolveVendo
     orFilters.push({ contactPhone: user.phone });
   }
 
-  if (orFilters.length === 0) return null;
-  const candidate = await VendorModel.findOne({ $or: orFilters });
+  const portfolioMatch = {
+    portfolioMedia: { $regex: `/uploads/vendors/${escapeRegex(userId)}/`, $options: "i" },
+  };
+
+  const orQuery = { $or: [...orFilters, portfolioMatch] };
+  const candidate = await findDoc(orQuery);
   if (!candidate) return null;
 
   if (candidate.userId.toString() !== user._id.toString()) {
@@ -38,5 +64,5 @@ export async function resolveVendorForUser(userId: string, options: ResolveVendo
     await candidate.save();
   }
 
-  return options.lean ? candidate.toObject() : candidate;
+  return wantLean ? candidate.toObject() : candidate;
 }

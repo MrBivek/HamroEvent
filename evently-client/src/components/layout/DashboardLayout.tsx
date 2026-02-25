@@ -101,6 +101,17 @@ export function DashboardLayout() {
 
     const navItems = getNavItems(user.role);
 
+    const isNavActive = (href: string, pathname: string) => {
+        if (pathname === href) return true;
+        if (href === "/customer/dashboard" || href === "/vendor/dashboard" || href === "/admin/dashboard") {
+            return false;
+        }
+        if (href === "/admin/vendors" && pathname.startsWith("/admin/vendors/pending")) {
+            return false;
+        }
+        return pathname.startsWith(href);
+    };
+
     const handleLogout = () => {
         logout();
         navigate("/");
@@ -134,12 +145,7 @@ export function DashboardLayout() {
             {/* Navigation */}
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                 {navItems.map((item) => {
-                    const isActive =
-                        location.pathname === item.href ||
-                        (item.href !== "/customer/dashboard" &&
-                            item.href !== "/vendor/dashboard" &&
-                            item.href !== "/admin/dashboard" &&
-                            location.pathname.startsWith(item.href));
+                    const isActive = isNavActive(item.href, location.pathname);
 
                     return (
                         <Link
@@ -221,7 +227,8 @@ export function DashboardLayout() {
 
                     <div className="hidden lg:block">
                         <h1 className="text-lg font-semibold text-foreground">
-                            {navItems.find((item) => location.pathname.startsWith(item.href))?.label || "Dashboard"}
+                            {navItems.find((item) => isNavActive(item.href, location.pathname))?.label ||
+                                "Dashboard"}
                         </h1>
                     </div>
 
