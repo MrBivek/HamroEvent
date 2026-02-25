@@ -15,10 +15,12 @@ import { CatalogService } from "@/services/CatalogService";
 import { MarketplaceService } from "@/services/MarketplaceService";
 import { getCategoryMeta } from "@/data/catalog";
 import type { Category, Location, VendorProfile } from "@/types";
+import { useAuthStore } from "@/store/authStore.ts";
 
 export default function VendorsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const { user } = useAuthStore();
 
     // Filter states
     const [keyword, setKeyword] = useState(searchParams.get("q") || "");
@@ -119,6 +121,7 @@ export default function VendorsPage() {
         minRating > 0,
         priceRange[0] > 0 || priceRange[1] < 500000
     ].filter(Boolean).length;
+    const canShortlist = user?.role === "customer";
 
     const FilterContent = () => (
         <div className="space-y-6">
@@ -316,7 +319,7 @@ export default function VendorsPage() {
                         {vendors.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {vendors.map((vendor, index) => (
-                                    <VendorCard key={vendor._id} vendor={vendor} index={index} />
+                                    <VendorCard key={vendor._id} vendor={vendor} index={index} canShortlist={canShortlist} />
                                 ))}
                             </div>
                         ) : (

@@ -12,9 +12,10 @@ import { resolveMediaUrl } from "@/lib/api";
 interface VendorCardProps {
     vendor: VendorProfile;
     index?: number;
+    canShortlist: boolean;
 }
 
-export function VendorCard({ vendor, index = 0 }: VendorCardProps) {
+export function VendorCard({ vendor, index = 0, canShortlist }: VendorCardProps) {
     const { isShortlisted, addToShortlist, removeFromShortlist } = useShortlistStore();
     const shortlisted = isShortlisted(vendor._id);
 
@@ -58,20 +59,22 @@ export function VendorCard({ vendor, index = 0 }: VendorCardProps) {
                         <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent" />
 
                         {/* Shortlist Button */}
-                        <motion.button
-                            onClick={handleShortlistClick}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className={`absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 ${
-                                shortlisted
-                                    ? "bg-destructive text-destructive-foreground"
-                                    : "bg-card/80 backdrop-blur-sm text-foreground hover:bg-card"
-                            }`}
-                        >
-                            <Heart
-                                className={`h-4 w-4 transition-transform ${shortlisted ? "fill-current scale-110" : ""}`}
-                            />
-                        </motion.button>
+                        {canShortlist && (
+                            <motion.button
+                                onClick={handleShortlistClick}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className={`absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 ${
+                                    shortlisted
+                                        ? "bg-destructive text-destructive-foreground"
+                                        : "bg-card/80 backdrop-blur-sm text-foreground hover:bg-card"
+                                }`}
+                            >
+                                <Heart
+                                    className={`h-4 w-4 transition-transform ${shortlisted ? "fill-current scale-110" : ""}`}
+                                />
+                            </motion.button>
+                        )}
 
                         {/* Verified Badge */}
                         {vendor.verificationStatus === "verified" && (

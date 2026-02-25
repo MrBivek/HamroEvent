@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Switch } from "@/components/ui/switch.tsx";
 import { Save, Plus, Trash2, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast.ts";
 import { VendorsService } from "@/services/VendorsService";
@@ -93,6 +94,31 @@ export default function VendorProfile() {
         } catch (error) {
             toast({
                 title: "Failed to delete package",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleTogglePackage = async (pkg: ServicePackage, isActive: boolean) => {
+        const previous = packages;
+        setPackages((prev) => prev.map((p) => (p._id === pkg._id ? { ...p, isActive } : p)));
+        try {
+            if (isActive) {
+                await PackagesService.postApiVendorsMePackagesPublish({ id: pkg._id });
+            } else {
+                await PackagesService.postApiVendorsMePackagesUnpublish({ id: pkg._id });
+            }
+            toast({
+                title: isActive ? "Package activated" : "Package deactivated",
+                description: isActive
+                    ? "Your package is now visible to customers."
+                    : "Your package is hidden from customers."
+            });
+        } catch (error) {
+            setPackages(previous);
+            toast({
+                title: "Failed to update package",
                 description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
@@ -231,14 +257,25 @@ export default function VendorProfile() {
                                         <h4 className="font-medium text-foreground">{pkg.name}</h4>
                                         <p className="text-sm text-muted-foreground">{pkg.description}</p>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        className="text-destructive"
-                                        onClick={() => handleDeletePackage(pkg._id)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground">
+                                                {pkg.isActive ? "Active" : "Inactive"}
+                                            </span>
+                                            <Switch
+                                                checked={Boolean(pkg.isActive)}
+                                                onCheckedChange={(checked) => handleTogglePackage(pkg, checked)}
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            className="text-destructive"
+                                            onClick={() => handleDeletePackage(pkg._id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {pkg.inclusions.map((item, i) => (

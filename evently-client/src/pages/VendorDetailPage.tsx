@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
     Star,
@@ -23,15 +23,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.t
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
+import { useAuthStore } from "@/store/authStore.ts";
 import { MarketplaceService } from "@/services/MarketplaceService";
 import { ReviewsService } from "@/services/ReviewsService";
 import { getCategoryMeta } from "@/data/catalog";
 import { resolveMediaUrl } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast.ts";
 import type { Review, VendorProfile } from "@/types";
 
 export default function VendorDetailPage() {
     const { id } = useParams();
     const { isShortlisted, addToShortlist, removeFromShortlist } = useShortlistStore();
+    const { user } = useAuthStore();
+    const navigate = useNavigate();
+    const { toast } = useToast();
     const [vendor, setVendor] = useState<VendorProfile | null>(null);
     const [vendorReviews, setVendorReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -88,8 +93,25 @@ export default function VendorDetailPage() {
     const categoryInfo = getCategoryMeta(vendor.category);
     const galleryImages =
         vendor.portfolioMedia && vendor.portfolioMedia.length > 0 ? vendor.portfolioMedia : [resolveMediaUrl(null)];
+    const isVendorUser = user?.role === "vendor";
+    const isAdminUser = user?.role === "admin";
+    const bookingDisabled = isVendorUser || isAdminUser;
+    const canShortlist = user?.role === "customer";
+    const shortlistDisabled = Boolean(user) && !canShortlist;
 
     const handleShortlist = async () => {
+        if (!user) {
+            navigate(`/login?redirect=/vendors/${vendor._id}`);
+            return;
+        }
+        if (!canShortlist) {
+            toast({
+                title: "Shortlist available for customers only",
+                description: "Switch to a customer account to use shortlist.",
+                variant: "default"
+            });
+            return;
+        }
         if (shortlisted) {
             await removeFromShortlist(vendor._id);
         } else {
@@ -130,6 +152,8 @@ export default function VendorDetailPage() {
                         size="icon"
                         className="bg-card/80 backdrop-blur-sm"
                         onClick={handleShortlist}
+                        disabled={shortlistDisabled}
+                        title={shortlistDisabled ? "Shortlist is available for customers only" : "Shortlist"}
                     >
                         <Heart className={`h-4 w-4 ${shortlisted ? "fill-destructive text-destructive" : ""}`} />
                     </Button>
@@ -362,18 +386,35 @@ export default function VendorDetailPage() {
                                     </span>
                                 </div>
 
-                                <Button variant="hero" size="lg" className="w-full" asChild>
-                                    <Link to={`/login?redirect=/vendors/${vendor._id}/book`}>
+                                {bookingDisabled ? (
+                                    <Button variant="outline" size="lg" className="w-full" disabled>
                                         <Calendar className="mr-2 h-4 w-4" />
-                                        Request Booking
-                                    </Link>
-                                </Button>
+                                        Booking for customers only
+                                    </Button>
+                                ) : (
+                                    <Button variant="hero" size="lg" className="w-full" asChild>
+                                        <Link to={`/login?redirect=/vendors/${vendor._id}/book`}>
+                                            <Calendar className="mr-2 h-4 w-4" />
+                                            Request Booking
+                                        </Link>
+                                    </Button>
+                                )}
 
-                                <Button variant="outline" size="lg" className="w-full" onClick={handleShortlist}>
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="w-full"
+                                    onClick={handleShortlist}
+                                    disabled={shortlistDisabled}
+                                >
                                     <Heart
                                         className={`mr-2 h-4 w-4 ${shortlisted ? "fill-destructive text-destructive" : ""}`}
                                     />
-                                    {shortlisted ? "Remove from Shortlist" : "Add to Shortlist"}
+                                    {shortlistDisabled
+                                        ? "Shortlist for customers only"
+                                        : shortlisted
+                                          ? "Remove from Shortlist"
+                                          : "Add to Shortlist"}
                                 </Button>
                             </CardContent>
                         </Card>
