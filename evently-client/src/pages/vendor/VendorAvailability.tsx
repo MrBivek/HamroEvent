@@ -153,6 +153,11 @@ export default function VendorAvailability() {
                                         date < new Date() ||
                                         bookedDates.some((d) => d.toDateString() === date.toDateString())
                                     }
+                                    classNames={{
+                                        cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                        day_selected:
+                                            "rounded-full bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                                    }}
                                     className="rounded-md border mt-2"
                                 />
                             </div>
@@ -192,6 +197,11 @@ export default function VendorAvailability() {
                             month={currentMonth}
                             onMonthChange={setCurrentMonth}
                             className="rounded-md border p-4"
+                            classNames={{
+                                cell: "h-9 w-9 text-center text-sm p-0 relative",
+                                day_selected:
+                                    "rounded-full bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                            }}
                             modifiers={{
                                 booked: bookedDates,
                                 blocked: blockedDates.map((b) => b.date)

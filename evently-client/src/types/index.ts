@@ -436,6 +436,21 @@ export interface VerificationDecisionResponse {
     vendor: VendorProfile | Record<string, unknown>;
 }
 
+export interface AdminVendorListItem {
+    vendorId: string;
+    userId: string;
+    businessName: string;
+    category: string;
+    location: string;
+    ratingAvg: number;
+    ratingCount: number;
+    contactEmail: string;
+    contactPhone?: string;
+    verificationStatus: VerificationStatus;
+    status: "active" | "pending" | "suspended" | (string & {});
+    createdAt?: string;
+}
+
 // Filter Types
 export interface VendorFilters {
     category?: VendorCategory;

@@ -9,7 +9,7 @@ import {
   UploadPortfolioSchema,
   DeletePortfolioSchema,
 } from "./vendors.schemas.js";
-import { DocumentOwnerType, UserRole, VerificationStatus } from "../../common/enums.js";
+import { DocumentOwnerType, UserRole, VerificationStatus, UserStatus } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
@@ -319,6 +319,10 @@ vendorsRoutes.get("/", async (req, res, next) => {
     const query = VendorListQuerySchema.parse(req.query);
 
     const filter: Record<string, any> = { verifiedStatus: VerificationStatus.APPROVED };
+    const activeUsers = await UserModel.find({ status: UserStatus.ACTIVE })
+      .select({ _id: 1 })
+      .lean();
+    filter.userId = { $in: activeUsers.map((u) => u._id) };
 
     if (query.categoryId && mongoose.isValidObjectId(query.categoryId)) {
       filter.categoryId = new mongoose.Types.ObjectId(query.categoryId);
@@ -424,6 +428,10 @@ vendorsRoutes.get("/:id", async (req, res, next) => {
 
     const vendor = await VendorModel.findById(id).lean();
     if (!vendor || vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+      throw new NotFoundError("Vendor not found");
+    }
+    const user = await UserModel.findById(vendor.userId).lean();
+    if (!user || user.status !== UserStatus.ACTIVE) {
       throw new NotFoundError("Vendor not found");
     }
 

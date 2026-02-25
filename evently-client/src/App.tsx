@@ -33,6 +33,7 @@ import VendorVerification from "@/pages/vendor/VendorVerification.tsx";
 import VendorNotifications from "@/pages/vendor/VendorNotifications.tsx";
 import AdminDashboard from "@/pages/admin/AdminDashboard.tsx";
 import AdminPendingVendors from "@/pages/admin/AdminPendingVendors.tsx";
+import AdminVendors from "@/pages/admin/AdminVendors.tsx";
 import AdminUsers from "@/pages/admin/AdminUsers.tsx";
 import AdminReviews from "@/pages/admin/AdminReviews.tsx";
 import AdminReports from "@/pages/admin/AdminReports.tsx";
@@ -108,6 +109,7 @@ const App = () => {
                         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
                             <Route element={<DashboardLayout />}>
                                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                <Route path="/admin/vendors" element={<AdminVendors />} />
                                 <Route path="/admin/vendors/pending" element={<AdminPendingVendors />} />
                                 <Route path="/admin/users" element={<AdminUsers />} />
                                 <Route path="/admin/reviews" element={<AdminReviews />} />

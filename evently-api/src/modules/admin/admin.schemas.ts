@@ -11,6 +11,15 @@ export const AdminUserListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(50).default(20),
 });
 
+export const AdminVendorListQuerySchema = z.object({
+  q: z.string().optional(),
+  status: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(50).default(20),
+});
+
 export const AdminUpdateUserSchema = z
   .object({
     isActive: z.boolean().optional(),

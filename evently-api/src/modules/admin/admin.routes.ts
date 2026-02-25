@@ -10,6 +10,7 @@ import { createNotification } from "../notifications/notifications.service.js";
 import { validateBody } from "../../middlewares/validate.js";
 import {
   AdminUserListQuerySchema,
+  AdminVendorListQuerySchema,
   AdminUpdateUserSchema,
   AdminReviewListQuerySchema,
   AdminReviewUpdateSchema,
@@ -20,6 +21,8 @@ import { BookingModel } from "../bookings/booking.model.js";
 import { mapVerificationStatusToUi, toUiUser } from "../../common/mappers.js";
 import { VerificationRequestModel } from "../verification-requests/verification-request.model.js";
 import { CategoryModel } from "../categories/category.model.js";
+import { UserStatus } from "../../common/enums.js";
+import { LocationModel } from "../locations/location.model.js";
 
 export const adminRoutes = Router();
 
@@ -279,6 +282,142 @@ adminRoutes.get("/users", requireAuth, requireRole(UserRole.ADMIN), async (req, 
     });
 
     res.json({ items: mapped, page: q.page, limit: q.limit, total });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/admin/vendors:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List verified vendors (Admin only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: string }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *       - in: query
+ *         name: from
+ *         schema: { type: string, example: "2026-02-01" }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, example: "2026-02-25" }
+ *       - in: query
+ *         name: page
+ *         schema: { type: number, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: number, default: 20 }
+ *     responses:
+ *       200: { description: OK }
+ */
+adminRoutes.get("/vendors", requireAuth, requireRole(UserRole.ADMIN), async (req, res, next) => {
+  try {
+    const q = AdminVendorListQuerySchema.parse(req.query);
+    const skip = (q.page - 1) * q.limit;
+
+    const vendorFilter: Record<string, unknown> = { verifiedStatus: VerificationStatus.APPROVED };
+    const andFilters: Record<string, unknown>[] = [];
+
+    let emailMatchedUserIds: mongoose.Types.ObjectId[] = [];
+    if (q.q) {
+      const regex = { $regex: q.q, $options: "i" };
+      const users = await UserModel.find({ email: regex }).select({ _id: 1 }).lean();
+      emailMatchedUserIds = users.map((u) => u._id);
+      const orFilters: Record<string, unknown>[] = [
+        { businessName: regex },
+        { description: regex },
+        { contactEmail: regex },
+      ];
+      if (emailMatchedUserIds.length) {
+        orFilters.push({ userId: { $in: emailMatchedUserIds } });
+      }
+      andFilters.push({ $or: orFilters });
+    }
+
+    if (q.from || q.to) {
+      const createdAt: Record<string, Date> = {};
+      if (q.from) {
+        const from = new Date(q.from);
+        if (Number.isNaN(from.getTime())) throw new BadRequestError("Invalid from date");
+        if (q.from.length <= 10) from.setHours(0, 0, 0, 0);
+        createdAt.$gte = from;
+      }
+      if (q.to) {
+        const to = new Date(q.to);
+        if (Number.isNaN(to.getTime())) throw new BadRequestError("Invalid to date");
+        if (q.to.length <= 10) to.setHours(23, 59, 59, 999);
+        createdAt.$lte = to;
+      }
+      andFilters.push({ createdAt });
+    }
+
+    if (andFilters.length) {
+      vendorFilter.$and = andFilters;
+    }
+
+    if (q.status) {
+      const status = q.status.toUpperCase();
+      if (!Object.values(UserStatus).includes(status as UserStatus)) {
+        throw new BadRequestError("Invalid status");
+      }
+      const users = await UserModel.find({ status }).select({ _id: 1 }).lean();
+      vendorFilter.userId = { $in: users.map((u) => u._id) };
+    }
+
+    // email filtering handled in q.or filters above
+
+    const [vendors, total] = await Promise.all([
+      VendorModel.find(vendorFilter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+      VendorModel.countDocuments(vendorFilter),
+    ]);
+
+    const categoryIds = vendors
+      .map((v) => v.categoryId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
+    const locationIds = vendors
+      .map((v) => v.primaryLocationId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
+    const userIds = vendors.map((v) => v.userId);
+
+    const [categories, locations, users] = await Promise.all([
+      CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
+      LocationModel.find({ _id: { $in: locationIds } }).lean(),
+      UserModel.find({ _id: { $in: userIds } }).lean(),
+    ]);
+
+    const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
+    const locationMap = new Map(locations.map((l) => [l._id.toString(), l]));
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    const items = vendors.map((vendor) => {
+      const category = vendor.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+      const location = vendor.primaryLocationId
+        ? locationMap.get(vendor.primaryLocationId.toString())
+        : undefined;
+      const user = userMap.get(vendor.userId.toString());
+      return {
+        vendorId: vendor._id.toString(),
+        userId: vendor.userId.toString(),
+        businessName: vendor.businessName,
+        category: category?.slug ?? "",
+        location: vendor.locationText ?? location?.name ?? vendor.serviceAreas?.[0] ?? "",
+        ratingAvg: vendor.ratingAvg ?? 0,
+        ratingCount: vendor.ratingCount ?? 0,
+        contactEmail: vendor.contactEmail ?? user?.email ?? "",
+        contactPhone: vendor.contactPhone ?? user?.phone ?? "",
+        verificationStatus: mapVerificationStatusToUi(vendor.verifiedStatus),
+        status: user?.status?.toLowerCase() ?? "active",
+        createdAt: vendor.createdAt?.toISOString(),
+      };
+    });
+
+    res.json({ items, page: q.page, limit: q.limit, total });
   } catch (err) {
     next(err);
   }

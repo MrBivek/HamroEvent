@@ -2,9 +2,10 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, VerificationStatus } from "../../common/enums.js";
+import { UserRole, VerificationStatus, UserStatus } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
+import { UserModel } from "../auth/user.model.js";
 import { PackageModel } from "./package.model.js";
 import { CreatePackageSchema, UpdatePackageSchema } from "./packages.schemas.js";
 import { recalculateVendorPricingRange } from "./packages.service.js";
@@ -388,6 +389,10 @@ packagesRoutes.get("/:vendorId/packages", async (req, res, next) => {
 
     const vendor = await VendorModel.findById(vendorId).lean();
     if (!vendor || vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+      throw new NotFoundError("Vendor not found");
+    }
+    const user = await UserModel.findById(vendor.userId).lean();
+    if (!user || user.status !== UserStatus.ACTIVE) {
       throw new NotFoundError("Vendor not found");
     }
 

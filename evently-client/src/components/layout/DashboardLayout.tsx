@@ -59,6 +59,7 @@ const vendorNav: NavItem[] = [
 const adminNav: NavItem[] = [
     { href: "/admin/dashboard", label: "Dashboard", icon: Home },
     { href: "/admin/vendors/pending", label: "Pending Vendors", icon: FileCheck },
+    { href: "/admin/vendors", label: "Verified Vendors", icon: Briefcase },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/reviews", label: "Reviews", icon: Star },
     { href: "/admin/reports", label: "Reports", icon: BarChart3 },

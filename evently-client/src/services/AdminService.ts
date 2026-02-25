@@ -6,6 +6,7 @@ import type { CancelablePromise } from "../core/CancelablePromise";
 import type {
     AdminAnalyticsResponse,
     AdminDashboardResponse,
+    AdminVendorListItem,
     AdminVendorVerificationResponse,
     AuditLog,
     PaginatedResponse,
@@ -83,6 +84,40 @@ export class AdminService {
             query: {
                 q: q,
                 role: role,
+                status: status,
+                from: from,
+                to: to,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+
+    /**
+     * List verified vendors (Admin only)
+     * @returns PaginatedResponse<AdminVendorListItem> OK
+     * @throws ApiError
+     */
+    public static getApiAdminVendors({
+        q,
+        status,
+        from,
+        to,
+        page = 1,
+        limit = 20
+    }: {
+        q?: string;
+        status?: string;
+        from?: string;
+        to?: string;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<PaginatedResponse<AdminVendorListItem>> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/vendors",
+            query: {
+                q: q,
                 status: status,
                 from: from,
                 to: to,
