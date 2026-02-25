@@ -32,6 +32,13 @@ export default function VendorAvailability() {
     const [blockReason, setBlockReason] = useState("");
     const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
 
+    const formatDateInput = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+
     useEffect(() => {
         let active = true;
         const load = async () => {
@@ -40,11 +47,11 @@ export default function VendorAvailability() {
                 const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
                 const [availabilityRes, bookingsRes] = await Promise.all([
                     AvailabilityService.getApiVendorsMeAvailability({
-                        from: start.toISOString().slice(0, 10),
-                        to: end.toISOString().slice(0, 10),
-                        limit: 200
+                        from: formatDateInput(start),
+                        to: formatDateInput(end),
+                        limit: 50
                     }),
-                    VendorBookingsService.getApiVendorsMeBookings({ page: 1, limit: 100 })
+                    VendorBookingsService.getApiVendorsMeBookings({ page: 1, limit: 50 })
                 ]);
                 if (!active) return;
                 const items = availabilityRes?.items || [];
@@ -75,7 +82,7 @@ export default function VendorAvailability() {
     const handleBlockDate = async () => {
         if (!selectedDate) return;
         try {
-            const dateStr = selectedDate.toISOString().slice(0, 10);
+            const dateStr = formatDateInput(selectedDate);
             await AvailabilityService.putApiVendorsMeAvailability({
                 date: dateStr,
                 requestBody: { isAvailable: false, note: blockReason || undefined }
@@ -95,7 +102,7 @@ export default function VendorAvailability() {
 
     const handleUnblockDate = async (dateToUnblock: Date) => {
         try {
-            const dateStr = dateToUnblock.toISOString().slice(0, 10);
+            const dateStr = formatDateInput(dateToUnblock);
             await AvailabilityService.deleteApiVendorsMeAvailability({ date: dateStr });
             setBlockedDates(blockedDates.filter((b) => b.date.getTime() !== dateToUnblock.getTime()));
             toast({ title: "Date Unblocked" });

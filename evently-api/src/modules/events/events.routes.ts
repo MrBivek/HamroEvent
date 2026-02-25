@@ -12,6 +12,7 @@ import { VendorModel } from "../vendors/vendor.model.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { buildEventDto } from "../../common/dtos.js";
 import { mapBookingStatusToUi } from "../../common/mappers.js";
+import { normalizeTimeRange } from "../../common/time.js";
 
 export const eventsRoutes = Router();
 
@@ -63,6 +64,12 @@ eventsRoutes.post(
       if (typeof body.budget === "number") {
         body.budgetMin = body.budget;
         body.budgetMax = body.budget;
+      }
+      if (body.startTime || body.endTime) {
+        const range = normalizeTimeRange(body.startTime, body.endTime);
+        if (!range) {
+          throw new BadRequestError("Invalid time range. Use HH:mm and ensure end is after start.");
+        }
       }
 
       if (body.locationId && mongoose.isValidObjectId(body.locationId)) {
@@ -239,6 +246,14 @@ eventsRoutes.patch(
           updates.locationId = new mongoose.Types.ObjectId(updates.locationId);
         } else {
           delete updates.locationId;
+        }
+      }
+      if ("startTime" in updates || "endTime" in updates) {
+        const start = updates.startTime ?? null;
+        const end = updates.endTime ?? null;
+        const range = normalizeTimeRange(start, end);
+        if (!range) {
+          throw new BadRequestError("Invalid time range. Use HH:mm and ensure end is after start.");
         }
       }
 

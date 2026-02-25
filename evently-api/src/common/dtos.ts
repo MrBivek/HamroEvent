@@ -107,6 +107,12 @@ export function buildEventDto(event: EventDoc & { _id: unknown }, vendorCount?: 
     title: event.title,
     eventType: formatEventType(event.eventType),
     date: event.eventDate instanceof Date ? event.eventDate.toISOString() : String(event.eventDate),
+    startTime: event.startTime ?? "",
+    endTime: event.endTime ?? "",
+    timeRange: {
+      start: event.startTime ?? "",
+      end: event.endTime ?? "",
+    },
     location: event.locationText ?? "",
     notes: event.notes,
     budget: event.budgetMax ?? event.budgetMin ?? 0,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Calendar, MapPin, Users, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, MoreVertical, Edit, Trash2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
@@ -15,9 +15,14 @@ import {
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
+import { Calendar as DatePicker } from "@/components/ui/calendar.tsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { EventsService } from "@/services/EventsService";
 import { getErrorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils.ts";
+import { format } from "date-fns";
 import type { Event } from "@/types";
 
 export default function CustomerEvents() {
@@ -25,6 +30,22 @@ export default function CustomerEvents() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
+
+    const timeOptions = Array.from({ length: 48 }, (_, i) => {
+        const hours = String(Math.floor(i / 2)).padStart(2, "0");
+        const minutes = i % 2 === 0 ? "00" : "30";
+        return `${hours}:${minutes}`;
+    });
+    const endTimeOptions = startTime ? timeOptions.filter((t) => t > startTime) : timeOptions;
+
+    useEffect(() => {
+        if (startTime && endTime && endTime <= startTime) {
+            setEndTime("");
+        }
+    }, [startTime, endTime]);
 
     useEffect(() => {
         let active = true;
@@ -49,10 +70,32 @@ export default function CustomerEvents() {
     const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        if (!selectedDate) {
+            toast({ title: "Select a date", description: "Please choose the event date.", variant: "destructive" });
+            return;
+        }
+        if (!startTime || !endTime) {
+            toast({
+                title: "Select time range",
+                description: "Please choose both start and end time.",
+                variant: "destructive"
+            });
+            return;
+        }
+        if (endTime <= startTime) {
+            toast({
+                title: "Invalid time range",
+                description: "End time must be after start time.",
+                variant: "destructive"
+            });
+            return;
+        }
         const payload = {
             title: String(formData.get("title") || ""),
             eventType: String(formData.get("eventType") || ""),
-            date: String(formData.get("date") || ""),
+            date: selectedDate.toISOString().slice(0, 10),
+            startTime,
+            endTime,
             location: String(formData.get("location") || ""),
             notes: String(formData.get("notes") || ""),
             budget: Number(formData.get("budget")) || undefined
@@ -61,6 +104,9 @@ export default function CustomerEvents() {
             const created = await EventsService.postApiEvents({ requestBody: payload });
             setEvents([created, ...events]);
             setIsDialogOpen(false);
+            setSelectedDate(undefined);
+            setStartTime("");
+            setEndTime("");
             toast({ title: "Event created", description: `${payload.title} has been created.` });
         } catch (error) {
             toast({
@@ -115,8 +161,75 @@ export default function CustomerEvents() {
                                     <Input id="eventType" name="eventType" placeholder="e.g., Wedding" required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="date">Date</Label>
-                                    <Input id="date" name="date" type="date" required />
+                                    <Label>Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className={cn(
+                                                    "w-full justify-between",
+                                                    !selectedDate && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                                                <Calendar className="h-4 w-4 opacity-60" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <DatePicker
+                                                mode="single"
+                                                selected={selectedDate}
+                                                onSelect={setSelectedDate}
+                                                disabled={(date) =>
+                                                    date <
+                                                    new Date(
+                                                        new Date().getFullYear(),
+                                                        new Date().getMonth(),
+                                                        new Date().getDate()
+                                                    )
+                                                }
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Start Time</Label>
+                                    <Select value={startTime} onValueChange={setStartTime}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select start time" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {timeOptions.map((time) => (
+                                                <SelectItem key={time} value={time}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                        <span>{time}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>End Time</Label>
+                                    <Select value={endTime} onValueChange={setEndTime}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select end time" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {endTimeOptions.map((time) => (
+                                                <SelectItem key={time} value={time}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                        <span>{time}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -188,17 +301,25 @@ export default function CustomerEvents() {
                                     </div>
 
                                     <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>
+                                            {new Date(event.date).toLocaleDateString("en-US", {
+                                                weekday: "long",
+                                                month: "long",
+                                                day: "numeric",
+                                                year: "numeric"
+                                            })}
+                                        </span>
+                                    </div>
+                                    {(event.startTime || event.endTime) && (
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4" />
+                                            <Clock className="h-4 w-4" />
                                             <span>
-                                                {new Date(event.date).toLocaleDateString("en-US", {
-                                                    weekday: "long",
-                                                    month: "long",
-                                                    day: "numeric",
-                                                    year: "numeric"
-                                                })}
+                                                {event.startTime || "--:--"} - {event.endTime || "--:--"}
                                             </span>
                                         </div>
+                                    )}
                                         <div className="flex items-center gap-2">
                                             <MapPin className="h-4 w-4" />
                                             <span>{event.location}</span>

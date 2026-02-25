@@ -9,6 +9,7 @@ import { AvailabilityModel } from "./availability.model.js";
 import { AvailabilityListQuerySchema, UpsertAvailabilitySchema } from "./availability.schemas.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { EventModel } from "../events/event.model.js";
+import { resolveVendorForUser } from "../../common/vendor.js";
 
 export const availabilityRoutes = Router();
 
@@ -87,7 +88,7 @@ availabilityRoutes.get(
   async (req, res, next) => {
     try {
       const q = AvailabilityListQuerySchema.parse(req.query);
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const now = new Date();
@@ -151,7 +152,7 @@ availabilityRoutes.put(
   validateBody(UpsertAvailabilitySchema),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const date = parseDateOnly(String(req.params.date));
@@ -206,7 +207,7 @@ availabilityRoutes.delete(
   requireRole(UserRole.VENDOR),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const date = parseDateOnly(String(req.params.date));

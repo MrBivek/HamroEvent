@@ -19,3 +19,8 @@ export const UpsertAvailabilitySchema = z.object({
     .optional(),
   note: z.string().optional(),
 });
+
+export const PublicAvailabilityQuerySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+});

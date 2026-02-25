@@ -18,8 +18,38 @@ import { DocumentModel } from "../documents/document.model.js";
 import { UserModel } from "../auth/user.model.js";
 import { buildVendorProfile } from "../../common/dtos.js";
 import { deleteFileByUrl, saveBase64File } from "../../common/fileStorage.js";
+import { AvailabilityModel } from "../availability/availability.model.js";
+import { BookingModel } from "../bookings/booking.model.js";
+import { EventModel } from "../events/event.model.js";
+import { BookingStatus } from "../../common/enums.js";
+import {
+  normalizeEventRangeForConflict,
+  normalizeTimeRange,
+  rangeWithinSlot,
+  rangesOverlap,
+} from "../../common/time.js";
+import { PublicAvailabilityQuerySchema } from "../availability/availability.schemas.js";
+import { resolveVendorForUser } from "../../common/vendor.js";
 
 export const vendorsRoutes = Router();
+
+function parseDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new BadRequestError("Invalid date format. Use YYYY-MM-DD");
+  }
+  const [y, m, d] = value.split("-").map((v) => Number(v));
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function startOfDayUtc(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function endOfDayUtc(date: Date) {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999),
+  );
+}
 
 async function hydrateVendorProfile(
   vendor: any,
@@ -62,7 +92,7 @@ async function hydrateVendorProfile(
  */
 vendorsRoutes.get("/me", requireAuth, requireRole(UserRole.VENDOR), async (req, res, next) => {
   try {
-    const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+    const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
     if (!vendor) throw new NotFoundError("Vendor profile not found");
     const profile = await hydrateVendorProfile(vendor, { includePackages: true });
     res.json(profile);
@@ -198,7 +228,7 @@ vendorsRoutes.post(
   validateBody(UploadPortfolioSchema),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub });
+      const vendor = await resolveVendorForUser(req.auth!.sub);
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const stored: string[] = [];
@@ -249,7 +279,7 @@ vendorsRoutes.delete(
   validateBody(DeletePortfolioSchema),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub });
+      const vendor = await resolveVendorForUser(req.auth!.sub);
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const url = req.body.url;
@@ -293,6 +323,15 @@ vendorsRoutes.delete(
  *       - in: query
  *         name: verified
  *         schema: { type: boolean }
+ *       - in: query
+ *         name: date
+ *         schema: { type: string, example: "2026-02-25" }
+ *       - in: query
+ *         name: startTime
+ *         schema: { type: string, example: "10:00" }
+ *       - in: query
+ *         name: endTime
+ *         schema: { type: string, example: "16:00" }
  *       - in: query
  *         name: priceMin
  *         schema: { type: number }
@@ -365,6 +404,83 @@ vendorsRoutes.get("/", async (req, res, next) => {
       filter.pricingMax = { $lte: query.priceMax };
     }
 
+    const excludedVendorIds = new Set<string>();
+    if (query.date) {
+      const targetDate = parseDateOnly(query.date);
+      const endDate = endOfDayUtc(targetDate);
+      const hasTimeFilter = Boolean(query.startTime || query.endTime);
+      const timeRange = normalizeTimeRange(query.startTime, query.endTime);
+      if (hasTimeFilter && !timeRange) {
+        throw new BadRequestError("Invalid time range. Use HH:mm and ensure end is after start.");
+      }
+
+      const blocked = await AvailabilityModel.find(
+        { date: targetDate, isAvailable: false },
+        { vendorId: 1 },
+      ).lean();
+      for (const item of blocked) {
+        excludedVendorIds.add(item.vendorId.toString());
+      }
+
+      if (hasTimeFilter) {
+        const withSlots = await AvailabilityModel.find(
+          { date: targetDate, "slots.0": { $exists: true } },
+          { vendorId: 1, slots: 1 },
+        ).lean();
+        for (const entry of withSlots) {
+          const fits =
+            timeRange &&
+            entry.slots?.some((slot) => rangeWithinSlot(timeRange, slot.start, slot.end));
+          if (!fits) {
+            excludedVendorIds.add(entry.vendorId.toString());
+          }
+        }
+      }
+
+      const eventsOnDate = await EventModel.find(
+        { eventDate: { $gte: targetDate, $lte: endDate } },
+        { _id: 1, startTime: 1, endTime: 1 },
+      ).lean();
+
+      if (eventsOnDate.length > 0) {
+        const eventIds = eventsOnDate.map((e) => e._id);
+        const eventMap = new Map(
+          eventsOnDate.map((e) => [
+            e._id.toString(),
+            normalizeEventRangeForConflict(e.startTime, e.endTime),
+          ]),
+        );
+
+        const blockingStatuses = [
+          BookingStatus.ACCEPTED,
+          BookingStatus.CONFIRMED_PENDING_PAYMENT,
+          BookingStatus.CONFIRMED,
+          BookingStatus.COMPLETED,
+        ];
+
+        const bookings = await BookingModel.find(
+          { eventId: { $in: eventIds }, status: { $in: blockingStatuses } },
+          { vendorId: 1, eventId: 1 },
+        ).lean();
+
+        const targetRange = normalizeEventRangeForConflict(query.startTime, query.endTime);
+        for (const booking of bookings) {
+          const otherRange = eventMap.get(booking.eventId.toString());
+          if (!otherRange) continue;
+          if (rangesOverlap(targetRange, otherRange)) {
+            excludedVendorIds.add(booking.vendorId.toString());
+          }
+        }
+      }
+    }
+
+    if (excludedVendorIds.size > 0) {
+      filter._id = {
+        ...(filter._id ?? {}),
+        $nin: Array.from(excludedVendorIds).map((id) => new mongoose.Types.ObjectId(id)),
+      };
+    }
+
     const skip = (query.page - 1) * query.limit;
 
     let sort: Record<string, 1 | -1> = { createdAt: -1 };
@@ -401,6 +517,88 @@ vendorsRoutes.get("/", async (req, res, next) => {
     );
 
     res.json({ items: hydrated, page: query.page, limit: query.limit, total });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/vendors/{id}/availability:
+ *   get:
+ *     tags: [Marketplace]
+ *     summary: Get vendor availability (public)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: from
+ *         schema: { type: string, example: "2026-02-25" }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, example: "2026-03-26" }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found }
+ */
+vendorsRoutes.get("/:id/availability", async (req, res, next) => {
+  try {
+    const id = String(req.params.id);
+    if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Vendor not found");
+
+    const vendor = await VendorModel.findById(id).lean();
+    if (!vendor || vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+      throw new NotFoundError("Vendor not found");
+    }
+    const user = await UserModel.findById(vendor.userId).lean();
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new NotFoundError("Vendor not found");
+    }
+
+    const q = PublicAvailabilityQuerySchema.parse(req.query);
+    const now = new Date();
+    const defaultFrom = startOfDayUtc(now);
+    const defaultTo = endOfDayUtc(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000));
+    const from = q.from ? parseDateOnly(q.from) : defaultFrom;
+    const to = q.to ? parseDateOnly(q.to) : defaultTo;
+
+    const dayCount = Math.floor((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
+    if (dayCount > 60 || dayCount < 0) {
+      throw new BadRequestError("Date range too large. Max 60 days.");
+    }
+
+    const items = await AvailabilityModel.find({
+      vendorId: vendor._id,
+      date: { $gte: from, $lte: to },
+    })
+      .sort({ date: 1 })
+      .lean();
+
+    const map = new Map(items.map((item) => [item.date.toISOString().slice(0, 10), item]));
+    const availableDates: string[] = [];
+    const blockedDates: string[] = [];
+
+    const cursor = new Date(from.getTime());
+    while (cursor <= to) {
+      const key = cursor.toISOString().slice(0, 10);
+      const entry = map.get(key);
+      if (entry && entry.isAvailable === false) {
+        blockedDates.push(key);
+      } else {
+        availableDates.push(key);
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    res.json({
+      items,
+      availableDates,
+      blockedDates,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    });
   } catch (err) {
     next(err);
   }

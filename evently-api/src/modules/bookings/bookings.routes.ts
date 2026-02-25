@@ -18,6 +18,7 @@ import { buildBookingDto, buildVendorProfile } from "../../common/dtos.js";
 import { mapUiBookingStatusToInternal } from "../../common/mappers.js";
 import { ConversationModel } from "../conversations/conversation.model.js";
 import { MessageModel } from "../conversations/message.model.js";
+import { normalizeTimeRange, rangeWithinSlot } from "../../common/time.js";
 
 export const bookingsRoutes = Router();
 
@@ -98,6 +99,18 @@ bookingsRoutes.post(
       }).lean();
       if (availability && availability.isAvailable === false) {
         throw new BadRequestError("Vendor is not available on the event date");
+      }
+      if (availability?.slots && availability.slots.length > 0) {
+        const eventRange = normalizeTimeRange(event.startTime, event.endTime);
+        if (!eventRange) {
+          throw new BadRequestError("Event time range is required for this vendor on the selected date");
+        }
+        const fits = availability.slots.some((slot) =>
+          rangeWithinSlot(eventRange, slot.start, slot.end),
+        );
+        if (!fits) {
+          throw new BadRequestError("Event time is outside the vendor's available slots");
+        }
       }
 
       // if packageId provided, validate it belongs to vendor

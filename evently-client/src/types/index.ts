@@ -175,6 +175,12 @@ export interface Event {
     title: string;
     eventType: string;
     date: string;
+    startTime?: string;
+    endTime?: string;
+    timeRange?: {
+        start: string;
+        end: string;
+    };
     location: string;
     notes?: string;
     budget?: number;
@@ -276,6 +282,21 @@ export interface AvailabilityEntry {
     isAvailable: boolean;
     note?: string;
     slots?: Array<{ start: string; end: string }>;
+}
+
+export interface VendorAvailabilityResponse {
+    items: AvailabilityEntry[];
+    availableDates: string[];
+    blockedDates: string[];
+    from: string;
+    to: string;
+}
+
+export interface VendorListResponse {
+    items: VendorProfile[];
+    page: number;
+    limit: number;
+    total: number;
 }
 
 export type QuoteStatus = "pending" | "accepted" | "rejected" | "expired";

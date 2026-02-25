@@ -17,6 +17,13 @@ import { buildBookingDto } from "../../common/dtos.js";
 import { mapUiBookingStatusToInternal } from "../../common/mappers.js";
 import { ConversationModel } from "../conversations/conversation.model.js";
 import { MessageModel } from "../conversations/message.model.js";
+import { resolveVendorForUser } from "../../common/vendor.js";
+import {
+  normalizeEventRangeForConflict,
+  normalizeTimeRange,
+  rangeWithinSlot,
+  rangesOverlap,
+} from "../../common/time.js";
 
 export const vendorBookingsRoutes = Router();
 
@@ -67,7 +74,7 @@ vendorBookingsRoutes.get(
     try {
       const q = BookingListQuerySchema.parse(req.query);
 
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const skip = (q.page - 1) * q.limit;
@@ -142,7 +149,7 @@ vendorBookingsRoutes.get(
   requireRole(UserRole.VENDOR),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const id = String(req.params.id);
@@ -220,7 +227,7 @@ vendorBookingsRoutes.patch(
   validateBody(VendorDecisionSchema),
   async (req, res, next) => {
     try {
-      const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+      const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
       if (!vendor) throw new NotFoundError("Vendor profile not found");
 
       const id = String(req.params.id);
@@ -247,6 +254,20 @@ vendorBookingsRoutes.patch(
         if (!availability || availability.isAvailable === false) {
           throw new BadRequestError("Vendor is not available on the event date");
         }
+        if (availability.slots && availability.slots.length > 0) {
+          const eventRange = normalizeTimeRange(event.startTime, event.endTime);
+          if (!eventRange) {
+            throw new BadRequestError(
+              "Event time range is required for this vendor on the selected date",
+            );
+          }
+          const fits = availability.slots.some((slot) =>
+            rangeWithinSlot(eventRange, slot.start, slot.end),
+          );
+          if (!fits) {
+            throw new BadRequestError("Event time is outside the vendor's available slots");
+          }
+        }
 
         const eventsOnDate = await EventModel.find(
           { eventDate: { $gte: date, $lte: endDate } },
@@ -254,7 +275,7 @@ vendorBookingsRoutes.patch(
         ).lean();
         const eventIds = eventsOnDate.map((e) => e._id);
         if (eventIds.length > 0) {
-          const conflictCount = await BookingModel.countDocuments({
+          const conflictingBookings = await BookingModel.find({
             _id: { $ne: booking._id },
             vendorId: vendor._id,
             eventId: { $in: eventIds },
@@ -266,10 +287,29 @@ vendorBookingsRoutes.patch(
                 BookingStatus.COMPLETED,
               ],
             },
-          });
+          }).lean();
 
-          if (conflictCount > 0) {
-            throw new BadRequestError("Booking conflicts with an existing confirmed booking");
+          if (conflictingBookings.length > 0) {
+            const otherEventIds = Array.from(
+              new Set(conflictingBookings.map((b) => b.eventId.toString())),
+            ).map((id) => new mongoose.Types.ObjectId(id));
+            const otherEvents = await EventModel.find({ _id: { $in: otherEventIds } }).lean();
+            const eventMap = new Map(otherEvents.map((e) => [e._id.toString(), e]));
+
+            const currentRange = normalizeEventRangeForConflict(event.startTime, event.endTime);
+            for (const other of conflictingBookings) {
+              const otherEvent = eventMap.get(other.eventId.toString());
+              if (!otherEvent) {
+                throw new BadRequestError("Booking conflicts with an existing confirmed booking");
+              }
+              const otherRange = normalizeEventRangeForConflict(
+                otherEvent.startTime,
+                otherEvent.endTime,
+              );
+              if (rangesOverlap(currentRange, otherRange)) {
+                throw new BadRequestError("Booking conflicts with an existing confirmed booking");
+              }
+            }
           }
         }
 

@@ -39,7 +39,9 @@ import { BookingsService } from "@/services/BookingsService";
 import { ReviewsService } from "@/services/ReviewsService";
 import { getCategoryMeta } from "@/data/catalog";
 import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
+import { fetchVendorAvailability } from "@/lib/vendors.ts";
 import { useToast } from "@/hooks/use-toast.ts";
+import { format } from "date-fns";
 import type { Review, VendorProfile, Event, Booking } from "@/types";
 
 export default function VendorDetailPage() {
@@ -57,6 +59,8 @@ export default function VendorDetailPage() {
     const [selectedPackageId, setSelectedPackageId] = useState("none");
     const [bookingNote, setBookingNote] = useState("");
     const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+    const [availableDates, setAvailableDates] = useState<string[]>([]);
+    const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
     const canBook = user?.role === "customer";
 
     useEffect(() => {
@@ -109,6 +113,31 @@ export default function VendorDetailPage() {
             active = false;
         };
     }, [canBook, selectedEventId]);
+
+    useEffect(() => {
+        let active = true;
+        const loadAvailability = async () => {
+            if (!id) return;
+            setIsAvailabilityLoading(true);
+            try {
+                const today = new Date();
+                const from = today.toISOString().slice(0, 10);
+                const to = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                const res = await fetchVendorAvailability({ vendorId: id, from, to });
+                if (!active) return;
+                setAvailableDates(res.availableDates || []);
+            } catch {
+                if (!active) return;
+                setAvailableDates([]);
+            } finally {
+                if (active) setIsAvailabilityLoading(false);
+            }
+        };
+        loadAvailability();
+        return () => {
+            active = false;
+        };
+    }, [id]);
 
     if (isLoading) {
         return (
@@ -568,6 +597,37 @@ export default function VendorDetailPage() {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Availability */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Available Dates</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {isAvailabilityLoading ? (
+                                    <p className="text-sm text-muted-foreground">Loading availability...</p>
+                                ) : availableDates.length > 0 ? (
+                                    <>
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableDates.slice(0, 8).map((date) => (
+                                                <Badge key={date} variant="soft">
+                                                    {format(new Date(`${date}T00:00:00Z`), "MMM d")}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                        {availableDates.length > 8 && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {availableDates.length - 8} more available dates in the next 30 days
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No availability info yet. Please contact the vendor for scheduling.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>
@@ -598,6 +658,9 @@ export default function VendorDetailPage() {
                                         {events.map((event) => (
                                             <SelectItem key={event._id} value={event._id}>
                                                 {event.title} • {new Date(event.date).toLocaleDateString()}
+                                                {event.startTime && event.endTime
+                                                    ? ` • ${event.startTime}-${event.endTime}`
+                                                    : ""}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

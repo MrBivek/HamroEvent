@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, DollarSign, Users, Plus, MessageSquare } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, DollarSign, Users, Plus, MessageSquare, Clock, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
+import { Input } from "@/components/ui/input.tsx";
 import { EventsService } from "@/services/EventsService";
+import { fetchAvailableVendors } from "@/lib/vendors.ts";
+import { resolveMediaUrl } from "@/lib/api";
 import type { BadgeProps } from "@/components/ui/badge.tsx";
-import type { Booking, Event } from "@/types";
+import type { Booking, Event, VendorProfile } from "@/types";
 
 export default function CustomerEventDetail() {
     const { id } = useParams();
     const [event, setEvent] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isVendorPickerOpen, setIsVendorPickerOpen] = useState(false);
+    const [availableVendors, setAvailableVendors] = useState<VendorProfile[]>([]);
+    const [isVendorsLoading, setIsVendorsLoading] = useState(false);
+    const [vendorQuery, setVendorQuery] = useState("");
 
     useEffect(() => {
         let active = true;
@@ -33,6 +41,35 @@ export default function CustomerEventDetail() {
             active = false;
         };
     }, [id]);
+
+    useEffect(() => {
+        let active = true;
+        const loadVendors = async () => {
+            if (!event || !isVendorPickerOpen) return;
+            setIsVendorsLoading(true);
+            try {
+                const date = event.date?.slice(0, 10);
+                const res = await fetchAvailableVendors({
+                    date,
+                    startTime: event.startTime || undefined,
+                    endTime: event.endTime || undefined,
+                    page: 1,
+                    limit: 24
+                });
+                if (!active) return;
+                setAvailableVendors(res.items || []);
+            } catch {
+                if (!active) return;
+                setAvailableVendors([]);
+            } finally {
+                if (active) setIsVendorsLoading(false);
+            }
+        };
+        loadVendors();
+        return () => {
+            active = false;
+        };
+    }, [event, isVendorPickerOpen]);
 
     if (isLoading) {
         return (
@@ -97,17 +134,21 @@ export default function CustomerEventDetail() {
                                 year: "numeric"
                             })}
                         </span>
+                        {(event.startTime || event.endTime) && (
+                            <span className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                {event.startTime || "--:--"} - {event.endTime || "--:--"}
+                            </span>
+                        )}
                         <span className="flex items-center gap-1">
                             <MapPin className="h-4 w-4" />
                             {event.location}
                         </span>
                     </div>
                 </div>
-                <Button variant="hero" asChild>
-                    <Link to="/vendors">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Vendor
-                    </Link>
+                <Button variant="hero" onClick={() => setIsVendorPickerOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Vendor
                 </Button>
             </div>
 
@@ -222,6 +263,78 @@ export default function CustomerEventDetail() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isVendorPickerOpen} onOpenChange={setIsVendorPickerOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Available Vendors</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                placeholder="Search vendors..."
+                                value={vendorQuery}
+                                onChange={(e) => setVendorQuery(e.target.value)}
+                            />
+                            <Badge variant="soft">
+                                {event.startTime && event.endTime
+                                    ? `${event.startTime}-${event.endTime}`
+                                    : "All day"}
+                            </Badge>
+                        </div>
+
+                        {isVendorsLoading ? (
+                            <div className="py-12 text-center text-muted-foreground">Loading vendors...</div>
+                        ) : availableVendors.length === 0 ? (
+                            <div className="py-12 text-center text-muted-foreground">
+                                No available vendors found for this date/time.
+                            </div>
+                        ) : (
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {availableVendors
+                                    .filter((vendor) =>
+                                        vendorQuery
+                                            ? vendor.businessName.toLowerCase().includes(vendorQuery.toLowerCase())
+                                            : true
+                                    )
+                                    .map((vendor) => (
+                                        <Card key={vendor._id} variant="interactive">
+                                            <CardContent className="p-4 space-y-3">
+                                                <div className="flex items-center gap-3">
+                                                    <img
+                                                        src={resolveMediaUrl(vendor.portfolioMedia?.[0])}
+                                                        alt={vendor.businessName}
+                                                        className="h-12 w-12 rounded-lg object-cover"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-foreground truncate">
+                                                            {vendor.businessName}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground truncate">
+                                                            {vendor.category} • {vendor.location}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                                    <span className="flex items-center gap-1">
+                                                        <Star className="h-4 w-4 fill-warning text-warning" />
+                                                        {vendor.ratingAvg.toFixed(1)}
+                                                    </span>
+                                                    <span>{vendor.ratingCount} reviews</span>
+                                                </div>
+                                                <Button variant="outline" className="w-full" asChild>
+                                                    <Link to={`/vendors/${vendor._id}`}>
+                                                        View Vendor
+                                                    </Link>
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
