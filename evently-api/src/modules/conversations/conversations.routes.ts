@@ -15,6 +15,7 @@ import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { NotificationType } from "../../common/enums.js";
+import { emitMessage } from "../../socket.js";
 
 export const conversationsRoutes = Router();
 
@@ -239,11 +240,12 @@ conversationsRoutes.post(
       const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
       await assertParticipant(convoId, req.auth!.sub);
 
-      const message = await MessageModel.create({
+      const messageDoc = await MessageModel.create({
         conversationId: convoId,
         senderId: new mongoose.Types.ObjectId(req.auth!.sub),
         text: req.body.text,
       });
+      const message = messageDoc.toObject();
 
       const convo = await ConversationModel.findByIdAndUpdate(
         convoId,
@@ -282,6 +284,7 @@ conversationsRoutes.post(
         }
       }
 
+      emitMessage(convoId.toString(), message);
       res.status(201).json(message);
     } catch (err) {
       next(err);

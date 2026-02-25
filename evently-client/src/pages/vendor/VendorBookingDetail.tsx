@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Send, Calendar, MapPin, Clock, User, Package, Check, X, RefreshCw, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -22,6 +22,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { VendorBookingsService } from "@/services/VendorBookingsService";
 import { ConversationsService } from "@/services/ConversationsService";
 import { getErrorMessage } from "@/lib/api";
+import { getSocket } from "@/lib/socket.ts";
+import { useAuthStore } from "@/store/authStore.ts";
 import type { BadgeProps } from "@/components/ui/badge.tsx";
 import type { Booking, BookingMessage, ConversationMessage } from "@/types";
 
@@ -30,6 +32,7 @@ type ChatMessage = BookingMessage | ConversationMessage;
 export default function VendorBookingDetail() {
     const { id } = useParams();
     const { toast } = useToast();
+    const { token } = useAuthStore();
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [status, setStatus] = useState("pending");
@@ -37,6 +40,7 @@ export default function VendorBookingDetail() {
     const [rescheduleReason, setRescheduleReason] = useState("");
     const [booking, setBooking] = useState<Booking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [conversationId, setConversationId] = useState<string | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -62,17 +66,80 @@ export default function VendorBookingDetail() {
         };
     }, [id]);
 
+    useEffect(() => {
+        let active = true;
+        const loadConversation = async () => {
+            if (!id) return;
+            try {
+                const convo = await ConversationsService.postApiConversations({
+                    requestBody: { bookingId: id }
+                });
+                if (!active) return;
+                setConversationId(convo._id);
+            } catch {
+                if (!active) return;
+                setConversationId(null);
+            }
+        };
+        loadConversation();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    const messageKey = useMemo(
+        () => (msg: ChatMessage) => {
+            if ("_id" in msg) return `conversation:${msg._id}`;
+            return `booking:${msg.id}`;
+        },
+        []
+    );
+
+    const appendMessage = useCallback((incoming: ChatMessage) => {
+        setMessages((prev) => {
+            const incomingKey = messageKey(incoming);
+            if (prev.some((m) => messageKey(m) === incomingKey)) return prev;
+            return [...prev, incoming].sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+        });
+    }, [messageKey]);
+
+    useEffect(() => {
+        if (!conversationId || !token) return;
+        const socket = getSocket(token);
+        if (!socket) return;
+
+        const handleMessage = (incoming: ConversationMessage) => {
+            if (incoming.conversationId !== conversationId) return;
+            appendMessage(incoming);
+        };
+
+        socket.emit("conversation:join", { conversationId });
+        socket.on("message:new", handleMessage);
+
+        return () => {
+            socket.emit("conversation:leave", { conversationId });
+            socket.off("message:new", handleMessage);
+        };
+    }, [appendMessage, conversationId, token]);
+
     const handleSendMessage = async () => {
         if (!message.trim() || !id) return;
         try {
-            const convo = await ConversationsService.postApiConversations({
-                requestBody: { bookingId: id }
-            });
+            const convoId =
+                conversationId ||
+                (
+                    await ConversationsService.postApiConversations({
+                        requestBody: { bookingId: id }
+                    })
+                )._id;
+            if (!conversationId) setConversationId(convoId);
             const msg = await ConversationsService.postApiConversationsMessages({
-                id: convo._id,
+                id: convoId,
                 requestBody: { text: message }
             });
-            setMessages([...messages, msg]);
+            appendMessage(msg);
             setMessage("");
         } catch (error) {
             toast({

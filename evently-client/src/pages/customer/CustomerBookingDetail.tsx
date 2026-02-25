@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
     ArrowLeft,
@@ -20,6 +20,8 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { BookingsService } from "@/services/BookingsService";
 import { ConversationsService } from "@/services/ConversationsService";
 import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
+import { getSocket } from "@/lib/socket.ts";
+import { useAuthStore } from "@/store/authStore.ts";
 import type { BadgeProps } from "@/components/ui/badge.tsx";
 import type { Booking, BookingMessage, ConversationMessage } from "@/types";
 
@@ -31,7 +33,9 @@ export default function CustomerBookingDetail() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [booking, setBooking] = useState<Booking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [conversationId, setConversationId] = useState<string | null>(null);
     const { toast } = useToast();
+    const { token } = useAuthStore();
 
     useEffect(() => {
         let active = true;
@@ -55,6 +59,64 @@ export default function CustomerBookingDetail() {
             active = false;
         };
     }, [id]);
+
+    useEffect(() => {
+        let active = true;
+        const loadConversation = async () => {
+            if (!id) return;
+            try {
+                const convo = await ConversationsService.postApiConversations({
+                    requestBody: { bookingId: id }
+                });
+                if (!active) return;
+                setConversationId(convo._id);
+            } catch {
+                if (!active) return;
+                setConversationId(null);
+            }
+        };
+        loadConversation();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    const messageKey = useMemo(
+        () => (msg: ChatMessage) => {
+            if ("_id" in msg) return `conversation:${msg._id}`;
+            return `booking:${msg.id}`;
+        },
+        []
+    );
+
+    const appendMessage = useCallback((incoming: ChatMessage) => {
+        setMessages((prev) => {
+            const incomingKey = messageKey(incoming);
+            if (prev.some((m) => messageKey(m) === incomingKey)) return prev;
+            return [...prev, incoming].sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+        });
+    }, [messageKey]);
+
+    useEffect(() => {
+        if (!conversationId || !token) return;
+        const socket = getSocket(token);
+        if (!socket) return;
+
+        const handleMessage = (incoming: ConversationMessage) => {
+            if (incoming.conversationId !== conversationId) return;
+            appendMessage(incoming);
+        };
+
+        socket.emit("conversation:join", { conversationId });
+        socket.on("message:new", handleMessage);
+
+        return () => {
+            socket.emit("conversation:leave", { conversationId });
+            socket.off("message:new", handleMessage);
+        };
+    }, [appendMessage, conversationId, token]);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -92,14 +154,19 @@ export default function CustomerBookingDetail() {
         if (!newMessage.trim() || !id) return;
 
         try {
-            const convo = await ConversationsService.postApiConversations({
-                requestBody: { bookingId: id }
-            });
+            const convoId =
+                conversationId ||
+                (
+                    await ConversationsService.postApiConversations({
+                        requestBody: { bookingId: id }
+                    })
+                )._id;
+            if (!conversationId) setConversationId(convoId);
             const message = await ConversationsService.postApiConversationsMessages({
-                id: convo._id,
+                id: convoId,
                 requestBody: { text: newMessage }
             });
-            setMessages([...messages, message]);
+            appendMessage(message);
             setNewMessage("");
             toast({ title: "Message sent" });
         } catch (error) {

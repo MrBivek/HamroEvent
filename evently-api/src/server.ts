@@ -1,8 +1,10 @@
+import { createServer } from "http";
 import { createApp } from "./app.js";
 import { connectDb } from "./configurations/db.js";
 import { env } from "./configurations/env.js";
 import mongoose from "mongoose";
 import { runMigrations } from "./migrate.js";
+import { initSocket } from "./socket.js";
 
 async function bootstrap() {
   await connectDb();
@@ -12,7 +14,10 @@ async function bootstrap() {
   }
 
   const app = createApp();
-  app.listen(env.PORT, () => {
+  const server = createServer(app);
+  initSocket(server);
+
+  server.listen(env.PORT, () => {
     console.log(`API Running on http://localhost:${env.PORT}`);
     console.log(`API Documentation on http://localhost:${env.PORT}/swagger`);
   });
