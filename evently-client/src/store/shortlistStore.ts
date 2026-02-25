@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { FavoritesService } from "@/services/FavoritesService";
+import { toast, useToast } from "@/hooks/use-toast.ts";
 
 interface ShortlistStore {
     shortlistedVendors: string[];
@@ -28,6 +29,7 @@ export const useShortlistStore = create<ShortlistStore>()(
                     set((state) => ({
                         shortlistedVendors: state.shortlistedVendors.filter((id) => id !== vendorId)
                     }));
+                    toast({ title: "Error", description: "Please log in to shortlist the following venddor.", variant: "destructive" });
                 }
             },
 
@@ -48,7 +50,7 @@ export const useShortlistStore = create<ShortlistStore>()(
 
             loadShortlist: async () => {
                 try {
-                    const res = await FavoritesService.getApiFavorites({ page: 1, limit: 200 });
+                    const res = await FavoritesService.getApiFavorites({ page: 1, limit: 50 });
                     const ids = (res?.items || []).map((vendor: { _id: string }) => vendor._id);
                     set({ shortlistedVendors: ids });
                 } catch {

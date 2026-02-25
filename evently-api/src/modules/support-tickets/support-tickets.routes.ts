@@ -6,6 +6,8 @@ import {
   CreateSupportTicketSchema,
   SupportTicketListQuerySchema,
 } from "./support-tickets.schemas.js";
+import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
+import { NotificationType } from "../../common/enums.js";
 
 export const supportTicketsRoutes = Router();
 
@@ -39,6 +41,13 @@ supportTicketsRoutes.post(
         createdBy: req.auth!.sub,
         subject: req.body.subject,
         message: req.body.message,
+      });
+
+      await createNotificationsForAdmins({
+        type: NotificationType.SYSTEM,
+        title: "New support ticket",
+        body: req.body.subject,
+        link: "/admin/support-tickets",
       });
 
       res.status(201).json(ticket);

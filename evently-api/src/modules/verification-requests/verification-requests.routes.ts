@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, VerificationStatus } from "../../common/enums.js";
+import { UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { DocumentModel } from "../documents/document.model.js";
@@ -11,6 +11,7 @@ import {
   CreateVerificationRequestSchema,
   VerificationRequestListQuerySchema,
 } from "./verification-requests.schemas.js";
+import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
 
 export const verificationRequestsRoutes = Router();
 
@@ -50,8 +51,8 @@ verificationRequestsRoutes.post(
         vendorId: vendor._id,
         status: VerificationStatus.PENDING,
       }).lean();
-      if (active) throw new BadRequestError("A verification request is already pending");
 
+      const hasDocumentIds = Array.isArray(req.body.documentIds);
       const documentIds = req.body.documentIds ?? [];
       const validDocIds = documentIds.filter((id: string) => mongoose.isValidObjectId(id));
 
@@ -69,6 +70,34 @@ verificationRequestsRoutes.post(
         }
       }
 
+      if (active) {
+        const update: Record<string, unknown> = {
+          vendorNote: req.body.vendorNote,
+          submittedAt: new Date(),
+        };
+        if (hasDocumentIds) {
+          update.documentIds = validDocIds.map((id: string) => new mongoose.Types.ObjectId(id));
+        }
+
+        const updated = await VerificationRequestModel.findByIdAndUpdate(active._id, update, {
+          new: true,
+        });
+
+        await VendorModel.updateOne(
+          { _id: vendor._id },
+          { $set: { verifiedStatus: VerificationStatus.PENDING } },
+        );
+
+        await createNotificationsForAdmins({
+          type: NotificationType.SYSTEM,
+          title: "Verification request updated",
+          body: `Vendor ${vendor.businessName} updated their verification request.`,
+          link: "/admin/vendors/pending",
+        });
+
+        return res.json(updated);
+      }
+
       const doc = await VerificationRequestModel.create({
         vendorId: vendor._id,
         status: VerificationStatus.PENDING,
@@ -81,6 +110,13 @@ verificationRequestsRoutes.post(
         { _id: vendor._id },
         { $set: { verifiedStatus: VerificationStatus.PENDING } },
       );
+
+      await createNotificationsForAdmins({
+        type: NotificationType.SYSTEM,
+        title: "New verification request",
+        body: `Vendor ${vendor.businessName} submitted verification documents.`,
+        link: "/admin/vendors/pending",
+      });
 
       res.status(201).json(doc);
     } catch (err) {

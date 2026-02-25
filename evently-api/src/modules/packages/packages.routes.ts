@@ -386,6 +386,11 @@ packagesRoutes.get("/:vendorId/packages", async (req, res, next) => {
     const vendorId = String(req.params.vendorId);
     if (!mongoose.isValidObjectId(vendorId)) throw new NotFoundError("Vendor not found");
 
+    const vendor = await VendorModel.findById(vendorId).lean();
+    if (!vendor || vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+      throw new NotFoundError("Vendor not found");
+    }
+
     const items = await PackageModel.find({
       vendorId: new mongoose.Types.ObjectId(vendorId),
       isActive: true,

@@ -46,7 +46,7 @@ export default function CustomerRegisterPage() {
             toast({
                 title: "Registration failed",
                 description: getErrorMessage(error, "Unable to create account. Please try again."),
-                variant: "destructive"
+                variant: "default"
             });
         } finally {
             setIsLoading(false);

@@ -60,6 +60,17 @@ export const RegisterVendorSchema = z.object({
     )
     .optional(),
   portfolioMedia: z.array(z.string()).optional(),
+  verificationDocuments: z
+    .array(
+      z.object({
+        data: z.string().min(1),
+        filename: z.string().optional(),
+        name: z.string().optional(),
+        mimeType: z.string().optional(),
+        type: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export const LoginSchema = z.object({

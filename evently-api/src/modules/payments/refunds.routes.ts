@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, PaymentStatus, BookingStatus } from "../../common/enums.js";
+import { UserRole, PaymentStatus, BookingStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError, ForbiddenError } from "../../common/errors.js";
 import { RefundModel } from "./refund.model.js";
 import { PaymentModel } from "./payment.model.js";
@@ -10,6 +10,7 @@ import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { CreateRefundSchema, RefundListQuerySchema } from "./payments.schemas.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
+import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
 import { mapUserRoleToUi } from "../../common/mappers.js";
 
 export const refundsRoutes = Router();
@@ -95,6 +96,13 @@ refundsRoutes.post(
         targetType: "Payment",
         targetId: payment._id,
         metadata: { amount, reason: reason ?? null, bookingId: booking._id.toString() },
+      });
+
+      await createNotificationsForAdmins({
+        type: NotificationType.SYSTEM,
+        title: "Refund issued",
+        body: `Refund of ${amount} created for booking ${booking._id.toString()}.`,
+        link: "/admin/audit-logs",
       });
 
       res.status(201).json(refund);

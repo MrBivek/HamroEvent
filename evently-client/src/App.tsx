@@ -36,6 +36,7 @@ import AdminUsers from "@/pages/admin/AdminUsers.tsx";
 import AdminReviews from "@/pages/admin/AdminReviews.tsx";
 import AdminReports from "@/pages/admin/AdminReports.tsx";
 import AdminAuditLogs from "@/pages/admin/AdminAuditLogs.tsx";
+import AdminNotifications from "@/pages/admin/AdminNotifications.tsx";
 import NotFound from "@/pages/NotFound.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
@@ -109,6 +110,7 @@ const App = () => {
                                 <Route path="/admin/users" element={<AdminUsers />} />
                                 <Route path="/admin/reviews" element={<AdminReviews />} />
                                 <Route path="/admin/reports" element={<AdminReports />} />
+                                <Route path="/admin/notifications" element={<AdminNotifications />} />
                                 <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
                             </Route>
                         </Route>

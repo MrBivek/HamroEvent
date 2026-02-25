@@ -89,6 +89,8 @@ export default function VendorRegisterPage() {
 
     const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
     const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
+    const [verificationFiles, setVerificationFiles] = useState<File[]>([]);
+    const [verificationPreviews, setVerificationPreviews] = useState<Array<{ name: string; type: string; preview?: string }>>([]);
 
     useEffect(() => {
         let active = true;
@@ -142,6 +144,16 @@ export default function VendorRegisterPage() {
                 portfolioFiles.length > 0
                     ? await Promise.all(portfolioFiles.map((file) => fileToBase64(file, 10)))
                     : [];
+            const verificationDocuments =
+                verificationFiles.length > 0
+                    ? await Promise.all(
+                          verificationFiles.map(async (file) => ({
+                              data: await fileToBase64(file, 10),
+                              filename: file.name,
+                              mimeType: file.type
+                          }))
+                      )
+                    : undefined;
             const packagesPayload = packages
                 .filter((pkg) => pkg.name.trim())
                 .map((pkg) => ({
@@ -172,7 +184,8 @@ export default function VendorRegisterPage() {
                         facebook: businessData.facebook || undefined
                     },
                     packages: packagesPayload.length > 0 ? packagesPayload : undefined,
-                    portfolioMedia: portfolioMedia.length > 0 ? portfolioMedia : undefined
+                    portfolioMedia: portfolioMedia.length > 0 ? portfolioMedia : undefined,
+                    verificationDocuments
                 }
             });
             toast({
@@ -184,7 +197,7 @@ export default function VendorRegisterPage() {
             toast({
                 title: "Registration failed",
                 description: getErrorMessage(error, "Unable to register. Please try again."),
-                variant: "destructive"
+                variant: "default"
             });
         } finally {
             setIsSubmitting(false);
@@ -232,6 +245,16 @@ export default function VendorRegisterPage() {
         }));
     };
 
+    const handlePrimaryLocationChange = (value: string) => {
+        setBusinessData((prev) => ({
+            ...prev,
+            location: value,
+            serviceAreas: prev.serviceAreas.includes(value)
+                ? prev.serviceAreas
+                : [...prev.serviceAreas, value]
+        }));
+    };
+
     const handlePortfolioSelect = async (files: FileList | null) => {
         if (!files) return;
         const selected = Array.from(files).slice(0, 10);
@@ -239,6 +262,30 @@ export default function VendorRegisterPage() {
         try {
             const previews = await Promise.all(selected.map((file) => fileToBase64(file, 10)));
             setPortfolioImages(previews);
+        } catch (error) {
+            toast({
+                title: "Upload failed",
+                description: getErrorMessage(error, "Unable to read files"),
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleVerificationSelect = async (files: FileList | null) => {
+        if (!files) return;
+        const selected = Array.from(files).slice(0, 10);
+        setVerificationFiles(selected);
+        try {
+            const previews = await Promise.all(
+                selected.map(async (file) => {
+                    if (file.type.startsWith("image/")) {
+                        const preview = await fileToBase64(file, 10);
+                        return { name: file.name, type: file.type, preview };
+                    }
+                    return { name: file.name, type: file.type };
+                })
+            );
+            setVerificationPreviews(previews);
         } catch (error) {
             toast({
                 title: "Upload failed",
@@ -523,9 +570,7 @@ export default function VendorRegisterPage() {
                                                 <Label>Primary Location</Label>
                                                 <Select
                                                     value={businessData.location}
-                                                    onValueChange={(value) =>
-                                                        setBusinessData({ ...businessData, location: value })
-                                                    }
+                                                    onValueChange={handlePrimaryLocationChange}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select location" />
@@ -543,20 +588,28 @@ export default function VendorRegisterPage() {
                                             <div className="space-y-2">
                                                 <Label>Service Areas</Label>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {locations.map((area) => (
-                                                        <Badge
-                                                            key={area._id || area.name}
-                                                            variant={
-                                                                businessData.serviceAreas.includes(area.name)
-                                                                    ? "default"
-                                                                    : "outline"
-                                                            }
-                                                            className="cursor-pointer transition-all hover:scale-105"
-                                                            onClick={() => toggleServiceArea(area.name)}
-                                                        >
-                                                            {area.name}
-                                                        </Badge>
-                                                    ))}
+                                                    {locations.map((area) => {
+                                                        const isPrimary = businessData.location === area.name;
+                                                        const isSelected = businessData.serviceAreas.includes(area.name);
+                                                        return (
+                                                            <Badge
+                                                                key={area._id || area.name}
+                                                                variant={isSelected ? "default" : "outline"}
+                                                                className={`transition-all ${
+                                                                    isPrimary
+                                                                        ? "cursor-not-allowed opacity-70"
+                                                                        : "cursor-pointer hover:scale-105"
+                                                                }`}
+                                                                aria-disabled={isPrimary}
+                                                                onClick={() => {
+                                                                    if (isPrimary) return;
+                                                                    toggleServiceArea(area.name);
+                                                                }}
+                                                            >
+                                                                {area.name}
+                                                            </Badge>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
 
@@ -826,7 +879,7 @@ export default function VendorRegisterPage() {
                                             {/* Verification Documents */}
                                             <div className="space-y-2">
                                                 <Label>Verification Documents</Label>
-                                                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                                                <div className="relative border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
                                                     <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                                                     <p className="font-medium text-foreground mb-1">
                                                         Upload verification documents
@@ -834,7 +887,37 @@ export default function VendorRegisterPage() {
                                                     <p className="text-sm text-muted-foreground">
                                                         Business registration, ID proof, etc.
                                                     </p>
+                                                    <input
+                                                        type="file"
+                                                        multiple
+                                                        accept="image/*,.pdf"
+                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        onChange={(e) => handleVerificationSelect(e.target.files)}
+                                                    />
                                                 </div>
+                                                {verificationPreviews.length > 0 && (
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {verificationPreviews.map((file) => (
+                                                            <div
+                                                                key={file.name}
+                                                                className="rounded-lg border border-border p-2 text-center text-xs text-muted-foreground"
+                                                            >
+                                                                {file.preview ? (
+                                                                    <img
+                                                                        src={file.preview}
+                                                                        alt={file.name}
+                                                                        className="w-full h-24 object-cover rounded-md mb-2"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="h-24 flex items-center justify-center rounded-md bg-muted/50 mb-2">
+                                                                        <FileText className="h-6 w-6 text-muted-foreground" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="truncate">{file.name}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Terms */}

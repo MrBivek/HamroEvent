@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import { UserModel } from "./user.model.js";
 import jwt, { SignOptions } from "jsonwebtoken";
-import { UserRole } from "../../common/enums.js";
+import { DocumentOwnerType, UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
 import { env } from "../../configurations/env.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
@@ -11,6 +11,9 @@ import { toUiUser } from "../../common/mappers.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
 import { saveBase64File } from "../../common/fileStorage.js";
+import { VerificationRequestModel } from "../verification-requests/verification-request.model.js";
+import { DocumentModel } from "../documents/document.model.js";
+import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
 
 function signToken(userId: string, role: UserRole) {
   const expiresIn = env.JWT_EXPIRES_IN as SignOptions["expiresIn"];
@@ -27,6 +30,10 @@ export async function registerCustomer(input: {
   const email = input.email.toLowerCase();
   const exists = await UserModel.findOne({ email });
   if (exists) throw new BadRequestError("Email already exists");
+  if (input.phone) {
+    const phoneExists = await UserModel.findOne({ phone: input.phone });
+    if (phoneExists) throw new BadRequestError("Phone already exists");
+  }
 
   const passwordHash = await bcrypt.hash(input.password, 10);
 
@@ -68,11 +75,22 @@ export async function registerVendor(input: {
     addOns?: string[];
   }>;
   portfolioMedia?: string[];
+  verificationDocuments?: Array<{
+    data: string;
+    filename?: string;
+    name?: string;
+    mimeType?: string;
+    type?: string;
+  }>;
 }) {
   const email = input.account.email.toLowerCase();
 
   const exists = await UserModel.findOne({ email });
   if (exists) throw new BadRequestError("Email already exists");
+  if (input.account.phone) {
+    const phoneExists = await UserModel.findOne({ phone: input.account.phone });
+    if (phoneExists) throw new BadRequestError("Phone already exists");
+  }
 
   const passwordHash = await bcrypt.hash(input.account.password, 10);
 
@@ -162,6 +180,55 @@ export async function registerVendor(input: {
         })),
       );
     }
+
+    let verificationDocumentIds: mongoose.Types.ObjectId[] = [];
+    if (input.verificationDocuments?.length) {
+      const docs = input.verificationDocuments;
+      const savedDocs = docs.map((doc, index) => {
+        const saved = saveBase64File({
+          data: doc.data,
+          folder: `vendors/${user._id.toString()}`,
+          filenamePrefix: "verification",
+          mimeTypeHint: doc.mimeType ?? doc.type,
+        });
+        return {
+          ownerType: DocumentOwnerType.VENDOR,
+          ownerId: vendor._id,
+          name: doc.filename ?? doc.name ?? `document-${index + 1}`,
+          type: doc.mimeType ?? doc.type,
+          url: saved.url,
+          uploadedBy: user._id,
+        };
+      });
+      const created = await DocumentModel.insertMany(savedDocs);
+      verificationDocumentIds = created.map((d) => d._id);
+    }
+
+    const verificationUpdate: Record<string, unknown> = {
+      $setOnInsert: {
+        vendorId: vendor._id,
+        status: VerificationStatus.PENDING,
+        submittedAt: new Date(),
+      },
+    };
+    if (verificationDocumentIds.length) {
+      verificationUpdate.$set = {
+        documentIds: verificationDocumentIds,
+      };
+    }
+
+    await VerificationRequestModel.updateOne(
+      { vendorId: vendor._id, status: VerificationStatus.PENDING },
+      verificationUpdate,
+      { upsert: true },
+    );
+
+    await createNotificationsForAdmins({
+      type: NotificationType.SYSTEM,
+      title: "New vendor registration",
+      body: `Vendor ${vendor.businessName} registered and is pending verification.`,
+      link: "/admin/vendors/pending",
+    });
 
     return {
       user: toUiUser(user),

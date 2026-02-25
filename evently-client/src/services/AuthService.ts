@@ -71,8 +71,18 @@ export class AuthService {
                 priceMax?: number;
                 includes?: Array<string>;
                 inclusions?: Array<string>;
+                duration?: string;
+                policies?: string;
+                addOns?: Array<string>;
             }>;
             portfolioMedia?: Array<string>;
+            verificationDocuments?: Array<{
+                data: string;
+                filename?: string;
+                name?: string;
+                mimeType?: string;
+                type?: string;
+            }>;
         };
     }): CancelablePromise<VendorRegisterResponse> {
         return __request(OpenAPI, {

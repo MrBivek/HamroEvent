@@ -9,8 +9,7 @@ import {
   UploadPortfolioSchema,
   DeletePortfolioSchema,
 } from "./vendors.schemas.js";
-import { DocumentOwnerType, UserRole } from "../../common/enums.js";
-import { mapUiVerificationStatusToInternal } from "../../common/mappers.js";
+import { DocumentOwnerType, UserRole, VerificationStatus } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
@@ -319,13 +318,7 @@ vendorsRoutes.get("/", async (req, res, next) => {
   try {
     const query = VendorListQuerySchema.parse(req.query);
 
-    const filter: Record<string, any> = {};
-    if (query.verified === true) {
-      filter.verifiedStatus = "APPROVED";
-    } else if (query.verifiedStatus) {
-      const mapped = mapUiVerificationStatusToInternal(query.verifiedStatus);
-      if (mapped) filter.verifiedStatus = mapped;
-    }
+    const filter: Record<string, any> = { verifiedStatus: VerificationStatus.APPROVED };
 
     if (query.categoryId && mongoose.isValidObjectId(query.categoryId)) {
       filter.categoryId = new mongoose.Types.ObjectId(query.categoryId);
@@ -430,7 +423,9 @@ vendorsRoutes.get("/:id", async (req, res, next) => {
     if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Vendor not found");
 
     const vendor = await VendorModel.findById(id).lean();
-    if (!vendor) throw new NotFoundError("Vendor not found");
+    if (!vendor || vendor.verifiedStatus !== VerificationStatus.APPROVED) {
+      throw new NotFoundError("Vendor not found");
+    }
 
     const profile = await hydrateVendorProfile(vendor, {
       includePackages: true,

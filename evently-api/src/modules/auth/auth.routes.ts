@@ -106,6 +106,17 @@ authRoutes.post(
  *               portfolioMedia:
  *                 type: array
  *                 items: { type: string }
+ *               verificationDocuments:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [data]
+ *                   properties:
+ *                     data: { type: string, description: "Base64 or data URL" }
+ *                     filename: { type: string }
+ *                     name: { type: string }
+ *                     mimeType: { type: string }
+ *                     type: { type: string }
  *     responses:
  *       201:
  *         description: Vendor onboarding created

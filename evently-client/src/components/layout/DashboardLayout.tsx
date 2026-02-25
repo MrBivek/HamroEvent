@@ -62,6 +62,7 @@ const adminNav: NavItem[] = [
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/reviews", label: "Reviews", icon: Star },
     { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+    { href: "/admin/notifications", label: "Notifications", icon: Bell },
     { href: "/admin/audit-logs", label: "Audit Logs", icon: FileText }
 ];
 

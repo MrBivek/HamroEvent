@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
+import { UserRole, VerificationStatus, NotificationType, DocumentOwnerType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VerificationRequestModel } from "./verification-request.model.js";
 import {
@@ -14,8 +14,10 @@ import { PackageModel } from "../packages/package.model.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
 import { DocumentModel } from "../documents/document.model.js";
+import { UserModel } from "../auth/user.model.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
 import { createNotification } from "../notifications/notifications.service.js";
+import { buildVendorProfile } from "../../common/dtos.js";
 
 export const adminVerificationRequestsRoutes = Router();
 
@@ -51,6 +53,32 @@ adminVerificationRequestsRoutes.get(
       const filter: Record<string, unknown> = {};
       if (q.status) filter.status = q.status;
 
+      if (!q.status || String(q.status).toUpperCase() === VerificationStatus.PENDING) {
+        const pendingVendors = await VendorModel.find({
+          verifiedStatus: VerificationStatus.PENDING,
+        })
+          .select({ _id: 1 })
+          .lean();
+        if (pendingVendors.length) {
+          const now = new Date();
+          await VerificationRequestModel.bulkWrite(
+            pendingVendors.map((vendor) => ({
+              updateOne: {
+                filter: { vendorId: vendor._id, status: VerificationStatus.PENDING },
+                update: {
+                  $setOnInsert: {
+                    vendorId: vendor._id,
+                    status: VerificationStatus.PENDING,
+                    submittedAt: now,
+                  },
+                },
+                upsert: true,
+              },
+            })),
+          );
+        }
+      }
+
       const [items, total] = await Promise.all([
         VerificationRequestModel.find(filter)
           .sort({ createdAt: -1 })
@@ -68,41 +96,70 @@ adminVerificationRequestsRoutes.get(
       const locationIds = vendors
         .map((v) => v.primaryLocationId)
         .filter(Boolean) as mongoose.Types.ObjectId[];
+      const userIds = vendors.map((v) => v.userId);
 
-      const [categories, locations] = await Promise.all([
+      const [categories, locations, documents, packages, users] = await Promise.all([
         CategoryModel.find({ _id: { $in: categoryIds } }).lean(),
         LocationModel.find({ _id: { $in: locationIds } }).lean(),
+        vendorIds.length
+          ? DocumentModel.find({ ownerType: DocumentOwnerType.VENDOR, ownerId: { $in: vendorIds } }).lean()
+          : Promise.resolve([]),
+        vendorIds.length ? PackageModel.find({ vendorId: { $in: vendorIds } }).lean() : Promise.resolve([]),
+        userIds.length ? UserModel.find({ _id: { $in: userIds } }).lean() : Promise.resolve([]),
       ]);
 
       const categoryMap = new Map(categories.map((c) => [c._id.toString(), c]));
       const locationMap = new Map(locations.map((l) => [l._id.toString(), l]));
       const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+      const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
-      const docCounts = await DocumentModel.aggregate([
-        { $match: { ownerId: { $in: vendorIds } } },
-        { $group: { _id: "$ownerId", count: { $sum: 1 } } },
-      ]);
-      const docCountMap = new Map(docCounts.map((d) => [d._id.toString(), d.count]));
+      const packageMap = new Map<string, typeof packages>();
+      for (const pkg of packages) {
+        const key = pkg.vendorId.toString();
+        const bucket = packageMap.get(key) ?? [];
+        bucket.push(pkg);
+        packageMap.set(key, bucket);
+      }
+
+      const documentMap = new Map<string, typeof documents>();
+      for (const doc of documents) {
+        const key = doc.ownerId.toString();
+        const bucket = documentMap.get(key) ?? [];
+        bucket.push(doc);
+        documentMap.set(key, bucket);
+      }
 
       const mapped = items.map((item) => {
         const vendor = vendorMap.get(item.vendorId.toString());
+        const vendorPackages = vendor ? packageMap.get(vendor._id.toString()) ?? [] : [];
         const category = vendor?.categoryId
           ? categoryMap.get(vendor.categoryId.toString())
           : undefined;
         const location = vendor?.primaryLocationId
           ? locationMap.get(vendor.primaryLocationId.toString())
           : undefined;
+        const vendorDocs = documentMap.get(item.vendorId.toString()) ?? [];
+        const user = vendor ? userMap.get(vendor.userId.toString()) : undefined;
         return {
           ...item,
           vendor: vendor
-            ? {
-                _id: vendor._id.toString(),
-                businessName: vendor.businessName,
-                category: category?.slug ?? "",
-                location: vendor.locationText ?? location?.name ?? "",
-              }
+            ? buildVendorProfile({
+                vendor,
+                user,
+                category,
+                location,
+                packages: vendorPackages,
+                documents: vendorDocs,
+                includePackages: true,
+              })
             : undefined,
-          documentsCount: docCountMap.get(item.vendorId.toString()) ?? 0,
+          documents: vendorDocs.map((doc) => ({
+            _id: doc._id.toString(),
+            url: doc.url,
+            name: doc.name,
+            mimeType: doc.type,
+          })),
+          documentsCount: vendorDocs.length,
         };
       });
 

@@ -313,7 +313,10 @@ export interface VerificationRequest {
     vendorId: string;
     status: string;
     note?: string;
-    documents?: string[];
+    vendorNote?: string;
+    adminNote?: string;
+    documentIds?: string[];
+    documents?: DocumentItem[];
     documentsCount?: number;
     submittedAt?: string;
     createdAt?: string;
