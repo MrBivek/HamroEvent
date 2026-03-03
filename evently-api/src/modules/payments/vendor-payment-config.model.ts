@@ -2,7 +2,13 @@ import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const VendorPaymentConfigSchema = new Schema(
     {
-        vendorId: { type: Schema.Types.ObjectId, required: true, unique: true, index: true, ref: "Vendor" },
+        vendorId: {
+            type: Schema.Types.ObjectId,
+            required: true,
+            unique: true,
+            index: true,
+            ref: "Vendor",
+        },
         khalti: {
             publicKey: { type: String },
             secretKey: { type: String },

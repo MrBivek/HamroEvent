@@ -189,7 +189,8 @@ export default function CustomerBookings() {
                                         {group.bookings.map((booking, index) => {
                                             const vendorName =
                                                 booking.vendorName || booking.vendor?.businessName || "Vendor";
-                                            const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
+                                            const vendorImage =
+                                                booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
                                             const category = booking.category || booking.vendor?.category || "Service";
                                             const price = booking.price || 0;
                                             const location = booking.location || "";
@@ -229,11 +230,14 @@ export default function CustomerBookings() {
                                                                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
                                                                         <span className="flex items-center gap-1">
                                                                             <Calendar className="h-4 w-4" />
-                                                                            {new Date(booking.date).toLocaleDateString("en-US", {
-                                                                                month: "short",
-                                                                                day: "numeric",
-                                                                                year: "numeric"
-                                                                            })}
+                                                                            {new Date(booking.date).toLocaleDateString(
+                                                                                "en-US",
+                                                                                {
+                                                                                    month: "short",
+                                                                                    day: "numeric",
+                                                                                    year: "numeric"
+                                                                                }
+                                                                            )}
                                                                         </span>
                                                                         <span>{booking.eventType}</span>
                                                                         <span>{location}</span>
@@ -243,7 +247,9 @@ export default function CustomerBookings() {
                                                                             NPR {price.toLocaleString()}
                                                                         </span>
                                                                         <Button variant="outline" size="sm" asChild>
-                                                                            <Link to={`/customer/bookings/${booking._id}`}>
+                                                                            <Link
+                                                                                to={`/customer/bookings/${booking._id}`}
+                                                                            >
                                                                                 <MessageSquare className="h-4 w-4 mr-1" />
                                                                                 View Details
                                                                             </Link>

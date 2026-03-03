@@ -241,14 +241,17 @@ paymentsRoutes.post(
 
             const provider = String(payment.provider || "").toUpperCase();
             if (provider !== "MOCK") {
-                const config = await VendorPaymentConfigModel.findOne({ vendorId: vendor._id }).lean();
+                const config = await VendorPaymentConfigModel.findOne({
+                    vendorId: vendor._id,
+                }).lean();
                 if (!config) throw new BadRequestError("Vendor payment configuration is missing");
 
                 if (provider === "KHALTI") {
                     const secretKey = config.khalti?.secretKey;
                     const mode = config.khalti?.mode ?? "sandbox";
                     if (!secretKey) throw new BadRequestError("Khalti keys are not configured");
-                    if (!payment.providerRef) throw new BadRequestError("Missing Khalti payment reference");
+                    if (!payment.providerRef)
+                        throw new BadRequestError("Missing Khalti payment reference");
 
                     const response = await fetch(KHALTI_LOOKUP_URLS[mode], {
                         method: "POST",
@@ -270,8 +273,11 @@ paymentsRoutes.post(
                     const merchantCode = config.esewa?.merchantCode;
                     const mode = config.esewa?.mode ?? "sandbox";
                     if (!merchantCode) throw new BadRequestError("eSewa keys are not configured");
-                    if (!payment.providerRef) throw new BadRequestError("Missing eSewa transaction reference");
-                    const meta = payment.providerMeta as { formData?: Record<string, string> } | undefined;
+                    if (!payment.providerRef)
+                        throw new BadRequestError("Missing eSewa transaction reference");
+                    const meta = payment.providerMeta as
+                        | { formData?: Record<string, string> }
+                        | undefined;
                     const totalAmount = meta?.formData?.total_amount ?? payment.amount.toFixed(2);
                     const url = new URL(ESEWA_STATUS_URLS[mode]);
                     url.searchParams.set("product_code", merchantCode);
@@ -373,8 +379,7 @@ paymentsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
             bookingIds = [new mongoose.Types.ObjectId(q.bookingId)];
         }
         if (q.eventId) {
-            if (!mongoose.isValidObjectId(q.eventId))
-                throw new BadRequestError("Invalid eventId");
+            if (!mongoose.isValidObjectId(q.eventId)) throw new BadRequestError("Invalid eventId");
             const eventBookings = await BookingModel.find({
                 userId: req.auth!.sub,
                 eventId: new mongoose.Types.ObjectId(q.eventId),
@@ -398,7 +403,9 @@ paymentsRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req,
             : [];
         const vendorIds = bookings.map((b) => b.vendorId);
         const [vendors, events] = await Promise.all([
-            vendorIds.length ? VendorModel.find({ _id: { $in: vendorIds } }).lean() : Promise.resolve([]),
+            vendorIds.length
+                ? VendorModel.find({ _id: { $in: vendorIds } }).lean()
+                : Promise.resolve([]),
             bookings.length
                 ? EventModel.find({ _id: { $in: bookings.map((b) => b.eventId) } }).lean()
                 : Promise.resolve([]),

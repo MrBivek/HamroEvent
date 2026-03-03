@@ -132,16 +132,13 @@ export default function CustomerBookingDetail() {
         [messageKey]
     );
 
-    const syncQuoteForm = useCallback(
-        (incoming: Quote | null) => {
-            if (!incoming) return;
-            setQuoteAmount(incoming.amount ? String(incoming.amount) : "");
-            setQuoteMessage(incoming.message || "");
-            setSelectedInclusions(incoming.packageInclusions || []);
-            setCustomInclusions(incoming.customInclusions || []);
-        },
-        []
-    );
+    const syncQuoteForm = useCallback((incoming: Quote | null) => {
+        if (!incoming) return;
+        setQuoteAmount(incoming.amount ? String(incoming.amount) : "");
+        setQuoteMessage(incoming.message || "");
+        setSelectedInclusions(incoming.packageInclusions || []);
+        setCustomInclusions(incoming.customInclusions || []);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -653,15 +650,15 @@ export default function CustomerBookingDetail() {
                                     booking.status !== "cancelled" &&
                                     booking.status !== "rejected" &&
                                     booking.status !== "accepted" && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCancel}
-                                        className="text-destructive hover:text-destructive"
-                                    >
-                                        Cancel Booking
-                                    </Button>
-                                )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleCancel}
+                                            className="text-destructive hover:text-destructive"
+                                        >
+                                            Cancel Booking
+                                        </Button>
+                                    )}
                             </div>
                         </CardContent>
                     </Card>
@@ -726,7 +723,11 @@ export default function CustomerBookingDetail() {
                                             {isPaying ? "Processing..." : "Pay Now"}
                                         </Button>
                                     </div>
-                                    <Button variant="outline" onClick={handleConfirmPayment} disabled={!pendingPaymentId}>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleConfirmPayment}
+                                        disabled={!pendingPaymentId}
+                                    >
                                         Confirm Payment
                                     </Button>
                                 </div>
@@ -852,9 +853,7 @@ export default function CustomerBookingDetail() {
                                         >
                                             {quote ? "Update proposal" : "Send proposal"}
                                         </Button>
-                                        {quote?.status === "rejected" && (
-                                            <Badge variant="destructive">Rejected</Badge>
-                                        )}
+                                        {quote?.status === "rejected" && <Badge variant="destructive">Rejected</Badge>}
                                     </div>
                                 </div>
                             )}

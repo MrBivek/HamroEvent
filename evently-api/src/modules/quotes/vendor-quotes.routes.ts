@@ -67,9 +67,7 @@ vendorQuotesRoutes.post(
 
             const allowed: BookingStatus[] = [BookingStatus.REQUESTED];
             if (!allowed.includes(booking.status as BookingStatus)) {
-                throw new BadRequestError(
-                    "Quotes can only be created while booking is pending",
-                );
+                throw new BadRequestError("Quotes can only be created while booking is pending");
             }
 
             const existing = await QuoteModel.findOne({ bookingId: booking._id }).lean();
@@ -252,10 +250,7 @@ vendorQuotesRoutes.patch(
                 quote,
                 bookingAfter ? mapBookingStatusToUi(bookingAfter.status) : undefined,
             );
-            emitQuoteUpdate(
-                [quote.customerId.toString(), vendor.userId.toString()],
-                dto,
-            );
+            emitQuoteUpdate([quote.customerId.toString(), vendor.userId.toString()], dto);
             if (bookingAfter) {
                 emitBookingUpdate([quote.customerId.toString(), vendor.userId.toString()], {
                     bookingId: bookingAfter._id.toString(),
@@ -337,10 +332,7 @@ vendorQuotesRoutes.post(
                 quote,
                 bookingStatus ? mapBookingStatusToUi(bookingStatus) : undefined,
             );
-            emitQuoteUpdate(
-                [quote.customerId.toString(), vendor.userId.toString()],
-                dto,
-            );
+            emitQuoteUpdate([quote.customerId.toString(), vendor.userId.toString()], dto);
             res.json(dto);
         } catch (err) {
             next(err);
@@ -395,10 +387,7 @@ vendorQuotesRoutes.post(
                 quote,
                 bookingStatus ? mapBookingStatusToUi(bookingStatus) : undefined,
             );
-            emitQuoteUpdate(
-                [quote.customerId.toString(), vendor.userId.toString()],
-                dto,
-            );
+            emitQuoteUpdate([quote.customerId.toString(), vendor.userId.toString()], dto);
             res.json(dto);
         } catch (err) {
             next(err);

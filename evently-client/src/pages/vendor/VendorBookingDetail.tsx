@@ -146,16 +146,13 @@ export default function VendorBookingDetail() {
         [messageKey]
     );
 
-    const syncQuoteForm = useCallback(
-        (incoming: Quote | null) => {
-            if (!incoming) return;
-            setQuoteAmount(incoming.amount ? String(incoming.amount) : "");
-            setQuoteMessage(incoming.message || "");
-            setSelectedInclusions(incoming.packageInclusions || []);
-            setCustomInclusions(incoming.customInclusions || []);
-        },
-        []
-    );
+    const syncQuoteForm = useCallback((incoming: Quote | null) => {
+        if (!incoming) return;
+        setQuoteAmount(incoming.amount ? String(incoming.amount) : "");
+        setQuoteMessage(incoming.message || "");
+        setSelectedInclusions(incoming.packageInclusions || []);
+        setCustomInclusions(incoming.customInclusions || []);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -464,25 +461,27 @@ export default function VendorBookingDetail() {
             : customInclusions;
         setIsQuoteSaving(true);
         try {
-            const res = (quote
-                ? await QuotesService.patchApiVendorsMeQuotes({
-                      id: quote._id,
-                      requestBody: {
-                          amount,
-                          message: quoteMessage || undefined,
-                          packageInclusions: selectedInclusions,
-                          customInclusions: mergedCustom
-                      }
-                  })
-                : await QuotesService.postApiVendorsMeBookingsQuote({
-                      id: booking._id,
-                      requestBody: {
-                          amount,
-                          message: quoteMessage || undefined,
-                          packageInclusions: selectedInclusions,
-                          customInclusions: mergedCustom
-                      }
-                  })) as Quote;
+            const res = (
+                quote
+                    ? await QuotesService.patchApiVendorsMeQuotes({
+                          id: quote._id,
+                          requestBody: {
+                              amount,
+                              message: quoteMessage || undefined,
+                              packageInclusions: selectedInclusions,
+                              customInclusions: mergedCustom
+                          }
+                      })
+                    : await QuotesService.postApiVendorsMeBookingsQuote({
+                          id: booking._id,
+                          requestBody: {
+                              amount,
+                              message: quoteMessage || undefined,
+                              packageInclusions: selectedInclusions,
+                              customInclusions: mergedCustom
+                          }
+                      })
+            ) as Quote;
             setQuote(res);
             syncQuoteForm(res);
             if (res?.bookingStatus) {
@@ -665,7 +664,9 @@ export default function VendorBookingDetail() {
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {payment.provider} •{" "}
-                                                {new Date(payment.paidAt || payment.createdAt || "").toLocaleDateString()}
+                                                {new Date(
+                                                    payment.paidAt || payment.createdAt || ""
+                                                ).toLocaleDateString()}
                                             </p>
                                         </div>
                                         <Badge

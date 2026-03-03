@@ -340,9 +340,7 @@ export default function VendorPayments() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-semibold text-foreground">Khalti</h3>
-                                    <Badge variant="soft">
-                                        {config.khalti?.mode === "live" ? "Live" : "Sandbox"}
-                                    </Badge>
+                                    <Badge variant="soft">{config.khalti?.mode === "live" ? "Live" : "Sandbox"}</Badge>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -378,7 +376,10 @@ export default function VendorPayments() {
                                             onValueChange={(value) =>
                                                 setConfigForm((prev) => ({
                                                     ...prev,
-                                                    khalti: { ...(prev.khalti || {}), mode: value as "sandbox" | "live" }
+                                                    khalti: {
+                                                        ...(prev.khalti || {}),
+                                                        mode: value as "sandbox" | "live"
+                                                    }
                                                 }))
                                             }
                                         >
@@ -399,9 +400,7 @@ export default function VendorPayments() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-semibold text-foreground">eSewa</h3>
-                                    <Badge variant="soft">
-                                        {config.esewa?.mode === "live" ? "Live" : "Sandbox"}
-                                    </Badge>
+                                    <Badge variant="soft">{config.esewa?.mode === "live" ? "Live" : "Sandbox"}</Badge>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">

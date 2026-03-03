@@ -40,7 +40,12 @@ export async function sendQuoteApprovedEmails(input: { quote: QuoteDoc; booking:
             inclusions,
             roleLabel: "Customer",
         });
-        await sendEmail({ to: customer.email, subject: email.subject, text: email.text, html: email.html });
+        await sendEmail({
+            to: customer.email,
+            subject: email.subject,
+            text: email.text,
+            html: email.html,
+        });
     }
 
     if (vendorUser?.email) {
@@ -53,6 +58,11 @@ export async function sendQuoteApprovedEmails(input: { quote: QuoteDoc; booking:
             inclusions,
             roleLabel: "Vendor",
         });
-        await sendEmail({ to: vendorUser.email, subject: email.subject, text: email.text, html: email.html });
+        await sendEmail({
+            to: vendorUser.email,
+            subject: email.subject,
+            text: email.text,
+            html: email.html,
+        });
     }
 }

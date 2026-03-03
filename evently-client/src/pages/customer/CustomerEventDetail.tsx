@@ -113,12 +113,9 @@ export default function CustomerEventDetail() {
                 setIsVendorsLoading(true);
                 try {
                     const date = event.date?.slice(0, 10);
-                    const minRating =
-                        minRatingFilter === "any" ? undefined : Number(minRatingFilter);
-                    const priceMin =
-                        priceMinFilter.trim() === "" ? undefined : Number(priceMinFilter);
-                    const priceMax =
-                        priceMaxFilter.trim() === "" ? undefined : Number(priceMaxFilter);
+                    const minRating = minRatingFilter === "any" ? undefined : Number(minRatingFilter);
+                    const priceMin = priceMinFilter.trim() === "" ? undefined : Number(priceMinFilter);
+                    const priceMax = priceMaxFilter.trim() === "" ? undefined : Number(priceMaxFilter);
                     const res = await fetchAvailableVendors({
                         date,
                         startTime: event.startTime || undefined,
@@ -482,9 +479,7 @@ export default function CustomerEventDetail() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Linked vendors</span>
-                                    <span className="font-medium text-foreground">
-                                        {event.bookings?.length || 0}
-                                    </span>
+                                    <span className="font-medium text-foreground">{event.bookings?.length || 0}</span>
                                 </div>
                             </div>
 
@@ -657,8 +652,7 @@ export default function CustomerEventDetail() {
                                                         </div>
                                                         <Badge variant="soft">
                                                             {vendor.pricingRange?.max &&
-                                                            vendor.pricingRange.max >
-                                                                vendor.pricingRange.min
+                                                            vendor.pricingRange.max > vendor.pricingRange.min
                                                                 ? `NPR ${vendor.pricingRange.min.toLocaleString()} - ${vendor.pricingRange.max.toLocaleString()}`
                                                                 : `NPR ${vendor.pricingRange?.min?.toLocaleString() ?? 0}+`}
                                                         </Badge>
@@ -673,11 +667,7 @@ export default function CustomerEventDetail() {
                                                     {vendor.serviceAreas?.length > 0 && (
                                                         <div className="flex flex-wrap gap-2">
                                                             {vendor.serviceAreas.slice(0, 3).map((area) => (
-                                                                <Badge
-                                                                    key={area}
-                                                                    variant="outline"
-                                                                    className="text-xs"
-                                                                >
+                                                                <Badge key={area} variant="outline" className="text-xs">
                                                                     {area}
                                                                 </Badge>
                                                             ))}

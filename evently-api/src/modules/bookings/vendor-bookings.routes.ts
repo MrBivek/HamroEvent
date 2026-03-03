@@ -189,15 +189,15 @@ vendorBookingsRoutes.get(
             messageRoleMap.set(vendor.userId.toString(), "vendor");
 
             const dto = buildBookingDto({
-                    booking,
-                    event,
-                    customer,
-                    packageTitle: pkg?.title,
-                    packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
-                    packageInclusions: pkg?.includes ?? [],
-                    messages,
-                    messageRoleMap,
-                });
+                booking,
+                event,
+                customer,
+                packageTitle: pkg?.title,
+                packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+                packageInclusions: pkg?.includes ?? [],
+                messages,
+                messageRoleMap,
+            });
             res.json({ ...dto, hasQuote: Boolean(quote) });
         } catch (err) {
             next(err);
@@ -260,7 +260,9 @@ vendorBookingsRoutes.patch(
             if (decision === "ACCEPT") {
                 const quote = await QuoteModel.findOne({ bookingId: booking._id }).lean();
                 if (!quote) {
-                    throw new BadRequestError("Please submit a proposal before accepting this booking");
+                    throw new BadRequestError(
+                        "Please submit a proposal before accepting this booking",
+                    );
                 }
                 const event = await EventModel.findById(booking.eventId).lean();
                 if (!event) throw new NotFoundError("Event not found");
@@ -414,9 +416,7 @@ vendorBookingsRoutes.patch(
                 history: dto.history,
             });
 
-            res.json(
-                dto,
-            );
+            res.json(dto);
         } catch (err) {
             next(err);
         }

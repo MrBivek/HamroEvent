@@ -174,10 +174,7 @@ quotesRoutes.post(
             if (booking) {
                 const vendor = await VendorModel.findById(booking.vendorId).lean();
                 if (vendor) {
-                    emitQuoteUpdate(
-                        [quote.customerId.toString(), vendor.userId.toString()],
-                        dto,
-                    );
+                    emitQuoteUpdate([quote.customerId.toString(), vendor.userId.toString()], dto);
                 }
             }
             res.json(dto);
@@ -231,10 +228,7 @@ quotesRoutes.post(
             if (booking) {
                 const vendor = await VendorModel.findById(booking.vendorId).lean();
                 if (vendor) {
-                    emitQuoteUpdate(
-                        [quote.customerId.toString(), vendor.userId.toString()],
-                        dto,
-                    );
+                    emitQuoteUpdate([quote.customerId.toString(), vendor.userId.toString()], dto);
                 }
             }
             res.json(dto);

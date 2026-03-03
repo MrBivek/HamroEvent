@@ -5,7 +5,11 @@ import { validateBody } from "../../middlewares/validate.js";
 import { UserRole, BookingStatus, NotificationType, QuoteStatus } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { BookingModel } from "./booking.model.js";
-import { CreateBookingSchema, BookingListQuerySchema, CancelBookingSchema } from "./bookings.schemas.js";
+import {
+    CreateBookingSchema,
+    BookingListQuerySchema,
+    CancelBookingSchema,
+} from "./bookings.schemas.js";
 import { EventModel } from "../events/event.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
@@ -137,7 +141,9 @@ bookingsRoutes.post(
                 status: { $nin: [BookingStatus.CANCELLED, BookingStatus.REJECTED] },
             }).lean();
             if (existingBooking) {
-                throw new BadRequestError("You already have a booking with this vendor for that event");
+                throw new BadRequestError(
+                    "You already have a booking with this vendor for that event",
+                );
             }
 
             const booking = await BookingModel.create({

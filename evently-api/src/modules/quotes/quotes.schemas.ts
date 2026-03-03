@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { QuoteStatus } from "../../common/enums.js";
 
-const InclusionListSchema = z
-    .array(z.string().trim().min(1))
-    .max(50)
-    .optional();
+const InclusionListSchema = z.array(z.string().trim().min(1)).max(50).optional();
 
 export const CreateQuoteSchema = z.object({
     amount: z.number().positive(),

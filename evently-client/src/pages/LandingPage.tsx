@@ -103,7 +103,7 @@ export default function LandingPage() {
                 setFeaturedVendors([]);
             }
         };
-        load().then(r => r);
+        load().then((r) => r);
     }, []);
     return (
         <div className="min-h-screen overflow-hidden">

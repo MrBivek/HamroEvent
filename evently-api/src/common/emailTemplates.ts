@@ -111,9 +111,7 @@ export function buildQuoteApprovedEmail(input: {
     if (input.recipientName) {
         lines.push(`Hi ${input.recipientName},`);
     }
-    lines.push(
-        `Great news! The quote has been fully approved and your booking is now confirmed.`,
-    );
+    lines.push(`Great news! The quote has been fully approved and your booking is now confirmed.`);
     if (input.eventTitle || input.eventDate) {
         lines.push(
             `Event: ${input.eventTitle ?? "Event"}${input.eventDate ? ` • ${input.eventDate}` : ""}`,

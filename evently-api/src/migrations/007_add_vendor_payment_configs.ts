@@ -8,5 +8,8 @@ export async function up(conn: mongoose.Connection) {
 }
 
 export async function down(conn: mongoose.Connection) {
-    await conn.collection("vendorPaymentConfigs").drop().catch(() => {});
+    await conn
+        .collection("vendorPaymentConfigs")
+        .drop()
+        .catch(() => {});
 }

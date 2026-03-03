@@ -91,7 +91,9 @@ vendorPaymentsRoutes.put(
             const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
             if (!vendor) throw new NotFoundError("Vendor profile not found");
 
-            const existing = await VendorPaymentConfigModel.findOne({ vendorId: vendor._id }).lean();
+            const existing = await VendorPaymentConfigModel.findOne({
+                vendorId: vendor._id,
+            }).lean();
             const config = await VendorPaymentConfigModel.findOneAndUpdate(
                 { vendorId: vendor._id },
                 {

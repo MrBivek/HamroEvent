@@ -273,21 +273,21 @@ export default function VendorBookings() {
                 <TabsList>
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="pending">Pending</TabsTrigger>
-                <TabsTrigger value="accepted">Accepted</TabsTrigger>
-                <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="mt-6 space-y-4">
-                {bookingsList}
-            </TabsContent>
-            <TabsContent value="pending" className="mt-6 space-y-4">
-                {bookingsList}
-            </TabsContent>
-            <TabsContent value="accepted" className="mt-6 space-y-4">
-                {bookingsList}
-            </TabsContent>
-            <TabsContent value="confirmed" className="mt-6 space-y-4">
-                {bookingsList}
-            </TabsContent>
+                    <TabsTrigger value="accepted">Accepted</TabsTrigger>
+                    <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-6 space-y-4">
+                    {bookingsList}
+                </TabsContent>
+                <TabsContent value="pending" className="mt-6 space-y-4">
+                    {bookingsList}
+                </TabsContent>
+                <TabsContent value="accepted" className="mt-6 space-y-4">
+                    {bookingsList}
+                </TabsContent>
+                <TabsContent value="confirmed" className="mt-6 space-y-4">
+                    {bookingsList}
+                </TabsContent>
             </Tabs>
         </div>
     );
