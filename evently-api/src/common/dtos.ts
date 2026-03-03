@@ -2,6 +2,7 @@ import {
     mapVerificationStatusToUi,
     formatEventType,
     mapBookingStatusToUi,
+    mapQuoteStatusToUi,
     toUiUser,
 } from "./mappers.js";
 import type { VendorDoc } from "../modules/vendors/vendor.model.js";
@@ -13,6 +14,7 @@ import type { UserDoc } from "../modules/auth/user.model.js";
 import type { EventDoc } from "../modules/events/event.model.js";
 import type { BookingDoc } from "../modules/bookings/booking.model.js";
 import type { MessageDoc } from "../modules/conversations/message.model.js";
+import type { QuoteDoc } from "../modules/quotes/quote.model.js";
 
 const DEFAULT_VENDOR_MEDIA = "/uploads/placeholders/vendor.svg";
 
@@ -75,7 +77,7 @@ export function buildVendorProfile({
         _id: vendor._id.toString(),
         userId: vendor.userId.toString(),
         businessName: vendor.businessName,
-        category: category?.slug ?? "",
+        category: category?.name ?? category?.slug ?? "",
         description: vendor.description ?? "",
         location: vendor.locationText ?? location?.name ?? vendor.serviceAreas?.[0] ?? "",
         serviceAreas: vendor.serviceAreas ?? [],
@@ -154,6 +156,7 @@ export function buildBookingDto({
         eventId: booking.eventId.toString(),
         packageId: booking.packageId?.toString(),
         eventType: event ? formatEventType(event.eventType) : "",
+        eventTitle: event?.title ?? "",
         date: event?.eventDate ? event.eventDate.toISOString() : "",
         timeRange: {
             start: event?.startTime ?? "",
@@ -183,5 +186,25 @@ export function buildBookingDto({
                   createdAt: msg.createdAt?.toISOString(),
               }))
             : undefined,
+    };
+}
+
+export function buildQuoteDto(quote: QuoteDoc, bookingStatus?: string) {
+    return {
+        _id: quote._id.toString(),
+        bookingId: quote.bookingId.toString(),
+        vendorId: quote.vendorId.toString(),
+        customerId: quote.customerId.toString(),
+        amount: quote.amount,
+        message: quote.message,
+        status: mapQuoteStatusToUi(quote.status),
+        packageInclusions: quote.packageInclusions ?? [],
+        customInclusions: quote.customInclusions ?? [],
+        customerApproved: Boolean(quote.customerApproved),
+        vendorApproved: Boolean(quote.vendorApproved),
+        lastUpdatedBy: quote.lastUpdatedBy ? quote.lastUpdatedBy.toLowerCase() : undefined,
+        bookingStatus,
+        createdAt: quote.createdAt?.toISOString(),
+        updatedAt: quote.updatedAt?.toISOString(),
     };
 }

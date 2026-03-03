@@ -31,7 +31,7 @@ export const useShortlistStore = create<ShortlistStore>()(
                     }));
                     toast({
                         title: "Error",
-                        description: "Please log in to shortlist the following venddor.",
+                        description: "Please log in to favorite this vendor.",
                         variant: "destructive"
                     });
                 }

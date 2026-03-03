@@ -126,13 +126,22 @@ export type BookingStatus =
     | "completed"
     | "rejected"
     | "cancelled"
-    | "reschedule-proposed";
+    | "reschedule-proposed"
+    | "proposal";
 
 export interface BookingHistoryEntry {
     status: BookingStatus;
     byRole: UserRole;
     at: string;
     note?: string;
+    meta?: {
+        quoteId?: string;
+        amount?: number;
+        message?: string;
+        packageInclusions?: string[];
+        customInclusions?: string[];
+        updatedBy?: "customer" | "vendor";
+    };
 }
 
 export interface Booking {
@@ -142,6 +151,7 @@ export interface Booking {
     eventId?: string;
     packageId?: string;
     eventType: string;
+    eventTitle?: string;
     date: string;
     timeRange: {
         start: string;
@@ -166,6 +176,7 @@ export interface Booking {
     packageInclusions?: string[];
     messages?: BookingMessage[];
     customerName?: string;
+    hasQuote?: boolean;
 }
 
 // Event Types
@@ -305,9 +316,16 @@ export interface Quote {
     _id: string;
     bookingId: string;
     vendorId?: string;
+    customerId?: string;
     amount: number;
-    note?: string;
+    message?: string;
     status: QuoteStatus;
+    packageInclusions?: string[];
+    customInclusions?: string[];
+    customerApproved?: boolean;
+    vendorApproved?: boolean;
+    lastUpdatedBy?: "customer" | "vendor";
+    bookingStatus?: BookingStatus;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -323,6 +341,11 @@ export interface Payment {
     payUrl?: string;
     createdAt?: string;
     updatedAt?: string;
+    paidAt?: string;
+    vendorId?: string;
+    vendorName?: string;
+    eventId?: string;
+    eventTitle?: string;
 }
 
 export interface Refund {
@@ -423,6 +446,31 @@ export interface VendorPayout {
     amount: number;
     status: "completed" | "pending" | "failed";
     date: string;
+}
+
+export interface VendorPaymentConfig {
+    khalti?: {
+        publicKey?: string;
+        secretKey?: string;
+        mode?: "sandbox" | "live";
+    };
+    esewa?: {
+        merchantCode?: string;
+        secretKey?: string;
+        mode?: "sandbox" | "live";
+    };
+}
+
+export interface VendorPaymentRecord {
+    id: string;
+    bookingId: string;
+    amount: number;
+    provider: string;
+    status: string;
+    createdAt?: string;
+    paidAt?: string;
+    eventTitle?: string;
+    customerName?: string;
 }
 
 export interface AdminDashboardStats {

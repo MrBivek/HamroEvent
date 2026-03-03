@@ -43,7 +43,7 @@ export default function CustomerShortlist() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">My Shortlist</h1>
+                    <h1 className="text-2xl font-bold text-foreground">My Favorites</h1>
                     <p className="text-muted-foreground">
                         {vendors.length} vendor{vendors.length !== 1 ? "s" : ""} saved
                     </p>
@@ -118,7 +118,7 @@ export default function CustomerShortlist() {
                 <Card className="py-16 text-center">
                     <CardContent>
                         <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-foreground mb-2">No vendors shortlisted</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">No favorite vendors yet</h3>
                         <p className="text-muted-foreground mb-4">Save vendors you like to compare them later</p>
                         <Button variant="hero" asChild>
                             <Link to="/vendors">Browse Vendors</Link>

@@ -39,7 +39,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 export const getErrorMessage = (error: unknown, fallback: string) => {
     if (!error) return fallback;
     if (typeof error === "string") return error;
-    if (error instanceof Error && error.message) return error.message;
     if (isRecord(error) && "body" in error) {
         const body = (error as ErrorWithBody).body;
         if (isRecord(body)) {
@@ -49,5 +48,18 @@ export const getErrorMessage = (error: unknown, fallback: string) => {
             if (typeof err === "string" && err.trim().length > 0) return err;
         }
     }
+    if (isRecord(error) && "response" in error) {
+        const response = (error as { response?: unknown }).response;
+        if (isRecord(response) && "data" in response) {
+            const data = (response as { data?: unknown }).data;
+            if (isRecord(data)) {
+                const msg = (data as ErrorBody).message;
+                if (typeof msg === "string" && msg.trim().length > 0) return msg;
+                const err = (data as ErrorBody).error;
+                if (typeof err === "string" && err.trim().length > 0) return err;
+            }
+        }
+    }
+    if (error instanceof Error && error.message) return error.message;
     return fallback;
 };

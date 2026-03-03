@@ -85,6 +85,7 @@ const App = () => {
                                 <Route path="/customer/events/:id" element={<CustomerEventDetail />} />
                                 <Route path="/customer/bookings" element={<CustomerBookings />} />
                                 <Route path="/customer/bookings/:id" element={<CustomerBookingDetail />} />
+                                <Route path="/customer/favorites" element={<CustomerShortlist />} />
                                 <Route path="/customer/shortlist" element={<CustomerShortlist />} />
                                 <Route path="/customer/profile" element={<CustomerProfile />} />
                                 <Route path="/customer/notifications" element={<CustomerNotifications />} />

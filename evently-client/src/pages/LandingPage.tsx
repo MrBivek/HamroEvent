@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Star, Users, Calendar, Shield, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, Star, Users, Calendar, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
@@ -12,6 +12,7 @@ import { MarketplaceService } from "@/services/MarketplaceService";
 import { getCategoryMeta } from "@/data/catalog";
 import { VENDOR_PLACEHOLDER } from "@/lib/api";
 import type { Category, VendorProfile } from "@/types";
+import { useAuthStore } from "@/store/authStore.ts";
 
 const stats = [
     { value: "500+", label: "Verified Vendors" },
@@ -80,29 +81,30 @@ export default function LandingPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [featuredVendors, setFeaturedVendors] = useState<VendorProfile[]>([]);
 
+    const { user } = useAuthStore();
+    const canShortlist = user?.role === "customer";
+
     useEffect(() => {
-        let active = true;
         const load = async () => {
-            try {
-                const [categoriesRes, vendorsRes] = await Promise.all([
-                    CatalogService.getApiCategories({ active: true }),
-                    MarketplaceService.getApiVendors({ verified: true, limit: 4 })
-                ]);
-                if (!active) return;
-                setCategories(categoriesRes?.items || []);
-                setFeaturedVendors(vendorsRes?.items || []);
-            } catch {
-                if (!active) return;
+            const [categoriesRes, vendorsRes] = await Promise.allSettled([
+                CatalogService.getApiCategories({ active: true }),
+                MarketplaceService.getApiVendors({ verified: true, limit: 4 })
+            ]);
+
+            if (categoriesRes.status === "fulfilled") {
+                setCategories(categoriesRes.value?.items || []);
+            } else {
                 setCategories([]);
+            }
+
+            if (vendorsRes.status === "fulfilled") {
+                setFeaturedVendors(vendorsRes.value?.items || []);
+            } else {
                 setFeaturedVendors([]);
             }
         };
-        load();
-        return () => {
-            active = false;
-        };
+        load().then(r => r);
     }, []);
-
     return (
         <div className="min-h-screen overflow-hidden">
             {/* Hero Section */}
@@ -211,25 +213,23 @@ export default function LandingPage() {
                             const value = category.slug || category.name || category._id;
                             const meta = getCategoryMeta(category.slug || category.name);
                             return (
-                                <motion.div key={category._id || value} variants={itemVariants}>
-                                    <Link to={`/vendors?category=${value}`}>
-                                        <Card variant="interactive" className="h-full hover-lift group">
-                                            <CardContent className="p-6 text-center">
-                                                <motion.div
-                                                    whileHover={{ scale: 1.2, rotate: 5 }}
-                                                    transition={{ type: "spring", stiffness: 300 }}
-                                                    className="text-4xl mb-3"
-                                                >
-                                                    {meta.icon}
-                                                </motion.div>
-                                                <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                                                    {meta.label || category.name}
-                                                </h3>
-                                                <p className="text-sm text-muted-foreground">{meta.description}</p>
-                                            </CardContent>
-                                        </Card>
-                                    </Link>
-                                </motion.div>
+                                <Link to={`/vendors?category=${value}`} key={category._id}>
+                                    <Card variant="interactive" key={category._id} className="h-full hover-lift group">
+                                        <CardContent className="p-6 text-center">
+                                            <motion.div
+                                                whileHover={{ scale: 1.2, rotate: 5 }}
+                                                transition={{ type: "spring", stiffness: 300 }}
+                                                className="text-4xl mb-3"
+                                            >
+                                                {meta.icon}
+                                            </motion.div>
+                                            <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                                                {meta.label || category.name}
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">{meta.description}</p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
                             );
                         })}
                     </motion.div>
@@ -261,7 +261,7 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {featuredVendors.map((vendor, index) => (
-                            <VendorCard key={vendor._id} vendor={vendor} index={index} />
+                            <VendorCard key={vendor._id} vendor={vendor} index={index} canShortlist={canShortlist} />
                         ))}
                     </div>
                 </div>

@@ -11,14 +11,185 @@ import { RefundModel } from "./refund.model.js";
 import { PayoutModel } from "./payout.model.js";
 import { EventModel } from "../events/event.model.js";
 import { UserModel } from "../auth/user.model.js";
-import { CreatePayoutSchema } from "./payments.schemas.js";
+import {
+    CreatePayoutSchema,
+    VendorPaymentConfigSchema,
+    VendorPaymentListQuerySchema,
+} from "./payments.schemas.js";
 import { formatEventType } from "../../common/mappers.js";
+import { VendorPaymentConfigModel } from "./vendor-payment-config.model.js";
 
 export const vendorPaymentsRoutes = Router();
 
 function getMonthKey(date: Date) {
     return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
 }
+
+/**
+ * @openapi
+ * /api/vendors/me/payments/config:
+ *   get:
+ *     tags: [Vendor Payments]
+ *     summary: Get vendor payment configuration
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: OK }
+ */
+vendorPaymentsRoutes.get(
+    "/me/payments/config",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    async (req, res, next) => {
+        try {
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+            const config = await VendorPaymentConfigModel.findOne({ vendorId: vendor._id }).lean();
+            res.json(config || null);
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
+/**
+ * @openapi
+ * /api/vendors/me/payments/config:
+ *   put:
+ *     tags: [Vendor Payments]
+ *     summary: Update vendor payment configuration
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               khalti:
+ *                 type: object
+ *                 properties:
+ *                   publicKey: { type: string }
+ *                   secretKey: { type: string }
+ *                   mode: { type: string, enum: [sandbox, live] }
+ *               esewa:
+ *                 type: object
+ *                 properties:
+ *                   merchantCode: { type: string }
+ *                   secretKey: { type: string }
+ *                   mode: { type: string, enum: [sandbox, live] }
+ *     responses:
+ *       200: { description: OK }
+ */
+vendorPaymentsRoutes.put(
+    "/me/payments/config",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    validateBody(VendorPaymentConfigSchema),
+    async (req, res, next) => {
+        try {
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+            const existing = await VendorPaymentConfigModel.findOne({ vendorId: vendor._id }).lean();
+            const config = await VendorPaymentConfigModel.findOneAndUpdate(
+                { vendorId: vendor._id },
+                {
+                    $set: {
+                        vendorId: vendor._id,
+                        khalti: req.body.khalti ?? existing?.khalti,
+                        esewa: req.body.esewa ?? existing?.esewa,
+                    },
+                },
+                { new: true, upsert: true },
+            ).lean();
+
+            res.json(config);
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
+/**
+ * @openapi
+ * /api/vendors/me/payments:
+ *   get:
+ *     tags: [Vendor Payments]
+ *     summary: List vendor payments (optional booking filter)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: bookingId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: number, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: number, default: 20 }
+ *     responses:
+ *       200: { description: OK }
+ */
+vendorPaymentsRoutes.get(
+    "/me/payments",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    async (req, res, next) => {
+        try {
+            const q = VendorPaymentListQuerySchema.parse(req.query);
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+            const bookings = await BookingModel.find({ vendorId: vendor._id }).lean();
+            const bookingIds = bookings.map((b) => b._id);
+
+            if (q.bookingId && !mongoose.isValidObjectId(q.bookingId)) {
+                throw new NotFoundError("Booking not found");
+            }
+
+            const filter: Record<string, unknown> = { bookingId: { $in: bookingIds } };
+            if (q.bookingId) {
+                const match = bookingIds.find((id) => id.toString() === q.bookingId);
+                if (!match) throw new NotFoundError("Booking not found");
+                filter.bookingId = new mongoose.Types.ObjectId(q.bookingId);
+            }
+
+            const skip = (q.page - 1) * q.limit;
+            const [payments, total, events, customers] = await Promise.all([
+                PaymentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(q.limit).lean(),
+                PaymentModel.countDocuments(filter),
+                EventModel.find({ _id: { $in: bookings.map((b) => b.eventId) } }).lean(),
+                UserModel.find({ _id: { $in: bookings.map((b) => b.userId) } }).lean(),
+            ]);
+
+            const bookingMap = new Map(bookings.map((b) => [b._id.toString(), b]));
+            const eventMap = new Map(events.map((e) => [e._id.toString(), e]));
+            const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+
+            const items = payments.map((payment) => {
+                const booking = bookingMap.get(payment.bookingId.toString());
+                const event = booking ? eventMap.get(booking.eventId.toString()) : undefined;
+                const customer = booking ? customerMap.get(booking.userId.toString()) : undefined;
+                return {
+                    id: payment._id.toString(),
+                    bookingId: payment.bookingId.toString(),
+                    amount: payment.amount,
+                    provider: payment.provider,
+                    status: payment.status,
+                    createdAt: payment.createdAt?.toISOString(),
+                    paidAt: payment.paidAt?.toISOString(),
+                    eventTitle: event?.title,
+                    customerName: customer?.fullName ?? customer?.name ?? "Customer",
+                };
+            });
+
+            res.json({ items, page: q.page, limit: q.limit, total });
+        } catch (err) {
+            next(err);
+        }
+    },
+);
 
 /**
  * @openapi

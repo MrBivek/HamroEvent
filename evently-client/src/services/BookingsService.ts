@@ -69,4 +69,29 @@ export class BookingsService {
             }
         });
     }
+
+    /**
+     * Cancel a booking (Customer only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static patchApiBookingsCancel({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody?: {
+            reason?: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/bookings/{id}/cancel",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
 }

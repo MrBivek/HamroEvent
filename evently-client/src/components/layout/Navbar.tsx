@@ -49,7 +49,31 @@ export function Navbar() {
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary">
-                        <span className="text-lg font-bold text-primary-foreground">E</span>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M3.41 11.3701V14.5501C3.41 15.7301 4.19001 17.2801 5.14001 17.9901L9.44 21.2001C10.85 22.2601 13.17 22.2601 14.58 21.2001L18.88 17.9901C19.83 17.2801 20.61 15.7301 20.61 14.5501V7.12006C20.61 5.89006 19.67 4.53006 18.52 4.10006L13.53 2.23006C12.7 1.92006 11.34 1.92006 10.51 2.23006L5.51999 4.10006C4.36999 4.53006 3.42999 5.89006 3.42999 7.12006"
+                                stroke="#fff"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M16 11.5C16 9.29 14.21 7.5 12 7.5C9.79 7.5 8 9.29 8 11.5C8 13.71 9.79 15.5 12 15.5C12.71 15.5 13.37 15.32 13.95 14.99"
+                                stroke="#fff"
+                                stroke-width="1.5"
+                                stroke-miterlimit="10"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M12.25 10.25V11.18C12.25 11.53 12.07 11.86 11.76 12.04L11 12.5"
+                                stroke="#fff"
+                                stroke-width="1.5"
+                                stroke-miterlimit="10"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
                     </div>
                     <span className="text-xl font-bold text-foreground">
                         Evently

@@ -25,6 +25,7 @@ const BookingSchema = new Schema(
                 byRole: { type: String, required: true },
                 at: { type: Date, required: true },
                 note: { type: String },
+                meta: { type: Schema.Types.Mixed },
             },
         ],
 

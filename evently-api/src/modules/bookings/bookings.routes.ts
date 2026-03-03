@@ -2,10 +2,10 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, BookingStatus, NotificationType } from "../../common/enums.js";
+import { UserRole, BookingStatus, NotificationType, QuoteStatus } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { BookingModel } from "./booking.model.js";
-import { CreateBookingSchema, BookingListQuerySchema } from "./bookings.schemas.js";
+import { CreateBookingSchema, BookingListQuerySchema, CancelBookingSchema } from "./bookings.schemas.js";
 import { EventModel } from "../events/event.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
@@ -14,11 +14,14 @@ import { AvailabilityModel } from "../availability/availability.model.js";
 import { CategoryModel } from "../categories/category.model.js";
 import { LocationModel } from "../locations/location.model.js";
 import { UserModel } from "../auth/user.model.js";
-import { buildBookingDto, buildVendorProfile } from "../../common/dtos.js";
-import { mapUiBookingStatusToInternal } from "../../common/mappers.js";
+import { buildBookingDto, buildVendorProfile, buildQuoteDto } from "../../common/dtos.js";
+import { mapUiBookingStatusToInternal, mapBookingStatusToUi } from "../../common/mappers.js";
 import { ConversationModel } from "../conversations/conversation.model.js";
 import { MessageModel } from "../conversations/message.model.js";
 import { normalizeTimeRange, rangeWithinSlot } from "../../common/time.js";
+import { QuoteModel } from "../quotes/quote.model.js";
+import { CustomerQuoteSchema } from "../quotes/quotes.schemas.js";
+import { emitBookingUpdate, emitQuoteUpdate } from "../../socket.js";
 
 export const bookingsRoutes = Router();
 
@@ -106,7 +109,7 @@ bookingsRoutes.post(
             if (availability && availability.isAvailable === false) {
                 throw new BadRequestError("Vendor is not available on the event date");
             }
-            if (availability?.slots && availability.slots.length > 0) {
+            if (availability && availability.slots && availability.slots.length > 0) {
                 const eventRange = normalizeTimeRange(event.startTime, event.endTime);
                 if (!eventRange) {
                     throw new BadRequestError(
@@ -125,6 +128,16 @@ bookingsRoutes.post(
             if (packageId) {
                 const pkg = await PackageModel.findOne({ _id: packageId, vendorId }).lean();
                 if (!pkg) throw new NotFoundError("Package not found for this vendor");
+            }
+
+            const existingBooking = await BookingModel.findOne({
+                userId,
+                vendorId: new mongoose.Types.ObjectId(vendorId),
+                eventId: new mongoose.Types.ObjectId(eventId),
+                status: { $nin: [BookingStatus.CANCELLED, BookingStatus.REJECTED] },
+            }).lean();
+            if (existingBooking) {
+                throw new BadRequestError("You already have a booking with this vendor for that event");
             }
 
             const booking = await BookingModel.create({
@@ -358,3 +371,262 @@ bookingsRoutes.get("/:id", requireAuth, requireRole(UserRole.CUSTOMER), async (r
         next(err);
     }
 });
+
+/**
+ * @openapi
+ * /api/bookings/{id}/cancel:
+ *   patch:
+ *     tags: [Bookings]
+ *     summary: Cancel a booking (Customer only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Invalid transition }
+ *       404: { description: Booking not found }
+ */
+bookingsRoutes.patch(
+    "/:id/cancel",
+    requireAuth,
+    requireRole(UserRole.CUSTOMER),
+    validateBody(CancelBookingSchema),
+    async (req, res, next) => {
+        try {
+            const id = String(req.params.id);
+            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+
+            const booking = await BookingModel.findOne({
+                _id: new mongoose.Types.ObjectId(id),
+                userId: new mongoose.Types.ObjectId(req.auth!.sub),
+            });
+            if (!booking) throw new NotFoundError("Booking not found");
+
+            if (booking.status === BookingStatus.REJECTED) {
+                throw new BadRequestError("Rejected bookings cannot be cancelled");
+            }
+            if (booking.status === BookingStatus.ACCEPTED) {
+                throw new BadRequestError("Accepted bookings cannot be cancelled");
+            }
+            if (booking.status === BookingStatus.CANCELLED) {
+                throw new BadRequestError("Booking already cancelled");
+            }
+            if (booking.status === BookingStatus.COMPLETED) {
+                throw new BadRequestError("Completed bookings cannot be cancelled");
+            }
+
+            const history = (booking.history ?? []) as any[];
+            history.push({
+                status: "cancelled",
+                byRole: "customer",
+                at: new Date(),
+                note: req.body.reason || "Cancelled by customer",
+            });
+            booking.status = BookingStatus.CANCELLED;
+            booking.history = history as any;
+
+            await booking.save();
+
+            const [event, vendor, pkg] = await Promise.all([
+                EventModel.findById(booking.eventId).lean(),
+                VendorModel.findById(booking.vendorId).lean(),
+                booking.packageId
+                    ? PackageModel.findById(booking.packageId).lean()
+                    : Promise.resolve(null),
+            ]);
+            const vendorUser = vendor ? await UserModel.findById(vendor.userId).lean() : null;
+            const vendorProfile = vendor
+                ? buildVendorProfile({
+                      vendor,
+                      user: vendorUser,
+                      category: null,
+                      location: null,
+                      packages: [],
+                      documents: [],
+                      includePackages: false,
+                  })
+                : null;
+
+            if (vendorUser?._id) {
+                await createNotification({
+                    userId: vendorUser._id.toString(),
+                    type: NotificationType.BOOKING_CANCELLED,
+                    title: "Booking cancelled",
+                    body: "A customer cancelled a booking request.",
+                    link: `/vendor/bookings/${booking._id.toString()}`,
+                });
+            }
+
+            const dto = buildBookingDto({
+                booking: booking.toObject(),
+                event,
+                vendorProfile,
+                packageTitle: pkg?.title,
+                packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+                packageInclusions: pkg?.includes ?? [],
+            });
+
+            if (vendorUser?._id) {
+                emitBookingUpdate([booking.userId.toString(), vendorUser._id.toString()], {
+                    bookingId: booking._id.toString(),
+                    bookingStatus: dto.status,
+                    history: dto.history,
+                });
+            }
+
+            res.json(dto);
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
+/**
+ * @openapi
+ * /api/bookings/{id}/quote:
+ *   post:
+ *     tags: [Quotes]
+ *     summary: Create or update a quote proposal (Customer only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [amount]
+ *             properties:
+ *               amount: { type: number }
+ *               message: { type: string }
+ *               packageInclusions:
+ *                 type: array
+ *                 items: { type: string }
+ *               customInclusions:
+ *                 type: array
+ *                 items: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Invalid request }
+ */
+bookingsRoutes.post(
+    "/:id/quote",
+    requireAuth,
+    requireRole(UserRole.CUSTOMER),
+    validateBody(CustomerQuoteSchema),
+    async (req, res, next) => {
+        try {
+            const id = String(req.params.id);
+            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+
+            const booking = await BookingModel.findOne({
+                _id: new mongoose.Types.ObjectId(id),
+                userId: new mongoose.Types.ObjectId(req.auth!.sub),
+            });
+            if (!booking) throw new NotFoundError("Booking not found");
+
+            const allowedStatuses: BookingStatus[] = [BookingStatus.REQUESTED];
+            if (!allowedStatuses.includes(booking.status as BookingStatus)) {
+                throw new BadRequestError("Quotes can only be edited while booking is pending");
+            }
+
+            let packageInclusions = req.body.packageInclusions ?? [];
+            const customInclusions = req.body.customInclusions ?? [];
+            if (booking.packageId) {
+                const pkg = await PackageModel.findById(booking.packageId).lean();
+                if (pkg) {
+                    const allowed = new Set(
+                        (pkg.includes ?? []).map((item: string) => item.trim()),
+                    );
+                    if (packageInclusions.length === 0) {
+                        packageInclusions = Array.from(allowed);
+                    }
+                    const invalid = packageInclusions.filter(
+                        (item: string) => !allowed.has(item.trim()),
+                    );
+                    if (invalid.length) {
+                        throw new BadRequestError("Invalid package inclusions selected");
+                    }
+                }
+            }
+
+            const existing = await QuoteModel.findOne({ bookingId: booking._id });
+            let quote = existing;
+            if (!quote) {
+                quote = await QuoteModel.create({
+                    bookingId: booking._id,
+                    vendorId: booking.vendorId,
+                    customerId: booking.userId,
+                    amount: req.body.amount,
+                    message: req.body.message,
+                    packageInclusions,
+                    customInclusions,
+                    customerApproved: false,
+                    vendorApproved: false,
+                    lastUpdatedBy: UserRole.CUSTOMER,
+                    status: QuoteStatus.PENDING,
+                });
+            } else {
+                if (quote.status !== QuoteStatus.PENDING) {
+                    throw new BadRequestError("Only PENDING quotes can be updated");
+                }
+                quote.amount = req.body.amount;
+                quote.message = req.body.message;
+                quote.packageInclusions = packageInclusions;
+                quote.customInclusions = customInclusions;
+                quote.customerApproved = false;
+                quote.vendorApproved = false;
+                quote.lastUpdatedBy = UserRole.CUSTOMER;
+                quote.status = QuoteStatus.PENDING;
+                await quote.save();
+            }
+
+            const history = (booking.history ?? []) as any[];
+            history.push({
+                status: "proposal",
+                byRole: "customer",
+                at: new Date(),
+                note: existing ? "Proposal updated by customer" : "Proposal submitted by customer",
+                meta: {
+                    quoteId: quote._id.toString(),
+                    amount: quote.amount,
+                    message: quote.message,
+                    packageInclusions: quote.packageInclusions ?? [],
+                    customInclusions: quote.customInclusions ?? [],
+                    updatedBy: "customer",
+                },
+            });
+            booking.history = history as any;
+            await booking.save();
+
+            const dto = buildQuoteDto(quote, mapBookingStatusToUi(booking.status));
+            const vendor = await VendorModel.findById(booking.vendorId).lean();
+            if (vendor) {
+                emitQuoteUpdate([booking.userId.toString(), vendor.userId.toString()], dto);
+                emitBookingUpdate([booking.userId.toString(), vendor.userId.toString()], {
+                    bookingId: booking._id.toString(),
+                    bookingStatus: mapBookingStatusToUi(booking.status),
+                    history: booking.history ?? [],
+                });
+            }
+            res.json(dto);
+        } catch (err) {
+            next(err);
+        }
+    },
+);

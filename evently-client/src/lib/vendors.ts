@@ -11,6 +11,13 @@ type VendorQueryParams = {
     date?: string;
     startTime?: string;
     endTime?: string;
+    q?: string;
+    category?: string;
+    location?: string;
+    minRating?: number;
+    priceMin?: number;
+    priceMax?: number;
+    sortBy?: string;
     page?: number;
     limit?: number;
 };
@@ -42,10 +49,30 @@ export const fetchAvailableVendors = async ({
     date,
     startTime,
     endTime,
+    q,
+    category,
+    location,
+    minRating,
+    priceMin,
+    priceMax,
+    sortBy,
     page = 1,
     limit = 20
 }: VendorQueryParams): Promise<VendorListResponse> => {
-    const query = buildQuery({ date, startTime, endTime, page, limit });
+    const query = buildQuery({
+        date,
+        startTime,
+        endTime,
+        q,
+        category,
+        location,
+        minRating,
+        priceMin,
+        priceMax,
+        sortBy,
+        page,
+        limit
+    });
     const res = await fetch(`${API_BASE}/api/vendors${query}`);
     if (!res.ok) {
         throw new Error("Failed to load vendors");

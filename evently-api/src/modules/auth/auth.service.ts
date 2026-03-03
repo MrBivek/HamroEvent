@@ -23,6 +23,7 @@ import { DocumentModel } from "../documents/document.model.js";
 import { createNotificationsForAdmins } from "../notifications/notifications.service.js";
 import { EmailOtpModel } from "./email-otp.model.js";
 import { sendEmail } from "../../common/email.js";
+import { buildOtpEmail } from "../../common/emailTemplates.js";
 
 function signToken(userId: string, role: UserRole) {
     const expiresIn = env.JWT_EXPIRES_IN as SignOptions["expiresIn"];
@@ -58,10 +59,12 @@ async function issueOtp(user: { _id: mongoose.Types.ObjectId; email: string }) {
         { upsert: true, new: true },
     );
 
+    const email = buildOtpEmail({ otp, expiresMinutes: env.OTP_EXPIRES_MINUTES });
     await sendEmail({
         to: user.email,
-        subject: "Evently account verification",
-        text: `Your verification code is ${otp}. It expires in ${env.OTP_EXPIRES_MINUTES} minutes.`,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
     });
 
     return { sent: true };

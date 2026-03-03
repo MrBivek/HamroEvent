@@ -34,10 +34,12 @@ export class PaymentsService {
      */
     public static getApiPayments({
         bookingId,
+        eventId,
         page = 1,
         limit = 20
     }: {
         bookingId?: string;
+        eventId?: string;
         page?: number;
         limit?: number;
     }): CancelablePromise<any> {
@@ -46,6 +48,7 @@ export class PaymentsService {
             url: "/api/payments",
             query: {
                 bookingId: bookingId,
+                eventId: eventId,
                 page: page,
                 limit: limit
             }

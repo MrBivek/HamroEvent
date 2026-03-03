@@ -64,3 +64,17 @@ export function emitMessage(conversationId: string, message: unknown) {
     if (!io) return;
     io.to(`conversation:${conversationId}`).emit("message:new", message);
 }
+
+export function emitQuoteUpdate(userIds: string[], payload: unknown) {
+    if (!io) return;
+    for (const id of userIds) {
+        io.to(`user:${id}`).emit("quote:update", payload);
+    }
+}
+
+export function emitBookingUpdate(userIds: string[], payload: unknown) {
+    if (!io) return;
+    for (const id of userIds) {
+        io.to(`user:${id}`).emit("booking:update", payload);
+    }
+}

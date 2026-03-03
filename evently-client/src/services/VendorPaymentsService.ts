@@ -7,6 +7,69 @@ import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class VendorPaymentsService {
     /**
+     * Get vendor payment configuration
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiVendorsMePaymentsConfig(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/vendors/me/payments/config"
+        });
+    }
+    /**
+     * Update vendor payment configuration
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static putApiVendorsMePaymentsConfig({
+        requestBody
+    }: {
+        requestBody: {
+            khalti?: {
+                publicKey?: string;
+                secretKey?: string;
+                mode?: "sandbox" | "live";
+            };
+            esewa?: {
+                merchantCode?: string;
+                secretKey?: string;
+                mode?: "sandbox" | "live";
+            };
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PUT",
+            url: "/api/vendors/me/payments/config",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+    /**
+     * List vendor payments (optional booking filter)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiVendorsMePayments({
+        bookingId,
+        page = 1,
+        limit = 20
+    }: {
+        bookingId?: string;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/vendors/me/payments",
+            query: {
+                bookingId: bookingId,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+    /**
      * Get vendor payment summary
      * @returns any OK
      * @throws ApiError

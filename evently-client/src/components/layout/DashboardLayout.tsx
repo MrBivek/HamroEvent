@@ -41,7 +41,7 @@ const customerNav: NavItem[] = [
     { href: "/customer/dashboard", label: "Dashboard", icon: Home },
     { href: "/customer/events", label: "My Events", icon: FolderOpen },
     { href: "/customer/bookings", label: "Bookings", icon: Calendar },
-    { href: "/customer/shortlist", label: "Shortlist", icon: Heart },
+    { href: "/customer/favorites", label: "Favorites", icon: Heart },
     { href: "/customer/notifications", label: "Notifications", icon: Bell },
     { href: "/customer/profile", label: "Profile", icon: User }
 ];
@@ -64,7 +64,6 @@ const adminNav: NavItem[] = [
     { href: "/admin/reviews", label: "Reviews", icon: Star },
     { href: "/admin/reports", label: "Reports", icon: BarChart3 },
     { href: "/admin/notifications", label: "Notifications", icon: Bell },
-    { href: "/admin/audit-logs", label: "Audit Logs", icon: FileText }
 ];
 
 const getNavItems = (role: UserRole): NavItem[] => {
@@ -105,6 +104,9 @@ export function DashboardLayout() {
         if (pathname === href) return true;
         if (href === "/customer/dashboard" || href === "/vendor/dashboard" || href === "/admin/dashboard") {
             return false;
+        }
+        if (href === "/customer/favorites" && pathname.startsWith("/customer/shortlist")) {
+            return true;
         }
         if (href === "/admin/vendors" && pathname.startsWith("/admin/vendors/pending")) {
             return false;

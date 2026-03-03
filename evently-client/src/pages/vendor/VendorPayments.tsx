@@ -16,11 +16,14 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Separator } from "@/components/ui/separator.tsx";
 import { motion } from "framer-motion";
 import { VendorPaymentsService } from "@/services/VendorPaymentsService";
 import { useToast } from "@/hooks/use-toast.ts";
 import { getErrorMessage } from "@/lib/api";
-import type { VendorPaymentSummary, VendorPaymentTransaction, VendorPayout } from "@/types";
+import type { VendorPaymentConfig, VendorPaymentSummary, VendorPaymentTransaction, VendorPayout } from "@/types";
 
 export default function VendorPayments() {
     const [period, setPeriod] = useState("month");
@@ -34,20 +37,26 @@ export default function VendorPayments() {
     });
     const [transactions, setTransactions] = useState<VendorPaymentTransaction[]>([]);
     const [payouts, setPayouts] = useState<VendorPayout[]>([]);
+    const [config, setConfig] = useState<VendorPaymentConfig>({});
+    const [configForm, setConfigForm] = useState<VendorPaymentConfig>({});
+    const [isSavingConfig, setIsSavingConfig] = useState(false);
 
     useEffect(() => {
         let active = true;
         const load = async () => {
             try {
-                const [summaryRes, txRes, payoutRes] = await Promise.all([
+                const [summaryRes, txRes, payoutRes, configRes] = await Promise.all([
                     VendorPaymentsService.getApiVendorsMePaymentsSummary(),
                     VendorPaymentsService.getApiVendorsMePaymentsTransactions(),
-                    VendorPaymentsService.getApiVendorsMePaymentsPayouts()
+                    VendorPaymentsService.getApiVendorsMePaymentsPayouts(),
+                    VendorPaymentsService.getApiVendorsMePaymentsConfig()
                 ]);
                 if (!active) return;
                 setSummary(summaryRes || summary);
                 setTransactions(txRes?.items || []);
                 setPayouts(payoutRes?.items || []);
+                setConfig(configRes || {});
+                setConfigForm(configRes || {});
             } catch {
                 if (!active) return;
                 setSummary({
@@ -59,6 +68,8 @@ export default function VendorPayments() {
                 });
                 setTransactions([]);
                 setPayouts([]);
+                setConfig({});
+                setConfigForm({});
             }
         };
         load();
@@ -82,6 +93,26 @@ export default function VendorPayments() {
                 description: getErrorMessage(error, "Please try again."),
                 variant: "destructive"
             });
+        }
+    };
+
+    const handleSaveConfig = async () => {
+        setIsSavingConfig(true);
+        try {
+            const saved = await VendorPaymentsService.putApiVendorsMePaymentsConfig({
+                requestBody: configForm
+            });
+            setConfig(saved || {});
+            setConfigForm(saved || {});
+            toast({ title: "Payment settings saved" });
+        } catch (error) {
+            toast({
+                title: "Failed to save settings",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsSavingConfig(false);
         }
     };
 
@@ -211,6 +242,7 @@ export default function VendorPayments() {
                 <TabsList>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
                     <TabsTrigger value="payouts">Payouts</TabsTrigger>
+                    <TabsTrigger value="settings">Payment Settings</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="transactions" className="mt-6 space-y-3">
@@ -297,6 +329,137 @@ export default function VendorPayments() {
                             </Card>
                         </motion.div>
                     ))}
+                </TabsContent>
+
+                <TabsContent value="settings" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Provider Keys</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-foreground">Khalti</h3>
+                                    <Badge variant="soft">
+                                        {config.khalti?.mode === "live" ? "Live" : "Sandbox"}
+                                    </Badge>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Public Key</Label>
+                                        <Input
+                                            value={configForm.khalti?.publicKey || ""}
+                                            onChange={(e) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    khalti: { ...(prev.khalti || {}), publicKey: e.target.value }
+                                                }))
+                                            }
+                                            placeholder="Khalti public key"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Secret Key</Label>
+                                        <Input
+                                            value={configForm.khalti?.secretKey || ""}
+                                            onChange={(e) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    khalti: { ...(prev.khalti || {}), secretKey: e.target.value }
+                                                }))
+                                            }
+                                            placeholder="Khalti secret key"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Mode</Label>
+                                        <Select
+                                            value={configForm.khalti?.mode || "sandbox"}
+                                            onValueChange={(value) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    khalti: { ...(prev.khalti || {}), mode: value as "sandbox" | "live" }
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Mode" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="sandbox">Sandbox</SelectItem>
+                                                <SelectItem value="live">Live</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-foreground">eSewa</h3>
+                                    <Badge variant="soft">
+                                        {config.esewa?.mode === "live" ? "Live" : "Sandbox"}
+                                    </Badge>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Merchant Code</Label>
+                                        <Input
+                                            value={configForm.esewa?.merchantCode || ""}
+                                            onChange={(e) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    esewa: { ...(prev.esewa || {}), merchantCode: e.target.value }
+                                                }))
+                                            }
+                                            placeholder="eSewa merchant code"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Secret Key</Label>
+                                        <Input
+                                            value={configForm.esewa?.secretKey || ""}
+                                            onChange={(e) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    esewa: { ...(prev.esewa || {}), secretKey: e.target.value }
+                                                }))
+                                            }
+                                            placeholder="eSewa secret key"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Mode</Label>
+                                        <Select
+                                            value={configForm.esewa?.mode || "sandbox"}
+                                            onValueChange={(value) =>
+                                                setConfigForm((prev) => ({
+                                                    ...prev,
+                                                    esewa: { ...(prev.esewa || {}), mode: value as "sandbox" | "live" }
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Mode" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="sandbox">Sandbox</SelectItem>
+                                                <SelectItem value="live">Live</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <Button onClick={handleSaveConfig} disabled={isSavingConfig}>
+                                    {isSavingConfig ? "Saving..." : "Save Settings"}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>

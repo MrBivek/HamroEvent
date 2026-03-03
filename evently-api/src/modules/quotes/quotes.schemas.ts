@@ -1,16 +1,32 @@
 import { z } from "zod";
 import { QuoteStatus } from "../../common/enums.js";
 
+const InclusionListSchema = z
+    .array(z.string().trim().min(1))
+    .max(50)
+    .optional();
+
 export const CreateQuoteSchema = z.object({
     amount: z.number().positive(),
     message: z.string().optional(),
+    packageInclusions: InclusionListSchema,
+    customInclusions: InclusionListSchema,
     expiresAt: z.string().optional(),
 });
 
 export const UpdateQuoteSchema = z.object({
     amount: z.number().positive().optional(),
     message: z.string().optional(),
+    packageInclusions: InclusionListSchema,
+    customInclusions: InclusionListSchema,
     expiresAt: z.string().optional(),
+});
+
+export const CustomerQuoteSchema = z.object({
+    amount: z.number().positive(),
+    message: z.string().optional(),
+    packageInclusions: InclusionListSchema,
+    customInclusions: InclusionListSchema,
 });
 
 export const QuoteListQuerySchema = z.object({

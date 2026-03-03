@@ -71,12 +71,49 @@ export default function CustomerBookings() {
     const filteredBookings = bookings.filter((booking) => {
         const vendorName = booking.vendorName || booking.vendor?.businessName || "";
         const category = booking.category || booking.vendor?.category || "";
+        const eventTitle = booking.eventTitle || "";
         const matchesSearch =
             vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            category.toLowerCase().includes(searchTerm.toLowerCase());
+            category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            eventTitle.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTab = activeTab === "all" || booking.status === activeTab;
         return matchesSearch && matchesTab;
     });
+
+    type BookingGroup = {
+        key: string;
+        eventId?: string;
+        title: string;
+        date: string;
+        eventType: string;
+        location: string;
+        bookings: Booking[];
+    };
+
+    const groupedBookings = filteredBookings.reduce(
+        (acc, booking) => {
+            const key = booking.eventId || `${booking.eventTitle || booking.eventType}-${booking.date}`;
+            let group = acc.map.get(key);
+            if (!group) {
+                group = {
+                    key,
+                    eventId: booking.eventId,
+                    title: booking.eventTitle || booking.eventType || "Event",
+                    date: booking.date,
+                    eventType: booking.eventType,
+                    location: booking.location,
+                    bookings: []
+                };
+                acc.map.set(key, group);
+                acc.list.push(group);
+            }
+            group.bookings.push(booking);
+            return acc;
+        },
+        { list: [] as BookingGroup[], map: new Map<string, BookingGroup>() }
+    ).list;
+
+    groupedBookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
         <div className="space-y-6">
@@ -110,77 +147,118 @@ export default function CustomerBookings() {
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-6">
-                    {filteredBookings.length > 0 ? (
-                        <div className="space-y-4">
-                            {filteredBookings.map((booking, index) => {
-                                const vendorName = booking.vendorName || booking.vendor?.businessName || "Vendor";
-                                const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
-                                const category = booking.category || booking.vendor?.category || "Service";
-                                const price = booking.price || 0;
-                                const location = booking.location || "";
-                                return (
-                                    <motion.div
-                                        key={booking._id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                    >
-                                        <Card variant="interactive">
-                                            <CardContent className="p-4">
-                                                <div className="flex flex-col sm:flex-row gap-4">
-                                                    <img
-                                                        src={resolveMediaUrl(vendorImage)}
-                                                        alt={vendorName}
-                                                        className="w-full sm:w-24 h-24 rounded-lg object-cover"
-                                                    />
-                                                    <div className="flex-1">
-                                                        <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                            <div>
-                                                                <h3 className="font-semibold text-foreground">
-                                                                    {vendorName}
-                                                                </h3>
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    {category}
-                                                                </p>
-                                                            </div>
-                                                            <Badge
-                                                                variant={getStatusVariant(booking.status)}
-                                                                className="capitalize gap-1"
-                                                            >
-                                                                {getStatusIcon(booking.status)}
-                                                                {booking.status}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar className="h-4 w-4" />
-                                                                {new Date(booking.date).toLocaleDateString("en-US", {
-                                                                    month: "short",
-                                                                    day: "numeric",
-                                                                    year: "numeric"
-                                                                })}
-                                                            </span>
-                                                            <span>{booking.eventType}</span>
-                                                            <span>{location}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="font-semibold text-foreground">
-                                                                NPR {price.toLocaleString()}
-                                                            </span>
-                                                            <Button variant="outline" size="sm" asChild>
-                                                                <Link to={`/customer/bookings/${booking._id}`}>
-                                                                    <MessageSquare className="h-4 w-4 mr-1" />
-                                                                    View Details
-                                                                </Link>
-                                                            </Button>
-                                                        </div>
-                                                    </div>
+                    {groupedBookings.length > 0 ? (
+                        <div className="space-y-6">
+                            {groupedBookings.map((group, groupIndex) => (
+                                <motion.div
+                                    key={group.key}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: groupIndex * 0.05 }}
+                                    className="space-y-4"
+                                >
+                                    <Card className="border-border/60 bg-muted/40">
+                                        <CardContent className="p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                            <div>
+                                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                    Event
+                                                </p>
+                                                <h3 className="text-lg font-semibold text-foreground">{group.title}</h3>
+                                                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="h-4 w-4" />
+                                                        {new Date(group.date).toLocaleDateString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric"
+                                                        })}
+                                                    </span>
+                                                    <span>{group.eventType}</span>
+                                                    <span>{group.location}</span>
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                );
-                            })}
+                                            </div>
+                                            {group.eventId && (
+                                                <Button variant="outline" asChild>
+                                                    <Link to={`/customer/events/${group.eventId}`}>View Event</Link>
+                                                </Button>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+
+                                    <div className="space-y-4">
+                                        {group.bookings.map((booking, index) => {
+                                            const vendorName =
+                                                booking.vendorName || booking.vendor?.businessName || "Vendor";
+                                            const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
+                                            const category = booking.category || booking.vendor?.category || "Service";
+                                            const price = booking.price || 0;
+                                            const location = booking.location || "";
+                                            return (
+                                                <motion.div
+                                                    key={booking._id}
+                                                    initial={{ opacity: 0, y: 16 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: index * 0.03 }}
+                                                >
+                                                    <Card variant="interactive">
+                                                        <CardContent className="p-4">
+                                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                                <img
+                                                                    src={resolveMediaUrl(vendorImage)}
+                                                                    alt={vendorName}
+                                                                    className="w-full sm:w-24 h-24 rounded-lg object-cover"
+                                                                />
+                                                                <div className="flex-1">
+                                                                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                                        <div>
+                                                                            <h3 className="font-semibold text-foreground">
+                                                                                {vendorName}
+                                                                            </h3>
+                                                                            <p className="text-sm text-muted-foreground">
+                                                                                {category}
+                                                                            </p>
+                                                                        </div>
+                                                                        <Badge
+                                                                            variant={getStatusVariant(booking.status)}
+                                                                            className="capitalize gap-1"
+                                                                        >
+                                                                            {getStatusIcon(booking.status)}
+                                                                            {booking.status}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Calendar className="h-4 w-4" />
+                                                                            {new Date(booking.date).toLocaleDateString("en-US", {
+                                                                                month: "short",
+                                                                                day: "numeric",
+                                                                                year: "numeric"
+                                                                            })}
+                                                                        </span>
+                                                                        <span>{booking.eventType}</span>
+                                                                        <span>{location}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">
+                                                                            NPR {price.toLocaleString()}
+                                                                        </span>
+                                                                        <Button variant="outline" size="sm" asChild>
+                                                                            <Link to={`/customer/bookings/${booking._id}`}>
+                                                                                <MessageSquare className="h-4 w-4 mr-1" />
+                                                                                View Details
+                                                                            </Link>
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            ))}
                         </div>
                     ) : (
                         <Card className="py-16 text-center">

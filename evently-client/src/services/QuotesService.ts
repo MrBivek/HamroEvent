@@ -31,6 +31,20 @@ export class QuotesService {
         });
     }
     /**
+     * Get quote for a booking (Customer or Vendor)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiQuotesBooking({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/quotes/booking/{id}",
+            path: {
+                id: id
+            }
+        });
+    }
+    /**
      * Accept a quote (Customer only)
      * @returns any OK
      * @throws ApiError
@@ -59,6 +73,36 @@ export class QuotesService {
         });
     }
     /**
+     * Create or update a quote proposal (Customer only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiBookingsQuote({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody: {
+            amount: number;
+            message?: string;
+            packageInclusions?: Array<string>;
+            customInclusions?: Array<string>;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/bookings/{id}/quote",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json",
+            errors: {
+                400: `Invalid request`
+            }
+        });
+    }
+    /**
      * Send a quote for a booking (Vendor only)
      * @returns any Created
      * @throws ApiError
@@ -71,6 +115,8 @@ export class QuotesService {
         requestBody: {
             amount: number;
             message?: string;
+            packageInclusions?: Array<string>;
+            customInclusions?: Array<string>;
             expiresAt?: string;
         };
     }): CancelablePromise<any> {
@@ -100,6 +146,8 @@ export class QuotesService {
         requestBody: {
             amount?: number;
             message?: string;
+            packageInclusions?: Array<string>;
+            customInclusions?: Array<string>;
             expiresAt?: string;
         };
     }): CancelablePromise<any> {
@@ -111,6 +159,34 @@ export class QuotesService {
             },
             body: requestBody,
             mediaType: "application/json"
+        });
+    }
+    /**
+     * Approve a quote (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiVendorsMeQuotesApprove({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/vendors/me/quotes/{id}/approve",
+            path: {
+                id: id
+            }
+        });
+    }
+    /**
+     * Reject a quote (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiVendorsMeQuotesReject({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/vendors/me/quotes/{id}/reject",
+            path: {
+                id: id
+            }
         });
     }
 }

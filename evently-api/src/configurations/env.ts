@@ -37,6 +37,8 @@ const EnvSchema = z.object({
             return val;
         }, z.boolean().default(false))
         .default(false),
+
+    CLIENT_URL: z.string().default("http://localhost:8085"),
 });
 
 export const env = EnvSchema.parse(process.env);

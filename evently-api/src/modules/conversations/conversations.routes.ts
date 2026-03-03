@@ -14,7 +14,7 @@ import {
 import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { createNotification } from "../notifications/notifications.service.js";
-import { NotificationType } from "../../common/enums.js";
+import { BookingStatus, NotificationType } from "../../common/enums.js";
 import { emitMessage } from "../../socket.js";
 
 export const conversationsRoutes = Router();
@@ -242,7 +242,18 @@ conversationsRoutes.post(
     async (req, res, next) => {
         try {
             const convoId = ensureObjectId(String(req.params.id), "Conversation not found");
-            await assertParticipant(convoId, req.auth!.sub);
+            const participantConvo = await assertParticipant(convoId, req.auth!.sub);
+
+            if (participantConvo.bookingId) {
+                const booking = await BookingModel.findById(participantConvo.bookingId).lean();
+                const blockedStatuses: BookingStatus[] = [
+                    BookingStatus.CANCELLED,
+                    BookingStatus.REJECTED,
+                ];
+                if (booking && blockedStatuses.includes(booking.status as BookingStatus)) {
+                    throw new BadRequestError("Messaging is disabled for cancelled bookings");
+                }
+            }
 
             const messageDoc = await MessageModel.create({
                 conversationId: convoId,
@@ -251,19 +262,19 @@ conversationsRoutes.post(
             });
             const message = messageDoc.toObject();
 
-            const convo = await ConversationModel.findByIdAndUpdate(
+            const updatedConvo = await ConversationModel.findByIdAndUpdate(
                 convoId,
                 { $set: { lastMessageAt: new Date() } },
                 { new: true },
             ).lean();
 
-            if (convo) {
-                const recipients = convo.participants.filter(
+            if (updatedConvo) {
+                const recipients = updatedConvo.participants.filter(
                     (id) => id.toString() !== req.auth!.sub,
                 );
                 if (recipients.length > 0) {
-                    const booking = convo.bookingId
-                        ? await BookingModel.findById(convo.bookingId).lean()
+                    const booking = updatedConvo.bookingId
+                        ? await BookingModel.findById(updatedConvo.bookingId).lean()
                         : null;
                     let vendorUserId: string | null = null;
                     if (booking) {

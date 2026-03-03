@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Calendar, Users, Star, Clock, BadgeCheck, AlertCircle, TrendingUp } from "lucide-react";
+import { Calendar, Users, Star, Clock, BadgeCheck, AlertCircle, MapPin, Package, Phone, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
@@ -129,44 +129,101 @@ export default function VendorDashboard() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {pendingBookings.map((booking) => (
-                            <div
-                                key={booking._id}
-                                className="flex items-center justify-between p-3 rounded-lg border border-border"
-                            >
-                                <div>
-                                    <p className="font-medium text-foreground">
-                                        {booking.customer?.name || booking.customerName || "Customer"}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {booking.eventType || "Event"} • {booking.packageName || "Package"}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(booking.date).toLocaleDateString()}
-                                    </p>
-                                    <div className="flex gap-2 mt-2">
-                                        <Button
-                                            size="sm"
-                                            variant="success"
-                                            onClick={() => handleDecision(booking._id, "ACCEPT")}
-                                        >
-                                            Accept
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleDecision(booking._id, "REJECT")}
-                                        >
-                                            Decline
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    {pendingBookings.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No pending requests.</p>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {pendingBookings.map((booking) => {
+                                const customerName = booking.customer?.name || booking.customerName || "Customer";
+                                const timeRange = booking.timeRange || { start: "--", end: "--" };
+                                const price = booking.price || 0;
+                                const customerPhone = booking.customer?.phone || "";
+                                const customerEmail = booking.customer?.email || "";
+                                return (
+                                    <Card key={booking._id} variant="interactive" className="border-dashed">
+                                        <CardContent className="p-4 space-y-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="font-medium text-foreground">{customerName}</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {booking.eventType || "Event"} •{" "}
+                                                        {booking.packageName || "Package"}
+                                                    </p>
+                                                </div>
+                                                <Badge variant="warning" className="capitalize">
+                                                    pending
+                                                </Badge>
+                                            </div>
+
+                                            <div className="grid gap-2 text-sm text-muted-foreground">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4" />
+                                                    <span>
+                                                        {new Date(booking.date).toLocaleDateString("en-US", {
+                                                            weekday: "short",
+                                                            month: "short",
+                                                            day: "numeric"
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span>
+                                                        {timeRange.start} - {timeRange.end}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4" />
+                                                    <span>{booking.location || "—"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Package className="h-4 w-4" />
+                                                    <span>NPR {price.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+
+                                            {(customerPhone || customerEmail) && (
+                                                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                                    {customerPhone && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Phone className="h-3.5 w-3.5" />
+                                                            {customerPhone}
+                                                        </span>
+                                                    )}
+                                                    {customerEmail && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Mail className="h-3.5 w-3.5" />
+                                                            {customerEmail}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="success"
+                                                    onClick={() => handleDecision(booking._id, "ACCEPT")}
+                                                >
+                                                    Accept
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleDecision(booking._id, "REJECT")}
+                                                >
+                                                    Decline
+                                                </Button>
+                                                <Button size="sm" variant="ghost" asChild>
+                                                    <Link to={`/vendor/bookings/${booking._id}`}>View</Link>
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

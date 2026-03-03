@@ -1,6 +1,7 @@
 import {
     BookingStatus,
     NotificationType,
+    QuoteStatus,
     UserRole,
     UserStatus,
     VerificationStatus,
@@ -59,6 +60,30 @@ export function mapBookingStatusToUi(status: BookingStatus) {
             return "cancelled";
         default:
             return "pending";
+    }
+}
+
+export function mapQuoteStatusToUi(status: QuoteStatus) {
+    return status.toLowerCase();
+}
+
+export function mapUiQuoteStatusToInternal(status?: string) {
+    if (!status) return undefined;
+    const normalized = status.toUpperCase();
+    if ((QuoteStatus as Record<string, string>)[normalized]) {
+        return normalized as QuoteStatus;
+    }
+    switch (status) {
+        case "pending":
+            return QuoteStatus.PENDING;
+        case "accepted":
+            return QuoteStatus.ACCEPTED;
+        case "rejected":
+            return QuoteStatus.REJECTED;
+        case "expired":
+            return QuoteStatus.EXPIRED;
+        default:
+            return undefined;
     }
 }
 

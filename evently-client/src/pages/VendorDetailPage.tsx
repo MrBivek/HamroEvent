@@ -53,6 +53,7 @@ export default function VendorDetailPage() {
     const [selectedPackageId, setSelectedPackageId] = useState("none");
     const [bookingNote, setBookingNote] = useState("");
     const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+    const [customerBookings, setCustomerBookings] = useState<Booking[]>([]);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
     const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
     const canBook = user?.role === "customer";
@@ -107,6 +108,25 @@ export default function VendorDetailPage() {
             active = false;
         };
     }, [canBook, selectedEventId]);
+
+    useEffect(() => {
+        let active = true;
+        const loadBookings = async () => {
+            if (!canBook) return;
+            try {
+                const res = await BookingsService.getApiBookings({ page: 1, limit: 100 });
+                if (!active) return;
+                setCustomerBookings(res?.items || []);
+            } catch {
+                if (!active) return;
+                setCustomerBookings([]);
+            }
+        };
+        loadBookings();
+        return () => {
+            active = false;
+        };
+    }, [canBook]);
 
     useEffect(() => {
         let active = true;
@@ -169,8 +189,8 @@ export default function VendorDetailPage() {
         }
         if (!canShortlist) {
             toast({
-                title: "Shortlist available for customers only",
-                description: "Switch to a customer account to use shortlist.",
+                title: "Favorites available for customers only",
+                description: "Switch to a customer account to save favorites.",
                 variant: "default"
             });
             return;
@@ -204,6 +224,20 @@ export default function VendorDetailPage() {
             toast({ title: "Select an event", variant: "destructive" });
             return;
         }
+        const hasExistingBooking = customerBookings.some(
+            (booking) =>
+                booking.vendorId === vendor._id &&
+                booking.eventId === selectedEventId &&
+                !["cancelled", "rejected"].includes(booking.status)
+        );
+        if (hasExistingBooking) {
+            toast({
+                title: "Already booked",
+                description: "You already have an active booking with this vendor for that event.",
+                variant: "destructive"
+            });
+            return;
+        }
         setIsBookingSubmitting(true);
         try {
             const created = (await BookingsService.postApiBookings({
@@ -232,6 +266,15 @@ export default function VendorDetailPage() {
             setIsBookingSubmitting(false);
         }
     };
+
+    const isDuplicateBooking = selectedEventId
+        ? customerBookings.some(
+              (booking) =>
+                  booking.vendorId === vendor._id &&
+                  booking.eventId === selectedEventId &&
+                  !["cancelled", "rejected"].includes(booking.status)
+          )
+        : false;
 
     return (
         <div className="min-h-screen bg-background">
@@ -267,7 +310,7 @@ export default function VendorDetailPage() {
                         className="bg-card/80 backdrop-blur-sm"
                         onClick={handleShortlist}
                         disabled={shortlistDisabled}
-                        title={shortlistDisabled ? "Shortlist is available for customers only" : "Shortlist"}
+                        title={shortlistDisabled ? "Favorites are available for customers only" : "Favorite"}
                     >
                         <Heart className={`h-4 w-4 ${shortlisted ? "fill-destructive text-destructive" : ""}`} />
                     </Button>
@@ -528,10 +571,10 @@ export default function VendorDetailPage() {
                                         className={`mr-2 h-4 w-4 ${shortlisted ? "fill-destructive text-destructive" : ""}`}
                                     />
                                     {shortlistDisabled
-                                        ? "Shortlist for customers only"
+                                        ? "Favorites for customers only"
                                         : shortlisted
-                                          ? "Remove from Shortlist"
-                                          : "Add to Shortlist"}
+                                          ? "Remove from Favorites"
+                                          : "Add to Favorites"}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -661,6 +704,11 @@ export default function VendorDetailPage() {
                                 </Select>
                             )}
                         </div>
+                        {isDuplicateBooking && (
+                            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                                You already have an active booking with this vendor for the selected event.
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-foreground">Package (optional)</label>
@@ -695,7 +743,7 @@ export default function VendorDetailPage() {
                         <Button
                             variant="hero"
                             onClick={handleBookingSubmit}
-                            disabled={isBookingSubmitting || events.length === 0}
+                            disabled={isBookingSubmitting || events.length === 0 || isDuplicateBooking}
                         >
                             {isBookingSubmitting ? "Sending..." : "Send Request"}
                         </Button>

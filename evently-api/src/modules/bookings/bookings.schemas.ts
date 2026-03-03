@@ -19,3 +19,7 @@ export const VendorDecisionSchema = z.object({
     vendorNote: z.string().optional(),
     rejectReason: z.string().optional(),
 });
+
+export const CancelBookingSchema = z.object({
+    reason: z.string().optional(),
+});

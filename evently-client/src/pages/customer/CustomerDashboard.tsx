@@ -108,7 +108,7 @@ export default function CustomerDashboard() {
                         color: "bg-success-soft text-success"
                     },
                     {
-                        label: "Shortlisted",
+                        label: "Favorites",
                         value: shortlistedVendors.length.toString(),
                         icon: Heart,
                         color: "bg-destructive-soft text-destructive"
@@ -219,12 +219,12 @@ export default function CustomerDashboard() {
                 </Card>
             </div>
 
-            {/* Shortlisted Vendors */}
+            {/* Favorite Vendors */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Shortlisted Vendors</CardTitle>
+                    <CardTitle className="text-lg">Favorite Vendors</CardTitle>
                     <Button variant="ghost" size="sm" asChild>
-                        <Link to="/customer/shortlist">
+                        <Link to="/customer/favorites">
                             View All <ArrowRight className="ml-1 h-4 w-4" />
                         </Link>
                     </Button>

@@ -6,6 +6,11 @@ import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { QuoteModel } from "./quote.model.js";
 import { QuoteListQuerySchema } from "./quotes.schemas.js";
 import { BookingModel } from "../bookings/booking.model.js";
+import { VendorModel } from "../vendors/vendor.model.js";
+import { buildQuoteDto } from "../../common/dtos.js";
+import { mapBookingStatusToUi } from "../../common/mappers.js";
+import { emitQuoteUpdate } from "../../socket.js";
+import { sendQuoteApprovedEmails } from "./quotes.service.js";
 
 export const quotesRoutes = Router();
 
@@ -42,7 +47,57 @@ quotesRoutes.get("/", requireAuth, requireRole(UserRole.CUSTOMER), async (req, r
             QuoteModel.countDocuments(filter),
         ]);
 
-        res.json({ items, page: q.page, limit: q.limit, total });
+        const mapped = items.map((quote) => buildQuoteDto(quote));
+        res.json({ items: mapped, page: q.page, limit: q.limit, total });
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/quotes/booking/{id}:
+ *   get:
+ *     tags: [Quotes]
+ *     summary: Get quote for a booking (Customer or Vendor)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found }
+ */
+quotesRoutes.get("/booking/:id", requireAuth, async (req, res, next) => {
+    try {
+        const id = String(req.params.id);
+        if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+
+        const booking = await BookingModel.findById(id).lean();
+        if (!booking) throw new NotFoundError("Booking not found");
+
+        const role = req.auth!.role;
+        if (role === UserRole.CUSTOMER) {
+            if (booking.userId.toString() !== req.auth!.sub) {
+                throw new NotFoundError("Booking not found");
+            }
+        } else if (role === UserRole.VENDOR) {
+            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
+            if (!vendor || booking.vendorId.toString() !== vendor._id.toString()) {
+                throw new NotFoundError("Booking not found");
+            }
+        } else {
+            throw new NotFoundError("Booking not found");
+        }
+
+        const quote = await QuoteModel.findOne({ bookingId: booking._id }).lean();
+        if (!quote) {
+            return res.json(null);
+        }
+
+        res.json(buildQuoteDto(quote, mapBookingStatusToUi(booking.status)));
     } catch (err) {
         next(err);
     }
@@ -83,25 +138,49 @@ quotesRoutes.post(
                 throw new BadRequestError("Quote has expired");
             }
 
-            quote.status = QuoteStatus.ACCEPTED;
+            quote.customerApproved = true;
+            quote.lastUpdatedBy = UserRole.CUSTOMER;
+
+            let bookingStatus: BookingStatus | undefined;
+            const booking = await BookingModel.findById(quote.bookingId);
+            let shouldNotify = false;
+            if (booking) {
+                bookingStatus = booking.status as BookingStatus;
+                if (quote.vendorApproved) {
+                    quote.status = QuoteStatus.ACCEPTED;
+                    booking.status = BookingStatus.CONFIRMED_PENDING_PAYMENT;
+                    const history = (booking.history ?? []) as any[];
+                    history.push({
+                        status: "accepted",
+                        byRole: "customer",
+                        at: new Date(),
+                        note: "Quote accepted",
+                    });
+                    booking.history = history as any;
+                    await booking.save();
+                    shouldNotify = true;
+                    bookingStatus = booking.status as BookingStatus;
+                }
+            }
+
             await quote.save();
-
-            await BookingModel.updateOne(
-                { _id: quote.bookingId },
-                {
-                    $set: { status: BookingStatus.CONFIRMED_PENDING_PAYMENT },
-                    $push: {
-                        history: {
-                            status: "accepted",
-                            byRole: "customer",
-                            at: new Date(),
-                            note: "Quote accepted",
-                        },
-                    },
-                },
+            if (shouldNotify && booking) {
+                await sendQuoteApprovedEmails({ quote, booking });
+            }
+            const dto = buildQuoteDto(
+                quote,
+                bookingStatus ? mapBookingStatusToUi(bookingStatus) : undefined,
             );
-
-            res.json(quote.toObject());
+            if (booking) {
+                const vendor = await VendorModel.findById(booking.vendorId).lean();
+                if (vendor) {
+                    emitQuoteUpdate(
+                        [quote.customerId.toString(), vendor.userId.toString()],
+                        dto,
+                    );
+                }
+            }
+            res.json(dto);
         } catch (err) {
             next(err);
         }
@@ -140,24 +219,25 @@ quotesRoutes.post(
             }
 
             quote.status = QuoteStatus.REJECTED;
+            quote.customerApproved = false;
+            quote.vendorApproved = false;
             await quote.save();
 
-            await BookingModel.updateOne(
-                { _id: quote.bookingId },
-                {
-                    $set: { status: BookingStatus.CANCELLED },
-                    $push: {
-                        history: {
-                            status: "cancelled",
-                            byRole: "customer",
-                            at: new Date(),
-                            note: "Quote rejected",
-                        },
-                    },
-                },
+            const booking = await BookingModel.findById(quote.bookingId).lean();
+            const dto = buildQuoteDto(
+                quote,
+                booking ? mapBookingStatusToUi(booking.status) : undefined,
             );
-
-            res.json(quote.toObject());
+            if (booking) {
+                const vendor = await VendorModel.findById(booking.vendorId).lean();
+                if (vendor) {
+                    emitQuoteUpdate(
+                        [quote.customerId.toString(), vendor.userId.toString()],
+                        dto,
+                    );
+                }
+            }
+            res.json(dto);
         } catch (err) {
             next(err);
         }

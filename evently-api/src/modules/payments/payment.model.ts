@@ -15,6 +15,7 @@ const PaymentSchema = new Schema(
         },
         providerRef: { type: String },
         payUrl: { type: String },
+        providerMeta: { type: Schema.Types.Mixed },
         paidAt: { type: Date },
     },
     { timestamps: true, collection: "payments" },
