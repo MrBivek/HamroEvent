@@ -127,7 +127,8 @@ export type BookingStatus =
     | "rejected"
     | "cancelled"
     | "reschedule-proposed"
-    | "proposal";
+    | "proposal"
+    | "payment";
 
 export interface BookingHistoryEntry {
     status: BookingStatus;
@@ -251,6 +252,7 @@ export type NotificationType =
     | "booking-accepted"
     | "booking-rejected"
     | "booking-confirmed"
+    | "booking-completed"
     | "booking-cancelled"
     | "booking-rescheduled"
     | "review-received"
@@ -353,6 +355,11 @@ export interface Refund {
     paymentId: string;
     bookingId?: string;
     amount: number;
+    provider?: string;
+    status?: PaymentStatus;
+    payUrl?: string;
+    providerRef?: string;
+    confirmedAt?: string;
     reason?: string;
     createdAt?: string;
 }

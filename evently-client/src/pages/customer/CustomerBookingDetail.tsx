@@ -11,7 +11,8 @@ import {
     CheckCircle2,
     XCircle,
     AlertCircle,
-    FileText
+    FileText,
+    DollarSign
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -27,6 +28,8 @@ import { BookingsService } from "@/services/BookingsService";
 import { PaymentsService } from "@/services/PaymentsService";
 import { ConversationsService } from "@/services/ConversationsService";
 import { QuotesService } from "@/services/QuotesService";
+import { ReviewsService } from "@/services/ReviewsService";
+import { ReportsService } from "@/services/ReportsService";
 import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import { getSocket } from "@/lib/socket.ts";
 import { useAuthStore } from "@/store/authStore.ts";
@@ -38,7 +41,9 @@ import type {
     BookingStatus,
     ConversationMessage,
     Quote,
-    Payment
+    Review,
+    Payment,
+    Refund
 } from "@/types";
 
 type ChatMessage = BookingMessage | ConversationMessage;
@@ -53,7 +58,10 @@ export default function CustomerBookingDetail() {
     const [proposalEntry, setProposalEntry] = useState<BookingHistoryEntry | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [isPaymentsLoading, setIsPaymentsLoading] = useState(false);
+    const [refunds, setRefunds] = useState<Refund[]>([]);
+    const [isRefundsLoading, setIsRefundsLoading] = useState(false);
     const [paymentProvider, setPaymentProvider] = useState("KHALTI");
+    const [paymentAmount, setPaymentAmount] = useState("");
     const [isPaying, setIsPaying] = useState(false);
     const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null);
     const [quote, setQuote] = useState<Quote | null>(null);
@@ -64,6 +72,13 @@ export default function CustomerBookingDetail() {
     const [customInclusionInput, setCustomInclusionInput] = useState("");
     const [isQuoteLoading, setIsQuoteLoading] = useState(false);
     const [isQuoteSaving, setIsQuoteSaving] = useState(false);
+    const [reviewRating, setReviewRating] = useState("5");
+    const [reviewComment, setReviewComment] = useState("");
+    const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
+    const [hasReviewed, setHasReviewed] = useState(false);
+    const [existingReview, setExistingReview] = useState<Review | null>(null);
+    const [reportReason, setReportReason] = useState("");
+    const [isReportSubmitting, setIsReportSubmitting] = useState(false);
     const { toast } = useToast();
     const { token } = useAuthStore();
 
@@ -186,6 +201,67 @@ export default function CustomerBookingDetail() {
     }, [id]);
 
     useEffect(() => {
+        let active = true;
+        const loadRefunds = async () => {
+            if (!id) return;
+            setIsRefundsLoading(true);
+            try {
+                const res = await PaymentsService.getApiRefundsCustomer({ bookingId: id, page: 1, limit: 20 });
+                if (!active) return;
+                setRefunds(res?.items || []);
+            } catch {
+                if (!active) return;
+                setRefunds([]);
+            } finally {
+                if (active) setIsRefundsLoading(false);
+            }
+        };
+        loadRefunds();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    useEffect(() => {
+        let active = true;
+        const loadReview = async () => {
+            if (!id) return;
+            try {
+                const res = (await ReviewsService.getApiReviewsBooking({ bookingId: id })) as Review | null;
+                if (!active) return;
+                setExistingReview(res || null);
+                setHasReviewed(Boolean(res));
+            } catch {
+                if (!active) return;
+                setExistingReview(null);
+            }
+        };
+        loadReview();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    const agreedAmount = quote?.amount ?? booking?.price ?? 0;
+    const paidTotal = payments
+        .filter((payment) => String(payment.status || "").toLowerCase() === "paid")
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const remainingAmount = Math.max(agreedAmount - paidTotal, 0);
+    const refundedTotal = refunds
+        .filter((refund) => String(refund.status || "").toUpperCase() === "PAID")
+        .reduce((sum, refund) => sum + (refund.amount || 0), 0);
+
+    useEffect(() => {
+        if (!remainingAmount) {
+            setPaymentAmount("");
+            return;
+        }
+        if (!paymentAmount || Number(paymentAmount) > remainingAmount) {
+            setPaymentAmount(String(remainingAmount));
+        }
+    }, [paymentAmount, remainingAmount]);
+
+    useEffect(() => {
         if (!quote && booking?.packageInclusions?.length && selectedInclusions.length === 0) {
             setSelectedInclusions(booking.packageInclusions);
         }
@@ -266,6 +342,8 @@ export default function CustomerBookingDetail() {
             case "completed":
             case "accepted":
                 return <CheckCircle2 className="h-4 w-4 text-success" />;
+            case "payment":
+                return <DollarSign className="h-4 w-4 text-secondary" />;
             case "pending":
                 return <AlertCircle className="h-4 w-4 text-warning" />;
             case "proposal":
@@ -280,6 +358,7 @@ export default function CustomerBookingDetail() {
 
     const formatHistoryStatus = (status: string) => {
         if (status === "proposal") return "Proposal";
+        if (status === "payment") return "Payment";
         return status.replace(/-/g, " ");
     };
 
@@ -452,9 +531,21 @@ export default function CustomerBookingDetail() {
 
     const handleInitiatePayment = async () => {
         if (!booking) return;
-        const amount = booking.price || 0;
-        if (!amount) {
+        const amount = Number(paymentAmount);
+        if (!agreedAmount) {
             toast({ title: "Missing price", description: "This booking has no price yet.", variant: "destructive" });
+            return;
+        }
+        if (!amount || Number.isNaN(amount) || amount <= 0) {
+            toast({ title: "Enter a valid amount", description: "Please enter a payment amount." });
+            return;
+        }
+        if (amount > remainingAmount) {
+            toast({
+                title: "Amount exceeds remaining",
+                description: `Remaining balance is NPR ${remainingAmount.toLocaleString()}.`,
+                variant: "destructive"
+            });
             return;
         }
         setIsPaying(true);
@@ -519,6 +610,64 @@ export default function CustomerBookingDetail() {
         }
     };
 
+    const handleSubmitReview = async () => {
+        if (!booking) return;
+        const ratingValue = Number(reviewRating);
+        if (!ratingValue || ratingValue < 1 || ratingValue > 5) {
+            toast({ title: "Select a rating between 1 and 5", variant: "destructive" });
+            return;
+        }
+        setIsReviewSubmitting(true);
+        try {
+            const res = (await ReviewsService.postApiReviews({
+                requestBody: {
+                    bookingId: booking._id,
+                    rating: ratingValue,
+                    comment: reviewComment || undefined
+                }
+            })) as Review;
+            setExistingReview(res);
+            setHasReviewed(true);
+            toast({ title: "Review submitted", description: "Thanks for your feedback." });
+        } catch (error) {
+            toast({
+                title: "Failed to submit review",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsReviewSubmitting(false);
+        }
+    };
+
+    const handleReportVendor = async () => {
+        if (!booking) return;
+        if (!reportReason.trim()) {
+            toast({ title: "Please add a reason", variant: "destructive" });
+            return;
+        }
+        setIsReportSubmitting(true);
+        try {
+            await ReportsService.postApiReports({
+                requestBody: {
+                    targetType: "vendor",
+                    targetId: booking.vendorId,
+                    reason: reportReason
+                }
+            });
+            setReportReason("");
+            toast({ title: "Report submitted", description: "Admin will review your report." });
+        } catch (error) {
+            toast({
+                title: "Failed to submit report",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsReportSubmitting(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="container py-16 text-center">
@@ -542,7 +691,7 @@ export default function CustomerBookingDetail() {
     const vendorImage = booking.vendorImage || booking.vendor?.portfolioMedia?.[0];
     const category = booking.category || booking.vendor?.category || "Service";
     const packageName = booking.packageName || booking.packageId || "Package";
-    const price = booking.price || 0;
+    const price = agreedAmount || 0;
     const timeRange = booking.timeRange || { start: "--", end: "--" };
     const location = booking.location || "";
     const vendorPhone = booking.vendorPhone || booking.vendor?.contact?.phone || "";
@@ -573,7 +722,7 @@ export default function CustomerBookingDetail() {
 
             {/* Header */}
             <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex-1 space-y-6">
+                <div className="flex-2 space-y-6">
                     {/* Booking Info */}
                     <Card>
                         <CardContent className="p-6">
@@ -663,6 +812,54 @@ export default function CustomerBookingDetail() {
                         </CardContent>
                     </Card>
 
+                    {/* Timeline */}
+                    <Card className="sticky top-6 mb-7">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Booking Timeline</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {history.map((entry, i) => {
+                                    const isProposal = entry.status === "proposal";
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={`flex gap-3 ${isProposal ? "cursor-pointer" : ""}`}
+                                            onClick={() => {
+                                                if (isProposal) setProposalEntry(entry);
+                                            }}
+                                        >
+                                            <div className="flex flex-col items-center">
+                                                {getStatusIcon(entry.status)}
+                                                {i < history.length - 1 && (
+                                                    <div className="w-px flex-1 bg-border mt-2" />
+                                                )}
+                                            </div>
+                                            <div className="pb-4">
+                                                <p className="font-medium text-foreground capitalize">
+                                                    {formatHistoryStatus(entry.status)}
+                                                </p>
+                                                {entry.note && (
+                                                    <p className="text-sm text-muted-foreground">{entry.note}</p>
+                                                )}
+                                                {isProposal && (
+                                                    <p className="text-xs text-primary mt-1">View proposal details</p>
+                                                )}
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {new Date(entry.at).toLocaleDateString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "numeric",
+                                                        minute: "2-digit"
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
                     {/* Payments */}
                     <Card>
                         <CardHeader>
@@ -706,9 +903,94 @@ export default function CustomerBookingDetail() {
                                 <p className="text-sm text-muted-foreground">No payments yet.</p>
                             )}
 
+                            <Separator />
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-foreground">Refunds</p>
+                                {isRefundsLoading ? (
+                                    <p className="text-sm text-muted-foreground">Loading refunds...</p>
+                                ) : refunds.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {refunds.map((refund) => (
+                                            <div
+                                                key={refund._id}
+                                                className="flex items-center justify-between rounded-lg border border-border p-3 text-sm"
+                                            >
+                                                <div>
+                                                    <p className="font-medium text-foreground">
+                                                        NPR {refund.amount.toLocaleString()}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {refund.provider || "Provider"} •{" "}
+                                                        {new Date(
+                                                            refund.confirmedAt || refund.createdAt || ""
+                                                        ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <Badge
+                                                    variant={
+                                                        String(refund.status).toUpperCase() === "PAID"
+                                                            ? "success"
+                                                            : "warning"
+                                                    }
+                                                    className="capitalize"
+                                                >
+                                                    {String(refund.status || "initiated").toLowerCase()}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No refunds yet.</p>
+                                )}
+                            </div>
+
+                            <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Total agreed</span>
+                                    <span className="font-medium text-foreground">
+                                        NPR {agreedAmount.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Paid so far</span>
+                                    <span className="font-medium text-foreground">
+                                        NPR {paidTotal.toLocaleString()}
+                                    </span>
+                                </div>
+                                {refundedTotal > 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Refunded</span>
+                                        <span className="font-medium text-foreground">
+                                            NPR {refundedTotal.toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Remaining</span>
+                                    <span className="font-semibold text-foreground">
+                                        NPR {remainingAmount.toLocaleString()}
+                                    </span>
+                                </div>
+                                {!quote && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Submit a proposal before making payment.
+                                    </p>
+                                )}
+                            </div>
+
                             {booking.status === "accepted" && (
                                 <div className="space-y-3">
-                                    <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                                    <label className="text-xs text-muted-foreground">Amount (NPR)</label>
+                                    <div className="grid gap-3 sm:grid-cols-[1fr_200px_auto]">
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                step={1}
+                                                value={paymentAmount}
+                                                onChange={(e) => setPaymentAmount(e.target.value)}
+                                                placeholder="Enter amount"
+                                            />
                                         <Select value={paymentProvider} onValueChange={setPaymentProvider}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select provider" />
@@ -719,7 +1001,10 @@ export default function CustomerBookingDetail() {
                                                 <SelectItem value="MOCK">Mock</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Button onClick={handleInitiatePayment} disabled={isPaying}>
+                                        <Button
+                                            onClick={handleInitiatePayment}
+                                            disabled={isPaying || remainingAmount <= 0 || !quote}
+                                        >
                                             {isPaying ? "Processing..." : "Pay Now"}
                                         </Button>
                                     </div>
@@ -734,9 +1019,11 @@ export default function CustomerBookingDetail() {
                             )}
                         </CardContent>
                     </Card>
+                </div>
 
+                <div className="flex-1">
                     {/* Quote & Requirements */}
-                    <Card>
+                    <Card className="mb-7">
                         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <CardTitle className="text-lg">Quote & Requirements</CardTitle>
@@ -929,57 +1216,96 @@ export default function CustomerBookingDetail() {
                             </form>
                         </CardContent>
                     </Card>
-                </div>
 
-                {/* Timeline */}
-                <div className="lg:w-80">
-                    <Card className="sticky top-6">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Booking Timeline</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {history.map((entry, i) => {
-                                    const isProposal = entry.status === "proposal";
-                                    return (
-                                        <div
-                                            key={i}
-                                            className={`flex gap-3 ${isProposal ? "cursor-pointer" : ""}`}
-                                            onClick={() => {
-                                                if (isProposal) setProposalEntry(entry);
-                                            }}
-                                        >
-                                            <div className="flex flex-col items-center">
-                                                {getStatusIcon(entry.status)}
-                                                {i < history.length - 1 && (
-                                                    <div className="w-px flex-1 bg-border mt-2" />
-                                                )}
+                    {booking.status === "completed" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Review & Report</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Share your experience with the vendor.
+                                    </p>
+                                    {existingReview ? (
+                                        <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground">Rating</span>
+                                                <span className="font-semibold text-foreground">
+                                                    {existingReview.rating} / 5
+                                                </span>
                                             </div>
-                                            <div className="pb-4">
-                                                <p className="font-medium text-foreground capitalize">
-                                                    {formatHistoryStatus(entry.status)}
+                                            {existingReview.comment && (
+                                                <p className="text-sm text-muted-foreground">
+                                                    {existingReview.comment}
                                                 </p>
-                                                {entry.note && (
-                                                    <p className="text-sm text-muted-foreground">{entry.note}</p>
-                                                )}
-                                                {isProposal && (
-                                                    <p className="text-xs text-primary mt-1">View proposal details</p>
-                                                )}
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {new Date(entry.at).toLocaleDateString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "numeric",
-                                                        minute: "2-digit"
-                                                    })}
-                                                </p>
-                                            </div>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                Submitted on{" "}
+                                                {new Date(existingReview.createdAt).toLocaleDateString()}
+                                            </p>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                    ) : (
+                                    <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium">Rating</label>
+                                            <Select value={reviewRating} onValueChange={setReviewRating}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select rating" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {[5, 4, 3, 2, 1].map((value) => (
+                                                        <SelectItem key={value} value={String(value)}>
+                                                            {value} Star{value > 1 ? "s" : ""}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium">Comment</label>
+                                            <Textarea
+                                                value={reviewComment}
+                                                onChange={(e) => setReviewComment(e.target.value)}
+                                                placeholder="Leave a short review"
+                                            />
+                                        </div>
+                                    </div>
+                                    )}
+                                    <Button
+                                        onClick={handleSubmitReview}
+                                        disabled={isReviewSubmitting || hasReviewed || Boolean(existingReview)}
+                                    >
+                                        {hasReviewed
+                                            ? "Review submitted"
+                                            : isReviewSubmitting
+                                              ? "Submitting..."
+                                              : "Submit Review"}
+                                    </Button>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Need to report this vendor? Provide details below.
+                                    </p>
+                                    <Textarea
+                                        value={reportReason}
+                                        onChange={(e) => setReportReason(e.target.value)}
+                                        placeholder="Describe the issue..."
+                                    />
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleReportVendor}
+                                        disabled={isReportSubmitting}
+                                    >
+                                        {isReportSubmitting ? "Submitting..." : "Report Vendor"}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
 

@@ -23,6 +23,7 @@ import { emitBookingUpdate } from "../../socket.js";
 import {
     normalizeEventRangeForConflict,
     normalizeTimeRange,
+    parseTimeToMinutes,
     rangeWithinSlot,
     rangesOverlap,
 } from "../../common/time.js";
@@ -39,6 +40,17 @@ function endOfDayUtc(date: Date) {
     );
 }
 
+function resolveEventEndUtc(eventDate?: Date | null, endTime?: string | null) {
+    if (!eventDate) return null;
+    const endMinutes = parseTimeToMinutes(endTime);
+    if (endMinutes === null) return endOfDayUtc(eventDate);
+    const hours = Math.floor(endMinutes / 60);
+    const minutes = endMinutes % 60;
+    return new Date(
+        Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), hours, minutes, 0, 0),
+    );
+}
+
 /**
  * NOTE:
  * Mount this under:
@@ -46,6 +58,7 @@ function endOfDayUtc(date: Date) {
  * Final paths:
  *   /api/vendors/me/bookings
  *   /api/vendors/me/bookings/:id/decision
+ *   /api/vendors/me/bookings/:id/complete
  */
 
 /**
@@ -199,6 +212,114 @@ vendorBookingsRoutes.get(
                 messageRoleMap,
             });
             res.json({ ...dto, hasQuote: Boolean(quote) });
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
+/**
+ * @openapi
+ * /api/vendors/me/bookings/{id}/complete:
+ *   patch:
+ *     tags: [Vendor Bookings]
+ *     summary: Mark a booking as completed (Vendor only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Validation error }
+ *       404: { description: Not found }
+ */
+vendorBookingsRoutes.patch(
+    "/me/bookings/:id/complete",
+    requireAuth,
+    requireRole(UserRole.VENDOR),
+    async (req, res, next) => {
+        try {
+            const vendor = await resolveVendorForUser(req.auth!.sub, { lean: true });
+            if (!vendor) throw new NotFoundError("Vendor profile not found");
+
+            const id = String(req.params.id);
+            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Booking not found");
+
+            const booking = await BookingModel.findOne({ _id: id, vendorId: vendor._id });
+            if (!booking) throw new NotFoundError("Booking not found");
+
+            if ([BookingStatus.CANCELLED, BookingStatus.REJECTED].includes(booking.status)) {
+                throw new BadRequestError("This booking cannot be completed");
+            }
+
+            if (booking.status === BookingStatus.COMPLETED) {
+                return res.json(booking.toObject());
+            }
+
+            if (
+                ![
+                    BookingStatus.ACCEPTED,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.CONFIRMED_PENDING_PAYMENT,
+                ].includes(booking.status)
+            ) {
+                throw new BadRequestError("Booking is not eligible for completion");
+            }
+
+            const event = await EventModel.findById(booking.eventId).lean();
+            if (!event) throw new NotFoundError("Event not found");
+
+            const eventEnd = resolveEventEndUtc(event.eventDate, event.endTime);
+            if (!eventEnd) throw new BadRequestError("Event date is missing");
+
+            if (new Date() < eventEnd) {
+                throw new BadRequestError("Event has not ended yet");
+            }
+
+            booking.status = BookingStatus.COMPLETED;
+            const history = (booking.history ?? []) as any[];
+            history.push({
+                status: "completed",
+                byRole: "vendor",
+                at: new Date(),
+                note: "Event marked completed",
+            });
+            booking.history = history as any;
+            await booking.save();
+
+            const [pkg, customer] = await Promise.all([
+                booking.packageId
+                    ? PackageModel.findById(booking.packageId).lean()
+                    : Promise.resolve(null),
+                UserModel.findById(booking.userId).lean(),
+            ]);
+
+            const dto = buildBookingDto({
+                booking: booking.toObject(),
+                event,
+                customer,
+                packageTitle: pkg?.title,
+                packagePrice: typeof pkg?.priceMin === "number" ? pkg.priceMin : undefined,
+                packageInclusions: pkg?.includes ?? [],
+            });
+
+            await createNotification({
+                userId: booking.userId.toString(),
+                type: NotificationType.BOOKING_COMPLETED,
+                title: "Event completed",
+                body: "Your event has been marked as completed. You can now leave a review.",
+                link: `/customer/bookings/${booking._id.toString()}`,
+            });
+
+            emitBookingUpdate([booking.userId.toString(), vendor.userId.toString()], {
+                bookingId: booking._id.toString(),
+                bookingStatus: dto.status,
+                history: dto.history,
+            });
+
+            res.json(dto);
         } catch (err) {
             next(err);
         }

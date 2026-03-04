@@ -371,7 +371,7 @@ export default function CustomerEventDetail() {
                                         </p>
                                         <div className="flex gap-2 mt-2">
                                             <Button variant="ghost" size="sm" asChild>
-                                                <Link to={`/customer/bookings/${booking._id}`}>
+                                                <Link to={`/customer/bookings/${booking._id || booking.id}`}>
                                                     <MessageSquare className="h-4 w-4 mr-1" />
                                                     View
                                                 </Link>

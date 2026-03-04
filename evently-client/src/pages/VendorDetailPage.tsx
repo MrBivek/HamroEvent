@@ -16,7 +16,8 @@ import {
     Clock,
     Check,
     ArrowLeft,
-    MessageSquare
+    MessageSquare,
+    AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -31,6 +32,7 @@ import { MarketplaceService } from "@/services/MarketplaceService";
 import { EventsService } from "@/services/EventsService";
 import { BookingsService } from "@/services/BookingsService";
 import { ReviewsService } from "@/services/ReviewsService";
+import { ReportsService } from "@/services/ReportsService";
 import { getCategoryMeta } from "@/data/catalog";
 import { getErrorMessage, resolveMediaUrl } from "@/lib/api";
 import { fetchVendorAvailability } from "@/lib/vendors.ts";
@@ -56,6 +58,9 @@ export default function VendorDetailPage() {
     const [customerBookings, setCustomerBookings] = useState<Booking[]>([]);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
     const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [reportReason, setReportReason] = useState("");
+    const [isReportSubmitting, setIsReportSubmitting] = useState(false);
     const canBook = user?.role === "customer";
 
     useEffect(() => {
@@ -181,6 +186,46 @@ export default function VendorDetailPage() {
     const bookingDisabled = isVendorUser || isAdminUser;
     const canShortlist = user?.role === "customer";
     const shortlistDisabled = Boolean(user) && !canShortlist;
+
+    const handleReportVendor = async () => {
+        if (!user) {
+            navigate(`/login?redirect=/vendors/${vendor._id}`);
+            return;
+        }
+        if (user.role !== "customer") {
+            toast({
+                title: "Reports are for customers",
+                description: "Switch to a customer account to report vendors.",
+                variant: "default"
+            });
+            return;
+        }
+        if (!reportReason.trim()) {
+            toast({ title: "Please add a reason", variant: "destructive" });
+            return;
+        }
+        setIsReportSubmitting(true);
+        try {
+            await ReportsService.postApiReports({
+                requestBody: {
+                    targetType: "vendor",
+                    targetId: vendor._id,
+                    reason: reportReason
+                }
+            });
+            setReportReason("");
+            setIsReportOpen(false);
+            toast({ title: "Report submitted", description: "Admin will review your report." });
+        } catch (error) {
+            toast({
+                title: "Failed to submit report",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsReportSubmitting(false);
+        }
+    };
 
     const handleShortlist = async () => {
         if (!user) {
@@ -317,8 +362,43 @@ export default function VendorDetailPage() {
                     <Button variant="hero-outline" size="icon" className="bg-card/80 backdrop-blur-sm">
                         <Share2 className="h-4 w-4" />
                     </Button>
+                    <Button
+                        variant="hero-outline"
+                        size="icon"
+                        className="bg-card/80 backdrop-blur-sm"
+                        onClick={() => setIsReportOpen(true)}
+                        title="Report vendor"
+                    >
+                        <AlertTriangle className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
+
+            <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Report Vendor</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            Tell us what went wrong. Your report will be reviewed by the admin team.
+                        </p>
+                        <Textarea
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value)}
+                            placeholder="Describe the issue..."
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsReportOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleReportVendor} disabled={isReportSubmitting}>
+                            {isReportSubmitting ? "Submitting..." : "Submit Report"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <div className="container py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

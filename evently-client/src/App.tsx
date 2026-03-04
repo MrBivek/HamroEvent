@@ -40,6 +40,8 @@ import AdminReports from "@/pages/admin/AdminReports.tsx";
 import AdminAuditLogs from "@/pages/admin/AdminAuditLogs.tsx";
 import AdminNotifications from "@/pages/admin/AdminNotifications.tsx";
 import NotFound from "@/pages/NotFound.tsx";
+import PaymentReturn from "@/pages/payments/PaymentReturn.tsx";
+import RefundReturn from "@/pages/refunds/RefundReturn.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
 
@@ -69,6 +71,8 @@ const App = () => {
                             <Route path="/vendors/:id" element={<VendorDetailPage />} />
                             <Route path="/about" element={<AboutPage />} />
                             <Route path="/contact" element={<ContactPage />} />
+                            <Route path="/payments/:provider" element={<PaymentReturn />} />
+                            <Route path="/refunds/:provider" element={<RefundReturn />} />
                         </Route>
 
                         {/* Auth routes */}

@@ -7,10 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.t
 import { motion } from "framer-motion";
 import { NotificationsService } from "@/services/NotificationsService";
 import type { Notification } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 export default function VendorNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let active = true;
@@ -40,6 +42,16 @@ export default function VendorNotifications() {
             await NotificationsService.postApiNotificationsRead({ id });
         } catch {
             // ignore
+        }
+    };
+
+    const handleNotificationClick = async (notification: Notification) => {
+        const id = String(notification._id);
+        if (!notification.isRead) {
+            await markAsRead(id);
+        }
+        if (notification.link) {
+            navigate(notification.link);
         }
     };
 
@@ -143,7 +155,7 @@ export default function VendorNotifications() {
                             >
                                 <Card
                                     className={`hover-lift cursor-pointer transition-all ${!notification.isRead ? "border-primary/30 bg-primary/5" : ""}`}
-                                    onClick={() => markAsRead(id)}
+                                    onClick={() => handleNotificationClick(notification)}
                                 >
                                     <CardContent className="p-4 flex items-start gap-4">
                                         <div
@@ -207,7 +219,7 @@ export default function VendorNotifications() {
                                     >
                                         <Card
                                             className="hover-lift cursor-pointer border-primary/30 bg-primary/5"
-                                            onClick={() => markAsRead(notification._id)}
+                                            onClick={() => handleNotificationClick(notification)}
                                         >
                                             <CardContent className="p-4 flex items-start gap-4">
                                                 <div
@@ -244,6 +256,7 @@ export default function VendorNotifications() {
                                 >
                                     <Card
                                         className={`hover-lift cursor-pointer ${!notification.isRead ? "border-primary/30 bg-primary/5" : ""}`}
+                                        onClick={() => handleNotificationClick(notification)}
                                     >
                                         <CardContent className="p-4 flex items-start gap-4">
                                             <div
@@ -279,6 +292,7 @@ export default function VendorNotifications() {
                                 >
                                     <Card
                                         className={`hover-lift cursor-pointer ${!notification.isRead ? "border-primary/30 bg-primary/5" : ""}`}
+                                        onClick={() => handleNotificationClick(notification)}
                                     >
                                         <CardContent className="p-4 flex items-start gap-4">
                                             <div

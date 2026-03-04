@@ -113,4 +113,67 @@ export class PaymentsService {
             }
         });
     }
+
+    /**
+     * List refunds (Customer only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiRefundsCustomer({
+        bookingId,
+        page = 1,
+        limit = 20
+    }: {
+        bookingId?: string;
+        page?: number;
+        limit?: number;
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/refunds/customer",
+            query: {
+                bookingId: bookingId,
+                page: page,
+                limit: limit
+            }
+        });
+    }
+
+    /**
+     * Initiate a refund (Vendor only)
+     * @returns any Created
+     * @throws ApiError
+     */
+    public static postApiRefundsInitiate({
+        requestBody
+    }: {
+        requestBody: {
+            paymentId: string;
+            amount: number;
+            provider: string;
+            reason?: string;
+        };
+    }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/refunds/initiate",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+
+    /**
+     * Confirm a refund (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static postApiRefundsConfirm({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/refunds/{id}/confirm",
+            path: {
+                id: id
+            }
+        });
+    }
 }

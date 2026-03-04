@@ -11,6 +11,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu.tsx";
+import { ThemeToggle } from "@/components/theme/ThemeToggle.tsx";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -95,7 +96,8 @@ export function Navbar() {
                 </nav>
 
                 {/* Desktop Auth Buttons */}
-                <div className="hidden md:flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2">
+                    <ThemeToggle />
                     {isAuthenticated && user ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -163,6 +165,10 @@ export function Navbar() {
                                     {link.label}
                                 </Link>
                             ))}
+                            <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-muted/60">
+                                <span className="text-sm font-medium text-foreground">Theme</span>
+                                <ThemeToggle />
+                            </div>
                             <div className="border-t border-border my-2" />
                             {isAuthenticated && user ? (
                                 <>

@@ -2,17 +2,15 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
 import { validateBody } from "../../middlewares/validate.js";
-import { UserRole, PaymentStatus, PayoutStatus } from "../../common/enums.js";
+import { UserRole, PaymentStatus } from "../../common/enums.js";
 import { NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { PaymentModel } from "./payment.model.js";
 import { RefundModel } from "./refund.model.js";
-import { PayoutModel } from "./payout.model.js";
 import { EventModel } from "../events/event.model.js";
 import { UserModel } from "../auth/user.model.js";
 import {
-    CreatePayoutSchema,
     VendorPaymentConfigSchema,
     VendorPaymentListQuerySchema,
 } from "./payments.schemas.js";
@@ -215,18 +213,12 @@ vendorPaymentsRoutes.get(
             const bookings = await BookingModel.find({ vendorId: vendor._id }).lean();
             const bookingIds = bookings.map((b) => b._id);
 
-            const [payments, payouts] = await Promise.all([
-                PaymentModel.find({ bookingId: { $in: bookingIds } }).lean(),
-                PayoutModel.find({ vendorId: vendor._id }).lean(),
-            ]);
+            const payments = await PaymentModel.find({ bookingId: { $in: bookingIds } }).lean();
 
             const paidPayments = payments.filter((p) => p.status === PaymentStatus.PAID);
             const totalEarnings = paidPayments.reduce((sum, p) => sum + p.amount, 0);
-            const totalPayouts = payouts
-                .filter((p) => p.status !== PayoutStatus.FAILED)
-                .reduce((sum, p) => sum + p.amount, 0);
-            const pendingPayout = Math.max(totalEarnings - totalPayouts, 0);
-            const availableBalance = pendingPayout;
+            const pendingPayout = 0;
+            const availableBalance = 0;
 
             const now = new Date();
             const thisMonthKey = getMonthKey(now);
@@ -326,95 +318,6 @@ vendorPaymentsRoutes.get(
             ].sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
 
             res.json({ items: transactions });
-        } catch (err) {
-            next(err);
-        }
-    },
-);
-
-/**
- * @openapi
- * /api/vendors/me/payments/payouts:
- *   get:
- *     tags: [Vendor Payments]
- *     summary: List vendor payouts
- *     security: [{ bearerAuth: [] }]
- *     responses:
- *       200: { description: OK }
- */
-vendorPaymentsRoutes.get(
-    "/me/payments/payouts",
-    requireAuth,
-    requireRole(UserRole.VENDOR),
-    async (req, res, next) => {
-        try {
-            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-            if (!vendor) throw new NotFoundError("Vendor profile not found");
-
-            const payouts = await PayoutModel.find({ vendorId: vendor._id })
-                .sort({ createdAt: -1 })
-                .lean();
-
-            res.json({
-                items: payouts.map((p) => ({
-                    id: p._id.toString(),
-                    amount: p.amount,
-                    status: p.status.toLowerCase(),
-                    date: (p.processedAt ?? p.requestedAt ?? p.createdAt)?.toISOString(),
-                    bank: p.bankLast4 ? `**** ${p.bankLast4}` : undefined,
-                })),
-            });
-        } catch (err) {
-            next(err);
-        }
-    },
-);
-
-/**
- * @openapi
- * /api/vendors/me/payments/payouts:
- *   post:
- *     tags: [Vendor Payments]
- *     summary: Request a payout
- *     security: [{ bearerAuth: [] }]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [amount]
- *             properties:
- *               amount: { type: number }
- *               bankLast4: { type: string }
- *     responses:
- *       201: { description: Created }
- */
-vendorPaymentsRoutes.post(
-    "/me/payments/payouts",
-    requireAuth,
-    requireRole(UserRole.VENDOR),
-    validateBody(CreatePayoutSchema),
-    async (req, res, next) => {
-        try {
-            const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
-            if (!vendor) throw new NotFoundError("Vendor profile not found");
-
-            const payout = await PayoutModel.create({
-                vendorId: vendor._id,
-                amount: req.body.amount,
-                status: PayoutStatus.PROCESSING,
-                bankLast4: req.body.bankLast4,
-                requestedAt: new Date(),
-            });
-
-            res.status(201).json({
-                id: payout._id.toString(),
-                amount: payout.amount,
-                status: payout.status.toLowerCase(),
-                date: payout.requestedAt?.toISOString(),
-                bank: payout.bankLast4 ? `**** ${payout.bankLast4}` : undefined,
-            });
         } catch (err) {
             next(err);
         }

@@ -6,6 +6,7 @@ import { validateBody } from "../../middlewares/validate.js";
 import { UserRole, BookingStatus, PaymentStatus, NotificationType } from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { PaymentModel } from "./payment.model.js";
+import { QuoteModel } from "../quotes/quote.model.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { EventModel } from "../events/event.model.js";
@@ -91,6 +92,31 @@ paymentsRoutes.post(
             if (!allowed.includes(booking.status as BookingStatus)) {
                 throw new BadRequestError(
                     "Payment is only allowed for accepted bookings or accepted quotes",
+                );
+            }
+
+            const quote = await QuoteModel.findOne({ bookingId: booking._id }).lean();
+            if (!quote) throw new BadRequestError("Pricing proposal is required before payment");
+
+            const paidAgg = await PaymentModel.aggregate([
+                {
+                    $match: {
+                        bookingId: new mongoose.Types.ObjectId(bookingId),
+                        status: PaymentStatus.PAID,
+                    },
+                },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]);
+            const paidSoFar = paidAgg?.[0]?.total ?? 0;
+            const remaining = Number(quote.amount) - Number(paidSoFar);
+
+            if (remaining <= 0) {
+                throw new BadRequestError("Booking is already fully paid");
+            }
+
+            if (amount > remaining) {
+                throw new BadRequestError(
+                    `Payment exceeds remaining balance. Remaining: ${Math.max(remaining, 0)}`,
                 );
             }
 
@@ -301,16 +327,42 @@ paymentsRoutes.post(
             payment.paidAt = new Date();
             await payment.save();
 
+            const quote = await QuoteModel.findOne({ bookingId: payment.bookingId }).lean();
+            if (!quote) throw new BadRequestError("Pricing proposal is required before payment");
+
+            const paidAgg = await PaymentModel.aggregate([
+                {
+                    $match: {
+                        bookingId: payment.bookingId,
+                        status: PaymentStatus.PAID,
+                    },
+                },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]);
+            const totalPaid = paidAgg?.[0]?.total ?? 0;
+            const totalDue = Number(quote.amount) || 0;
+            const fullyPaid = totalPaid >= totalDue;
+            const nextStatus = fullyPaid
+                ? BookingStatus.CONFIRMED
+                : BookingStatus.CONFIRMED_PENDING_PAYMENT;
+
             const updatedBooking = await BookingModel.findByIdAndUpdate(
                 payment.bookingId,
                 {
-                    $set: { status: BookingStatus.CONFIRMED },
+                    $set: { status: nextStatus },
                     $push: {
                         history: {
-                            status: "confirmed",
+                            status: fullyPaid ? "confirmed" : "payment",
                             byRole: "customer",
                             at: new Date(),
-                            note: "Payment confirmed",
+                            note: fullyPaid
+                                ? "Payment confirmed"
+                                : `Partial payment received (NPR ${payment.amount})`,
+                            meta: {
+                                amount: payment.amount,
+                                totalPaid,
+                                totalDue,
+                            },
                         },
                     },
                 },
@@ -318,19 +370,23 @@ paymentsRoutes.post(
             ).lean();
 
             if (updatedBooking) {
-                await createNotification({
-                    userId: updatedBooking.userId.toString(),
-                    type: NotificationType.BOOKING_CONFIRMED,
-                    title: "Booking confirmed",
-                    body: "Your booking has been confirmed.",
-                    link: `/customer/bookings/${updatedBooking._id.toString()}`,
-                });
+                if (fullyPaid) {
+                    await createNotification({
+                        userId: updatedBooking.userId.toString(),
+                        type: NotificationType.BOOKING_CONFIRMED,
+                        title: "Booking confirmed",
+                        body: "Your booking has been confirmed.",
+                        link: `/customer/bookings/${updatedBooking._id.toString()}`,
+                    });
+                }
 
                 await createNotification({
                     userId: vendor.userId.toString(),
                     type: NotificationType.PAYMENT_RECEIVED,
                     title: "Payment received",
-                    body: "You received a booking payment.",
+                    body: fullyPaid
+                        ? "You received a booking payment."
+                        : `You received a partial payment of NPR ${payment.amount}.`,
                     link: "/vendor/bookings",
                 });
             }

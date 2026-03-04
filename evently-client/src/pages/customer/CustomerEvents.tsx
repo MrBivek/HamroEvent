@@ -326,7 +326,9 @@ export default function CustomerEvents() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Users className="h-4 w-4" />
-                                            <span>{event.bookings?.length || 0} vendors booked</span>
+                                            <span>
+                                                {(event.vendorCount ?? event.bookings?.length ?? 0)} vendors booked
+                                            </span>
                                         </div>
                                     </div>
 

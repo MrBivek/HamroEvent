@@ -5,9 +5,6 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Download,
-    Filter,
-    Calendar,
-    CreditCard,
     Wallet
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -15,7 +12,6 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
-import { Progress } from "@/components/ui/progress.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
@@ -23,7 +19,7 @@ import { motion } from "framer-motion";
 import { VendorPaymentsService } from "@/services/VendorPaymentsService";
 import { useToast } from "@/hooks/use-toast.ts";
 import { getErrorMessage } from "@/lib/api";
-import type { VendorPaymentConfig, VendorPaymentSummary, VendorPaymentTransaction, VendorPayout } from "@/types";
+import type { VendorPaymentConfig, VendorPaymentSummary, VendorPaymentTransaction } from "@/types";
 
 export default function VendorPayments() {
     const [period, setPeriod] = useState("month");
@@ -36,7 +32,6 @@ export default function VendorPayments() {
         growth: 0
     });
     const [transactions, setTransactions] = useState<VendorPaymentTransaction[]>([]);
-    const [payouts, setPayouts] = useState<VendorPayout[]>([]);
     const [config, setConfig] = useState<VendorPaymentConfig>({});
     const [configForm, setConfigForm] = useState<VendorPaymentConfig>({});
     const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -45,16 +40,14 @@ export default function VendorPayments() {
         let active = true;
         const load = async () => {
             try {
-                const [summaryRes, txRes, payoutRes, configRes] = await Promise.all([
+                const [summaryRes, txRes, configRes] = await Promise.all([
                     VendorPaymentsService.getApiVendorsMePaymentsSummary(),
                     VendorPaymentsService.getApiVendorsMePaymentsTransactions(),
-                    VendorPaymentsService.getApiVendorsMePaymentsPayouts(),
                     VendorPaymentsService.getApiVendorsMePaymentsConfig()
                 ]);
                 if (!active) return;
                 setSummary(summaryRes || summary);
                 setTransactions(txRes?.items || []);
-                setPayouts(payoutRes?.items || []);
                 setConfig(configRes || {});
                 setConfigForm(configRes || {});
             } catch {
@@ -67,7 +60,6 @@ export default function VendorPayments() {
                     growth: 0
                 });
                 setTransactions([]);
-                setPayouts([]);
                 setConfig({});
                 setConfigForm({});
             }
@@ -78,23 +70,10 @@ export default function VendorPayments() {
         };
     }, []);
 
-    const handleRequestPayout = async () => {
-        if (summary.availableBalance <= 0) return;
-        try {
-            await VendorPaymentsService.postApiVendorsMePaymentsPayouts({
-                requestBody: { amount: summary.availableBalance, bankLast4: "1234" }
-            });
-            const payoutRes = await VendorPaymentsService.getApiVendorsMePaymentsPayouts();
-            setPayouts(payoutRes?.items || []);
-            toast({ title: "Payout requested", description: "Your payout request was submitted." });
-        } catch (error) {
-            toast({
-                title: "Failed to request payout",
-                description: getErrorMessage(error, "Please try again."),
-                variant: "destructive"
-            });
-        }
-    };
+    const totalRefunds = transactions
+        .filter((tx) => tx.type === "debit")
+        .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    const totalPayments = transactions.filter((tx) => tx.type === "credit").length;
 
     const handleSaveConfig = async () => {
         setIsSavingConfig(true);
@@ -121,7 +100,7 @@ export default function VendorPayments() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Payments</h1>
-                    <p className="text-muted-foreground">Track your earnings and payouts</p>
+                    <p className="text-muted-foreground">Track your earnings and payments</p>
                 </div>
                 <div className="flex gap-2">
                     <Select value={period} onValueChange={setPeriod}>
@@ -165,34 +144,6 @@ export default function VendorPayments() {
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                     <Card className="hover-lift">
                         <CardContent className="p-4">
-                            <div className="h-10 w-10 rounded-lg bg-primary-soft flex items-center justify-center mb-3">
-                                <Wallet className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="text-2xl font-bold text-foreground">
-                                NPR {summary.availableBalance.toLocaleString()}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Available Balance</div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="hover-lift">
-                        <CardContent className="p-4">
-                            <div className="h-10 w-10 rounded-lg bg-warning-soft flex items-center justify-center mb-3">
-                                <Clock className="h-5 w-5 text-warning" />
-                            </div>
-                            <div className="text-2xl font-bold text-foreground">
-                                NPR {summary.pendingPayout.toLocaleString()}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Pending Payout</div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Card className="hover-lift">
-                        <CardContent className="p-4">
                             <div className="h-10 w-10 rounded-lg bg-accent-soft flex items-center justify-center mb-3">
                                 <TrendingUp className="h-5 w-5 text-accent" />
                             </div>
@@ -203,45 +154,38 @@ export default function VendorPayments() {
                         </CardContent>
                     </Card>
                 </motion.div>
-            </div>
 
-            {/* Payout Card */}
-            <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20">
-                <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h3 className="font-semibold text-foreground mb-1">Request Payout</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Withdraw your available balance to your bank account
-                            </p>
-                            <div className="mt-3">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <CreditCard className="h-4 w-4" />
-                                    <span>Bank Account ending in **** 1234</span>
-                                </div>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                    <Card className="hover-lift">
+                        <CardContent className="p-4">
+                            <div className="h-10 w-10 rounded-lg bg-warning-soft flex items-center justify-center mb-3">
+                                <Wallet className="h-5 w-5 text-warning" />
                             </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-3xl font-bold text-foreground mb-2">
-                                NPR {summary.availableBalance.toLocaleString()}
+                            <div className="text-2xl font-bold text-foreground">
+                                NPR {totalRefunds.toLocaleString()}
                             </div>
-                            <Button
-                                variant="default"
-                                onClick={handleRequestPayout}
-                                disabled={summary.availableBalance <= 0}
-                            >
-                                Request Payout
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                            <div className="text-sm text-muted-foreground">Total Refunds</div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                    <Card className="hover-lift">
+                        <CardContent className="p-4">
+                            <div className="h-10 w-10 rounded-lg bg-primary-soft flex items-center justify-center mb-3">
+                                <ArrowDownRight className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">{totalPayments}</div>
+                            <div className="text-sm text-muted-foreground">Payments Received</div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            </div>
 
             {/* Transactions & Payouts */}
             <Tabs defaultValue="transactions">
                 <TabsList>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
-                    <TabsTrigger value="payouts">Payouts</TabsTrigger>
                     <TabsTrigger value="settings">Payment Settings</TabsTrigger>
                 </TabsList>
 
@@ -285,44 +229,6 @@ export default function VendorPayments() {
                                             className="capitalize"
                                         >
                                             {tx.status}
-                                        </Badge>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    ))}
-                </TabsContent>
-
-                <TabsContent value="payouts" className="mt-6 space-y-3">
-                    {payouts.map((payout, index) => (
-                        <motion.div
-                            key={payout.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                        >
-                            <Card className="hover-lift">
-                                <CardContent className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-full bg-primary-soft flex items-center justify-center">
-                                            <CreditCard className="h-5 w-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-foreground">Payout to {payout.bank}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {new Date(payout.date).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-foreground">
-                                            NPR {payout.amount.toLocaleString()}
-                                        </p>
-                                        <Badge
-                                            variant={payout.status === "completed" ? "success" : "warning"}
-                                            className="capitalize"
-                                        >
-                                            {payout.status}
                                         </Badge>
                                     </div>
                                 </CardContent>

@@ -120,6 +120,8 @@ export function mapNotificationTypeToUi(type: NotificationType) {
             return "booking-rejected";
         case NotificationType.BOOKING_CONFIRMED:
             return "booking-confirmed";
+        case NotificationType.BOOKING_COMPLETED:
+            return "booking-completed";
         case NotificationType.BOOKING_CANCELLED:
             return "booking-cancelled";
         case NotificationType.BOOKING_RESCHEDULED:

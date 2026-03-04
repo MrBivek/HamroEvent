@@ -51,6 +51,21 @@ export class ReviewsService {
             }
         });
     }
+
+    /**
+     * Get my review for a booking (Customer only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getApiReviewsBooking({ bookingId }: { bookingId: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/reviews/booking/{bookingId}",
+            path: {
+                bookingId: bookingId
+            }
+        });
+    }
     /**
      * List my vendor reviews (Vendor only)
      * @returns any OK

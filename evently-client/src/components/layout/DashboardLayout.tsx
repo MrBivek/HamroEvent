@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import type { UserRole } from "@/types";
+import { ThemeToggle } from "@/components/theme/ThemeToggle.tsx";
 
 interface NavItem {
     href: string;
@@ -234,6 +235,7 @@ export function DashboardLayout() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <ThemeToggle />
                         <Button variant="ghost" size="icon" asChild>
                             <Link to={`/${user.role}/notifications`}>
                                 <Bell className="h-5 w-5" />

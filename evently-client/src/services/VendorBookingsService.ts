@@ -77,4 +77,23 @@ export class VendorBookingsService {
             }
         });
     }
+
+    /**
+     * Mark a booking as completed (Vendor only)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static patchApiVendorsMeBookingsComplete({ id }: { id: string }): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/vendors/me/bookings/{id}/complete",
+            path: {
+                id: id
+            },
+            errors: {
+                400: `Invalid transition`,
+                404: `Booking not found`
+            }
+        });
+    }
 }

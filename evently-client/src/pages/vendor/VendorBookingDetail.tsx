@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import {
     Dialog,
     DialogContent,
@@ -38,6 +39,7 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { motion, AnimatePresence } from "framer-motion";
 import { VendorBookingsService } from "@/services/VendorBookingsService";
 import { VendorPaymentsService } from "@/services/VendorPaymentsService";
+import { PaymentsService } from "@/services/PaymentsService";
 import { ConversationsService } from "@/services/ConversationsService";
 import { QuotesService } from "@/services/QuotesService";
 import { getErrorMessage } from "@/lib/api";
@@ -51,7 +53,8 @@ import type {
     BookingStatus,
     ConversationMessage,
     Quote,
-    VendorPaymentRecord
+    VendorPaymentRecord,
+    Refund
 } from "@/types";
 
 type ChatMessage = BookingMessage | ConversationMessage;
@@ -65,6 +68,13 @@ export default function VendorBookingDetail() {
     const [status, setStatus] = useState("pending");
     const [rescheduleDate, setRescheduleDate] = useState("");
     const [rescheduleReason, setRescheduleReason] = useState("");
+    const [refundPayment, setRefundPayment] = useState<VendorPaymentRecord | null>(null);
+    const [refundAmount, setRefundAmount] = useState("");
+    const [refundReason, setRefundReason] = useState("");
+    const [refundProvider, setRefundProvider] = useState("KHALTI");
+    const [isRefunding, setIsRefunding] = useState(false);
+    const [pendingRefundId, setPendingRefundId] = useState<string | null>(null);
+    const [isCompleting, setIsCompleting] = useState(false);
     const [booking, setBooking] = useState<Booking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [conversationId, setConversationId] = useState<string | null>(null);
@@ -79,6 +89,8 @@ export default function VendorBookingDetail() {
     const [proposalEntry, setProposalEntry] = useState<BookingHistoryEntry | null>(null);
     const [paymentRecords, setPaymentRecords] = useState<VendorPaymentRecord[]>([]);
     const [isPaymentsLoading, setIsPaymentsLoading] = useState(false);
+    const [refunds, setRefunds] = useState<Refund[]>([]);
+    const [isRefundsLoading, setIsRefundsLoading] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -194,6 +206,28 @@ export default function VendorBookingDetail() {
             }
         };
         loadPayments();
+        return () => {
+            active = false;
+        };
+    }, [id]);
+
+    useEffect(() => {
+        let active = true;
+        const loadRefunds = async () => {
+            if (!id) return;
+            setIsRefundsLoading(true);
+            try {
+                const res = await PaymentsService.getApiRefunds({ bookingId: id, page: 1, limit: 20 });
+                if (!active) return;
+                setRefunds(res?.items || []);
+            } catch {
+                if (!active) return;
+                setRefunds([]);
+            } finally {
+                if (active) setIsRefundsLoading(false);
+            }
+        };
+        loadRefunds();
         return () => {
             active = false;
         };
@@ -338,10 +372,133 @@ export default function VendorBookingDetail() {
         }
     };
 
+    const handleComplete = async () => {
+        if (!id) return;
+        setIsCompleting(true);
+        try {
+            const res = await VendorBookingsService.patchApiVendorsMeBookingsComplete({ id });
+            setBooking(res as Booking);
+            setStatus((res as Booking).status || status);
+            toast({ title: "Event completed", description: "Customer can now review." });
+        } catch (error) {
+            toast({
+                title: "Failed to complete booking",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsCompleting(false);
+        }
+    };
+
+    const handleRefundInitiate = async () => {
+        if (!refundPayment || !id) return;
+        const amount = Number(refundAmount || refundPayment.amount);
+        if (!amount || Number.isNaN(amount) || amount <= 0) {
+            toast({ title: "Enter a valid amount", variant: "destructive" });
+            return;
+        }
+        if (amount > refundPayment.amount) {
+            toast({ title: "Amount exceeds payment", variant: "destructive" });
+            return;
+        }
+        if (amount > totalPaid) {
+            toast({ title: "Amount exceeds total paid", variant: "destructive" });
+            return;
+        }
+        setIsRefunding(true);
+        try {
+            const res = await PaymentsService.postApiRefundsInitiate({
+                requestBody: {
+                    paymentId: refundPayment.id,
+                    amount,
+                    provider: refundProvider,
+                    reason: refundReason || undefined
+                }
+            });
+            if (res?.refundId) {
+                setPendingRefundId(res.refundId);
+            }
+            if (res?.formData && res?.payUrl) {
+                const form = document.createElement("form");
+                form.method = "POST";
+                form.action = res.payUrl;
+                Object.entries(res.formData as Record<string, string>).forEach(([key, value]) => {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = key;
+                    input.value = String(value);
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+                form.remove();
+            } else if (res?.payUrl) {
+                window.open(res.payUrl, "_blank");
+            }
+            toast({ title: "Refund initiated", description: "Complete the payment in the new window." });
+        } catch (error) {
+            toast({
+                title: "Failed to initiate refund",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsRefunding(false);
+        }
+    };
+
+    const handleRefundConfirm = async () => {
+        if (!pendingRefundId || !id) return;
+        setIsRefunding(true);
+        try {
+            await PaymentsService.postApiRefundsConfirm({ id: pendingRefundId });
+            const paymentRes = await VendorPaymentsService.getApiVendorsMePayments({
+                bookingId: id,
+                page: 1,
+                limit: 20
+            });
+            setPaymentRecords(paymentRes?.items || []);
+            const refundRes = await PaymentsService.getApiRefunds({ bookingId: id, page: 1, limit: 20 });
+            setRefunds(refundRes?.items || []);
+            const bookingRes = await VendorBookingsService.getApiVendorsMeBookings1({ id });
+            setBooking(bookingRes as Booking);
+            setStatus((bookingRes as Booking).status || status);
+            setRefundPayment(null);
+            setRefundAmount("");
+            setRefundReason("");
+            setPendingRefundId(null);
+            toast({ title: "Refund confirmed", description: "The booking was cancelled." });
+        } catch (error) {
+            toast({
+                title: "Failed to confirm refund",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive"
+            });
+        } finally {
+            setIsRefunding(false);
+        }
+    };
+
     const handleReschedule = () => {
         if (!rescheduleDate) return;
         toast({ title: "Reschedule not available", description: "This feature will be added soon." });
     };
+
+    const eventEnd = useMemo(() => {
+        if (!booking?.date) return null;
+        const date = new Date(booking.date);
+        const endTime = booking.timeRange?.end;
+        if (endTime && /^\d{2}:\d{2}$/.test(endTime)) {
+            const [h, m] = endTime.split(":").map(Number);
+            const end = new Date(date);
+            end.setHours(h, m, 0, 0);
+            return end;
+        }
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+        return end;
+    }, [booking?.date, booking?.timeRange?.end]);
 
     const getStatusColor = (s: string): BadgeProps["variant"] => {
         switch (s) {
@@ -367,6 +524,8 @@ export default function VendorBookingDetail() {
             case "completed":
             case "accepted":
                 return <CheckCircle2 className="h-4 w-4 text-success" />;
+            case "payment":
+                return <DollarSign className="h-4 w-4 text-secondary" />;
             case "pending":
                 return <AlertCircle className="h-4 w-4 text-warning" />;
             case "proposal":
@@ -381,6 +540,7 @@ export default function VendorBookingDetail() {
 
     const formatHistoryStatus = (value: string) => {
         if (value === "proposal") return "Proposal";
+        if (value === "payment") return "Payment";
         return value.replace(/-/g, " ");
     };
 
@@ -524,10 +684,16 @@ export default function VendorBookingDetail() {
     const customer = booking.customer;
     const timeRange = booking.timeRange || { start: "--", end: "--" };
     const packageName = booking.packageName || "Package";
-    const price = booking.price || 0;
+    const price = quote?.amount ?? booking.price ?? 0;
     const packageInclusions = booking.packageInclusions || [];
     const history = booking.history || [];
     const canAcceptBooking = status === "pending" && Boolean(quote);
+    const eligibleForComplete = ["accepted", "confirmed"].includes(status);
+    const totalPaid = paymentRecords
+        .filter((payment) => String(payment.status).toUpperCase() === "PAID")
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const canComplete =
+        eligibleForComplete && eventEnd && new Date().getTime() >= eventEnd.getTime();
 
     const getMessageSender = (msg: ChatMessage) => {
         if ("sender" in msg) return msg.sender;
@@ -542,6 +708,73 @@ export default function VendorBookingDetail() {
 
     return (
         <div className="space-y-6">
+            <Dialog
+                open={Boolean(refundPayment)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setRefundPayment(null);
+                        setPendingRefundId(null);
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Issue Refund</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Amount (NPR)</label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={refundAmount}
+                                onChange={(e) => setRefundAmount(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Provider</label>
+                            <Select value={refundProvider} onValueChange={setRefundProvider}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select provider" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="KHALTI">Khalti</SelectItem>
+                                    <SelectItem value="ESEWA">eSewa</SelectItem>
+                                    <SelectItem value="MOCK">Mock</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Reason (optional)</label>
+                            <Textarea
+                                value={refundReason}
+                                onChange={(e) => setRefundReason(e.target.value)}
+                                placeholder="Reason for refund"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setRefundPayment(null)}
+                            disabled={isRefunding}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleRefundInitiate} disabled={isRefunding}>
+                            {isRefunding ? "Processing..." : "Initiate Refund"}
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={handleRefundConfirm}
+                            disabled={!pendingRefundId || isRefunding}
+                        >
+                            Confirm Refund
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
                     <Link to="/vendor/bookings">
@@ -669,19 +902,78 @@ export default function VendorBookingDetail() {
                                                 ).toLocaleDateString()}
                                             </p>
                                         </div>
-                                        <Badge
-                                            variant={
-                                                String(payment.status).toUpperCase() === "PAID" ? "success" : "warning"
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {String(payment.status).toLowerCase()}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                variant={
+                                                    String(payment.status).toUpperCase() === "PAID"
+                                                        ? "success"
+                                                        : "warning"
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {String(payment.status).toLowerCase()}
+                                            </Badge>
+                                            {String(payment.status).toUpperCase() === "PAID" && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setRefundPayment(payment);
+                                                        setRefundAmount(String(payment.amount));
+                                                        setRefundReason("");
+                                                        setRefundProvider("KHALTI");
+                                                        setPendingRefundId(null);
+                                                    }}
+                                                >
+                                                    Refund
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             ) : (
                                 <p className="text-sm text-muted-foreground">No payments yet.</p>
                             )}
+
+                            <Separator />
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-foreground">Refund History</p>
+                                {isRefundsLoading ? (
+                                    <p className="text-sm text-muted-foreground">Loading refunds...</p>
+                                ) : refunds.length > 0 ? (
+                                    refunds.map((refund) => (
+                                        <div
+                                            key={refund._id}
+                                            className="flex items-center justify-between rounded-lg border border-border p-3 text-sm"
+                                        >
+                                            <div>
+                                                <p className="font-medium text-foreground">
+                                                    NPR {refund.amount.toLocaleString()}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {refund.provider || "Provider"} •{" "}
+                                                    {new Date(
+                                                        refund.confirmedAt || refund.createdAt || ""
+                                                    ).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <Badge
+                                                variant={
+                                                    String(refund.status).toUpperCase() === "PAID"
+                                                        ? "success"
+                                                        : "warning"
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {String(refund.status || "initiated").toLowerCase()}
+                                            </Badge>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No refunds yet.</p>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -727,6 +1019,26 @@ export default function VendorBookingDetail() {
                                 <Button variant="destructive" className="w-full" onClick={handleReject}>
                                     <X className="h-4 w-4 mr-2" /> Decline
                                 </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {eligibleForComplete && (
+                        <Card>
+                            <CardContent className="p-4 space-y-3">
+                                <Button
+                                    variant="default"
+                                    className="w-full"
+                                    onClick={handleComplete}
+                                    disabled={!canComplete || isCompleting}
+                                >
+                                    {isCompleting ? "Completing..." : "Mark as Completed"}
+                                </Button>
+                                {!canComplete && (
+                                    <p className="text-xs text-muted-foreground">
+                                        You can mark this as completed after the event ends.
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
                     )}

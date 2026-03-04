@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Bell, Check, CheckCheck, Calendar, MessageSquare, BadgeCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -10,6 +11,7 @@ import type { Notification } from "@/types";
 export default function CustomerNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let active = true;
@@ -42,6 +44,16 @@ export default function CustomerNotifications() {
         }
     };
 
+    const handleNotificationClick = async (notification: Notification) => {
+        const id = String(notification._id);
+        if (!notification.isRead) {
+            await markAsRead(id);
+        }
+        if (notification.link) {
+            navigate(notification.link);
+        }
+    };
+
     const markAllAsRead = async () => {
         setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
         try {
@@ -54,6 +66,7 @@ export default function CustomerNotifications() {
     const getIcon = (type: string) => {
         switch (type) {
             case "booking-confirmed":
+            case "booking-completed":
                 return <BadgeCheck className="h-5 w-5 text-success" />;
             case "booking-accepted":
                 return <Check className="h-5 w-5 text-secondary" />;
@@ -65,7 +78,7 @@ export default function CustomerNotifications() {
     };
 
     return (
-        <div className="max-w-2xl space-y-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -97,7 +110,7 @@ export default function CustomerNotifications() {
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        onClick={() => markAsRead(id)}
+                                        onClick={() => handleNotificationClick(notification)}
                                         className={`w-full flex items-start gap-4 p-4 text-left transition-colors hover:bg-muted/50 ${
                                             !notification.isRead ? "bg-primary-soft/30" : ""
                                         }`}

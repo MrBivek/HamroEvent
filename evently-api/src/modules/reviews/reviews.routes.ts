@@ -16,6 +16,50 @@ export const reviewsRoutes = Router();
 
 /**
  * @openapi
+ * /api/reviews/booking/{bookingId}:
+ *   get:
+ *     tags: [Reviews]
+ *     summary: Get my review for a booking (Customer only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found }
+ */
+reviewsRoutes.get(
+    "/booking/:bookingId",
+    requireAuth,
+    requireRole(UserRole.CUSTOMER),
+    async (req, res, next) => {
+        try {
+            const bookingId = String(req.params.bookingId);
+            if (!mongoose.isValidObjectId(bookingId))
+                throw new BadRequestError("Invalid bookingId");
+
+            const booking = await BookingModel.findOne({
+                _id: bookingId,
+                userId: req.auth!.sub,
+            }).lean();
+            if (!booking) throw new NotFoundError("Booking not found");
+
+            const review = await ReviewModel.findOne({
+                bookingId: new mongoose.Types.ObjectId(bookingId),
+                customerId: booking.userId,
+            }).lean();
+
+            res.json(review || null);
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
+/**
+ * @openapi
  * /api/reviews:
  *   post:
  *     tags: [Reviews]
