@@ -137,3 +137,39 @@ export function buildQuoteApprovedEmail(input: {
 
     return { subject, text: lines.join("\n"), html };
 }
+
+export function buildPaymentReminderEmail(input: {
+    recipientName?: string;
+    bookingId: string;
+    amount: number;
+    eventTitle?: string;
+    eventDate?: string;
+    paymentUrl?: string;
+}) {
+    const subject = "Pending payment reminder";
+    const lines: string[] = [];
+    if (input.recipientName) {
+        lines.push(`Hi ${input.recipientName},`);
+    }
+    lines.push("Your booking is completed, but a payment is still pending.");
+    if (input.eventTitle || input.eventDate) {
+        lines.push(
+            `Event: ${input.eventTitle ?? "Event"}${input.eventDate ? ` • ${input.eventDate}` : ""}`,
+        );
+    }
+    lines.push(`Pending amount: NPR ${input.amount.toLocaleString()}`);
+    lines.push(`Booking ID: ${input.bookingId}`);
+
+    const html = renderEmailTemplate({
+        title: "Payment pending",
+        subtitle: "Please complete the remaining balance.",
+        preheader: `Pending payment of NPR ${input.amount.toLocaleString()}`,
+        highlight: `NPR ${input.amount.toLocaleString()}`,
+        contentLines: lines,
+        ctaLabel: input.paymentUrl ? "Complete payment" : undefined,
+        ctaUrl: input.paymentUrl,
+        footerNote: "If you have already paid, you can ignore this reminder.",
+    });
+
+    return { subject, text: lines.join("\n"), html };
+}

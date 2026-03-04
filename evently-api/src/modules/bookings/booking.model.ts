@@ -31,6 +31,7 @@ const BookingSchema = new Schema(
 
         requestedAt: { type: Date, default: () => new Date() },
         decisionAt: { type: Date },
+        lastPaymentReminderAt: { type: Date },
     },
     { timestamps: true, collection: "bookings" },
 );

@@ -87,6 +87,7 @@ paymentsRoutes.post(
 
             const allowed: BookingStatus[] = [
                 BookingStatus.ACCEPTED,
+                BookingStatus.COMPLETED,
                 BookingStatus.CONFIRMED_PENDING_PAYMENT,
             ];
             if (!allowed.includes(booking.status as BookingStatus)) {

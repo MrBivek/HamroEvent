@@ -12,7 +12,8 @@ import {
     XCircle,
     AlertCircle,
     FileText,
-    DollarSign
+    DollarSign,
+    Star
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -413,6 +414,7 @@ export default function CustomerBookingDetail() {
     const isChatDisabled = booking?.status === "cancelled" || booking?.status === "rejected";
     const isBookingInactive = booking?.status === "cancelled" || booking?.status === "rejected";
     const isQuoteLocked = Boolean(isBookingInactive || (booking?.status && booking.status !== "pending"));
+    const canPay = booking?.status === "accepted" || booking?.status === "completed";
 
     const quoteStatusBanner = useMemo(() => {
         if (!quote) return null;
@@ -979,18 +981,18 @@ export default function CustomerBookingDetail() {
                                 )}
                             </div>
 
-                            {booking.status === "accepted" && (
+                            {canPay && (
                                 <div className="space-y-3">
                                     <label className="text-xs text-muted-foreground">Amount (NPR)</label>
                                     <div className="grid gap-3 sm:grid-cols-[1fr_200px_auto]">
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                step={1}
-                                                value={paymentAmount}
-                                                onChange={(e) => setPaymentAmount(e.target.value)}
-                                                placeholder="Enter amount"
-                                            />
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            step={1}
+                                            value={paymentAmount}
+                                            onChange={(e) => setPaymentAmount(e.target.value)}
+                                            placeholder="Enter amount"
+                                        />
                                         <Select value={paymentProvider} onValueChange={setPaymentProvider}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select provider" />
@@ -998,7 +1000,6 @@ export default function CustomerBookingDetail() {
                                             <SelectContent>
                                                 <SelectItem value="KHALTI">Khalti</SelectItem>
                                                 <SelectItem value="ESEWA">eSewa</SelectItem>
-                                                <SelectItem value="MOCK">Mock</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <Button
@@ -1218,7 +1219,7 @@ export default function CustomerBookingDetail() {
                     </Card>
 
                     {booking.status === "completed" && (
-                        <Card>
+                        <Card className="mt-5">
                             <CardHeader>
                                 <CardTitle className="text-lg">Review & Report</CardTitle>
                             </CardHeader>
@@ -1241,36 +1242,49 @@ export default function CustomerBookingDetail() {
                                                 </p>
                                             )}
                                             <p className="text-xs text-muted-foreground">
-                                                Submitted on{" "}
-                                                {new Date(existingReview.createdAt).toLocaleDateString()}
+                                                Submitted on {new Date(existingReview.createdAt).toLocaleDateString()}
                                             </p>
                                         </div>
                                     ) : (
-                                    <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
-                                        <div className="space-y-1">
-                                            <label className="text-sm font-medium">Rating</label>
-                                            <Select value={reviewRating} onValueChange={setReviewRating}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select rating" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {[5, 4, 3, 2, 1].map((value) => (
-                                                        <SelectItem key={value} value={String(value)}>
-                                                            {value} Star{value > 1 ? "s" : ""}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium">Rating</label>
+                                                <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map((value) => {
+                                                        const active = value <= Number(reviewRating || 0);
+                                                        return (
+                                                            <button
+                                                                key={value}
+                                                                type="button"
+                                                                onClick={() => setReviewRating(String(value))}
+                                                                className="p-1"
+                                                                disabled={isReviewSubmitting}
+                                                                aria-label={`${value} star`}
+                                                            >
+                                                                <Star
+                                                                    className={`h-5 w-5 ${
+                                                                        active
+                                                                            ? "text-amber-500 fill-amber-500"
+                                                                            : "text-muted-foreground"
+                                                                    }`}
+                                                                />
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <span className="ml-2 text-xs text-muted-foreground">
+                                                        {reviewRating} / 5
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium">Comment</label>
+                                                <Textarea
+                                                    value={reviewComment}
+                                                    onChange={(e) => setReviewComment(e.target.value)}
+                                                    placeholder="Leave a short review"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-sm font-medium">Comment</label>
-                                            <Textarea
-                                                value={reviewComment}
-                                                onChange={(e) => setReviewComment(e.target.value)}
-                                                placeholder="Leave a short review"
-                                            />
-                                        </div>
-                                    </div>
                                     )}
                                     <Button
                                         onClick={handleSubmitReview}

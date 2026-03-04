@@ -5,6 +5,7 @@ import { env } from "./configurations/env.js";
 import mongoose from "mongoose";
 import { runMigrations } from "./migrate.js";
 import { initSocket } from "./socket.js";
+import { startPaymentReminderJob } from "./common/jobs/paymentReminder.js";
 
 async function bootstrap() {
     await connectDb();
@@ -16,6 +17,7 @@ async function bootstrap() {
     const app = createApp();
     const server = createServer(app);
     initSocket(server);
+    startPaymentReminderJob();
 
     server.listen(env.PORT, () => {
         console.log(`API Running on http://localhost:${env.PORT}`);

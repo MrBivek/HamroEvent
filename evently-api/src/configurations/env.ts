@@ -39,6 +39,7 @@ const EnvSchema = z.object({
         .default(false),
 
     CLIENT_URL: z.string().default("http://localhost:8085"),
+    PAYMENT_REMINDER_COOLDOWN_MINUTES: z.coerce.number().int().min(1).default(60),
 });
 
 export const env = EnvSchema.parse(process.env);

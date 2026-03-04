@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
@@ -563,19 +564,28 @@ export default function VendorDetailPage() {
                             <TabsContent value="reviews" className="mt-6">
                                 {vendorReviews.length > 0 ? (
                                     <div className="space-y-4">
-                                        {vendorReviews.map((review) => (
+                                        {vendorReviews.map((review) => {
+                                            const reviewerName =
+                                                review.customer?.name || review.customerName || "Customer";
+                                            const reviewerInitials = reviewerName
+                                                .split(" ")
+                                                .map((part) => part[0])
+                                                .join("")
+                                                .slice(0, 2)
+                                                .toUpperCase();
+                                            return (
                                             <Card key={review._id}>
                                                 <CardContent className="p-6">
                                                     <div className="flex items-start gap-4">
-                                                        <img
-                                                            src={resolveMediaUrl(null)}
-                                                            alt=""
-                                                            className="h-10 w-10 rounded-full"
-                                                        />
+                                                        <Avatar className="h-10 w-10">
+                                                            <AvatarFallback className="bg-primary/10 text-primary">
+                                                                {reviewerInitials}
+                                                            </AvatarFallback>
+                                                        </Avatar>
                                                         <div className="flex-1">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <span className="font-medium text-foreground">
-                                                                    {review.customer?.name || "Customer"}
+                                                                    {reviewerName}
                                                                 </span>
                                                                 <span className="text-sm text-muted-foreground">
                                                                     {new Date(review.createdAt).toLocaleDateString()}
@@ -598,7 +608,8 @@ export default function VendorDetailPage() {
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        ))}
+                                        );
+                                        })}
                                     </div>
                                 ) : (
                                     <Card className="py-12 text-center">
