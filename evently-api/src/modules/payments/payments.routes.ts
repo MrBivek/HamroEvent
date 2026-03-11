@@ -347,10 +347,15 @@ paymentsRoutes.post(
                 ? BookingStatus.CONFIRMED
                 : BookingStatus.CONFIRMED_PENDING_PAYMENT;
 
+            const currentBooking = await BookingModel.findById(payment.bookingId).lean();
+            const shouldPreserveCompleted =
+                currentBooking?.status === BookingStatus.COMPLETED;
+            const statusToSet = shouldPreserveCompleted ? BookingStatus.COMPLETED : nextStatus;
+
             const updatedBooking = await BookingModel.findByIdAndUpdate(
                 payment.bookingId,
                 {
-                    $set: { status: nextStatus },
+                    $set: { status: statusToSet },
                     $push: {
                         history: {
                             status: fullyPaid ? "confirmed" : "payment",
