@@ -180,7 +180,7 @@ vendorPaymentsRoutes.get(
                     createdAt: payment.createdAt?.toISOString(),
                     paidAt: payment.paidAt?.toISOString(),
                     eventTitle: event?.title,
-                    customerName: customer?.fullName ?? customer?.name ?? "Customer",
+                    customerName: customer?.fullName ?? "Customer",
                 };
             });
 

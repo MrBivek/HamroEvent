@@ -86,3 +86,18 @@ export const VerifyOtpSchema = z.object({
     email: z.string().email(),
     otp: z.string().min(4).max(8),
 });
+
+export const RequestPasswordResetSchema = z.object({
+    email: z.string().email(),
+});
+
+export const VerifyPasswordResetOtpSchema = z.object({
+    email: z.string().email(),
+    otp: z.string().min(4).max(8),
+});
+
+export const ResetPasswordSchema = z.object({
+    email: z.string().email(),
+    resetToken: z.string().min(16),
+    newPassword: Password,
+});

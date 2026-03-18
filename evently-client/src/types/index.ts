@@ -43,6 +43,15 @@ export interface AuthOtpResponse {
     sent: boolean;
 }
 
+export interface AuthResetPasswordVerifyResponse {
+    verified: boolean;
+    resetToken: string;
+}
+
+export interface AuthResetPasswordResponse {
+    reset: boolean;
+}
+
 // Vendor Types
 export type VerificationStatus = "pending" | "verified" | "rejected";
 

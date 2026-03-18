@@ -25,3 +25,18 @@ export async function verifyOtp(req: Request, res: Response) {
     const result = await service.verifyOtp(req.body);
     res.json(result);
 }
+
+export async function requestPasswordReset(req: Request, res: Response) {
+    const result = await service.requestPasswordReset(req.body);
+    res.json(result);
+}
+
+export async function verifyPasswordResetOtp(req: Request, res: Response) {
+    const result = await service.verifyPasswordResetOtp(req.body);
+    res.json(result);
+}
+
+export async function resetPassword(req: Request, res: Response) {
+    const result = await service.resetPassword(req.body);
+    res.json(result);
+}

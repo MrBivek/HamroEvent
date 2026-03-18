@@ -4,6 +4,9 @@ import {
     RegisterCustomerSchema,
     RequestOtpSchema,
     VerifyOtpSchema,
+    RequestPasswordResetSchema,
+    VerifyPasswordResetOtpSchema,
+    ResetPasswordSchema,
 } from "./auth.schemas.js";
 import { Router } from "express";
 import * as controller from "./auth.controller.js";
@@ -199,3 +202,81 @@ authRoutes.post("/request-otp", validateBody(RequestOtpSchema), controller.reque
  *         description: Invalid or expired OTP
  */
 authRoutes.post("/verify-otp", validateBody(VerifyOtpSchema), controller.verifyOtp);
+
+/**
+ * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send OTP for password reset
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, example: "customer1@test.com" }
+ *     responses:
+ *       200:
+ *         description: Reset OTP sent
+ */
+authRoutes.post(
+    "/forgot-password",
+    validateBody(RequestPasswordResetSchema),
+    controller.requestPasswordReset,
+);
+
+/**
+ * @openapi
+ * /api/auth/verify-reset-otp:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify password reset OTP
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email: { type: string, example: "customer1@test.com" }
+ *               otp: { type: string, example: "123456" }
+ *     responses:
+ *       200:
+ *         description: OTP verified, reset token returned
+ */
+authRoutes.post(
+    "/verify-reset-otp",
+    validateBody(VerifyPasswordResetOtpSchema),
+    controller.verifyPasswordResetOtp,
+);
+
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Reset password after OTP verification
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, resetToken, newPassword]
+ *             properties:
+ *               email: { type: string, example: "customer1@test.com" }
+ *               resetToken: { type: string }
+ *               newPassword: { type: string, example: "newStrongPassword123" }
+ *     responses:
+ *       200:
+ *         description: Password reset complete
+ */
+authRoutes.post(
+    "/reset-password",
+    validateBody(ResetPasswordSchema),
+    controller.resetPassword,
+);

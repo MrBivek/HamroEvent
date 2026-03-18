@@ -3,7 +3,14 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { AuthLoginResponse, AuthOtpResponse, AuthRegisterResponse, VendorRegisterResponse } from "../types";
+import type {
+    AuthLoginResponse,
+    AuthOtpResponse,
+    AuthRegisterResponse,
+    AuthResetPasswordResponse,
+    AuthResetPasswordVerifyResponse,
+    VendorRegisterResponse
+} from "../types";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 export class AuthService {
@@ -154,6 +161,69 @@ export class AuthService {
         return __request(OpenAPI, {
             method: "POST",
             url: "/api/auth/verify-otp",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+
+    /**
+     * Send OTP for password reset
+     * @returns AuthOtpResponse Reset OTP sent
+     * @throws ApiError
+     */
+    public static postApiAuthForgotPassword({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+        };
+    }): CancelablePromise<AuthOtpResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/forgot-password",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+
+    /**
+     * Verify password reset OTP
+     * @returns AuthResetPasswordVerifyResponse OTP verified, reset token returned
+     * @throws ApiError
+     */
+    public static postApiAuthVerifyResetOtp({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+            otp: string;
+        };
+    }): CancelablePromise<AuthResetPasswordVerifyResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/verify-reset-otp",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+
+    /**
+     * Reset password after OTP verification
+     * @returns AuthResetPasswordResponse Password reset complete
+     * @throws ApiError
+     */
+    public static postApiAuthResetPassword({
+        requestBody
+    }: {
+        requestBody: {
+            email: string;
+            resetToken: string;
+            newPassword: string;
+        };
+    }): CancelablePromise<AuthResetPasswordResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/reset-password",
             body: requestBody,
             mediaType: "application/json"
         });

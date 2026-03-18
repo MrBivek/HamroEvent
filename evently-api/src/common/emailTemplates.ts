@@ -97,6 +97,24 @@ export function buildOtpEmail(input: { otp: string; expiresMinutes: number }) {
     return { subject, text, html };
 }
 
+export function buildPasswordResetOtpEmail(input: { otp: string; expiresMinutes: number }) {
+    const subject = "Reset your Evently password";
+    const text = `Your Evently password reset code is ${input.otp}. It expires in ${input.expiresMinutes} minutes.`;
+    const html = renderEmailTemplate({
+        title: "Reset your password",
+        subtitle: "Use this code to continue securing your Evently account.",
+        preheader: `Your password reset code is ${input.otp}`,
+        highlight: input.otp,
+        contentLines: [
+            "We received a request to reset your password.",
+            "Enter this one-time code to verify the request and continue.",
+            `This code expires in ${input.expiresMinutes} minutes.`,
+        ],
+        footerNote: "If you did not request a password reset, you can safely ignore this email.",
+    });
+    return { subject, text, html };
+}
+
 export function buildQuoteApprovedEmail(input: {
     recipientName?: string;
     counterpartName?: string;

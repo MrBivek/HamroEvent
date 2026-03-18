@@ -250,7 +250,10 @@ vendorBookingsRoutes.patch(
             const booking = await BookingModel.findOne({ _id: id, vendorId: vendor._id });
             if (!booking) throw new NotFoundError("Booking not found");
 
-            if ([BookingStatus.CANCELLED, BookingStatus.REJECTED].includes(booking.status)) {
+            if (
+                booking.status === BookingStatus.CANCELLED ||
+                booking.status === BookingStatus.REJECTED
+            ) {
                 throw new BadRequestError("This booking cannot be completed");
             }
 
@@ -259,11 +262,9 @@ vendorBookingsRoutes.patch(
             }
 
             if (
-                ![
-                    BookingStatus.ACCEPTED,
-                    BookingStatus.CONFIRMED,
-                    BookingStatus.CONFIRMED_PENDING_PAYMENT,
-                ].includes(booking.status)
+                booking.status !== BookingStatus.ACCEPTED &&
+                booking.status !== BookingStatus.CONFIRMED &&
+                booking.status !== BookingStatus.CONFIRMED_PENDING_PAYMENT
             ) {
                 throw new BadRequestError("Booking is not eligible for completion");
             }

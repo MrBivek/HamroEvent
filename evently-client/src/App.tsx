@@ -14,6 +14,8 @@ import LoginPage from "@/pages/auth/LoginPage.tsx";
 import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage.tsx";
 import VendorRegisterPage from "@/pages/auth/VendorRegisterPage.tsx";
 import OtpVerificationPage from "@/pages/auth/OtpVerificationPage.tsx";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage.tsx";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage.tsx";
 import { AboutPage, ContactPage } from "@/pages/StaticPages.tsx";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard.tsx";
 import CustomerEvents from "@/pages/customer/CustomerEvents.tsx";
@@ -77,6 +79,8 @@ const App = () => {
 
                         {/* Auth routes */}
                         <Route path="/login" element={<LoginPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
                         <Route path="/register/customer" element={<CustomerRegisterPage />} />
                         <Route path="/register/vendor" element={<VendorRegisterPage />} />
                         <Route path="/verify-otp" element={<OtpVerificationPage />} />
