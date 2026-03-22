@@ -10,6 +10,7 @@ export interface User {
     isActive: boolean;
     status?: "active" | "pending" | "suspended" | (string & {});
     verificationStatus?: VerificationStatus;
+    twoFactorEnabled?: boolean;
     createdAt: string;
 }
 
@@ -35,8 +36,11 @@ export interface VendorRegisterResponse {
 }
 
 export interface AuthLoginResponse {
-    token: string;
-    user: User;
+    token?: string;
+    user?: User;
+    requiresTwoFactor?: boolean;
+    tempToken?: string;
+    email?: string;
 }
 
 export interface AuthOtpResponse {
@@ -50,6 +54,23 @@ export interface AuthResetPasswordVerifyResponse {
 
 export interface AuthResetPasswordResponse {
     reset: boolean;
+}
+
+export interface AccountSecurityStatus {
+    email: string;
+    twoFactorEnabled: boolean;
+    hasPendingSetup: boolean;
+}
+
+export interface TwoFactorSetupResponse {
+    qrCodeDataUrl: string;
+    manualEntryKey: string;
+    email: string;
+}
+
+export interface TwoFactorToggleResponse {
+    user: User;
+    twoFactorEnabled: boolean;
 }
 
 // Vendor Types

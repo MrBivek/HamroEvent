@@ -27,6 +27,7 @@ import { adminSupportTicketsRoutes } from "./support-tickets/admin-support-ticke
 import { reportsRoutes } from "./reports/reports.routes.js";
 import { adminReportsRoutes } from "./reports/admin-reports.routes.js";
 import { auditLogsRoutes } from "./audit-logs/audit-logs.routes.js";
+import { accountRoutes } from "./account/account.routes.js";
 
 export const apiRouter = Router();
 
@@ -58,3 +59,4 @@ apiRouter.use("/reviews", reviewsRoutes);
 apiRouter.use("/favorites", favoritesRoutes);
 apiRouter.use("/support-tickets", supportTicketsRoutes);
 apiRouter.use("/reports", reportsRoutes);
+apiRouter.use("/account", accountRoutes);

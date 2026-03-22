@@ -12,7 +12,7 @@ import {
     Sparkles,
     Star,
     TrendingUp,
-    Wallet,
+    Wallet
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -62,7 +62,7 @@ export default function CustomerDashboard() {
                 const [bookingRes, eventRes, favoritesRes] = await Promise.all([
                     BookingsService.getApiBookings({ page: 1, limit: 50 }),
                     EventsService.getApiEvents({ page: 1, limit: 50 }),
-                    FavoritesService.getApiFavorites({ page: 1, limit: 20 }),
+                    FavoritesService.getApiFavorites({ page: 1, limit: 20 })
                 ]);
                 if (!active) return;
                 setBookings(bookingRes?.items || []);
@@ -105,7 +105,7 @@ export default function CustomerDashboard() {
         .slice(0, 4);
     const totalBudget = events.reduce((sum, event) => sum + (event.budget || 0), 0);
     const confirmedBookings = bookings.filter((booking) =>
-        ["accepted", "confirmed", "completed"].includes(booking.status),
+        ["accepted", "confirmed", "completed"].includes(booking.status)
     ).length;
     const completedBookings = bookings.filter((booking) => booking.status === "completed").length;
     const averageVendorRating =
@@ -121,33 +121,33 @@ export default function CustomerDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         legend: {
             bottom: 0,
             textStyle: {
-                color: getChartColor("--muted-foreground", "#6b7280"),
-            },
+                color: getChartColor("--muted-foreground", "#6b7280")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 24,
             bottom: 48,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "category",
             boundaryGap: false,
             data: MONTH_LABELS,
             axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } },
-            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
+            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") }
         },
         yAxis: {
             type: "value",
             splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } },
-            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
+            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") }
         },
         series: [
             {
@@ -159,8 +159,8 @@ export default function CustomerDashboard() {
                 lineStyle: { width: 3, color: getChartColor("--primary", "#6366f1") },
                 itemStyle: { color: getChartColor("--primary", "#6366f1") },
                 areaStyle: {
-                    color: getChartColor("--primary-soft", "#eef2ff"),
-                },
+                    color: getChartColor("--primary-soft", "#eef2ff")
+                }
             },
             {
                 name: "Events",
@@ -171,10 +171,10 @@ export default function CustomerDashboard() {
                 lineStyle: { width: 3, color: getChartColor("--secondary", "#14b8a6") },
                 itemStyle: { color: getChartColor("--secondary", "#14b8a6") },
                 areaStyle: {
-                    color: getChartColor("--secondary-soft", "#ccfbf1"),
-                },
-            },
-        ],
+                    color: getChartColor("--secondary-soft", "#ccfbf1")
+                }
+            }
+        ]
     };
 
     const statusBreakdownOption: EChartsOption = {
@@ -184,14 +184,14 @@ export default function CustomerDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         legend: {
             bottom: 0,
             textStyle: {
-                color: getChartColor("--muted-foreground", "#6b7280"),
-            },
+                color: getChartColor("--muted-foreground", "#6b7280")
+            }
         },
         series: [
             {
@@ -199,37 +199,37 @@ export default function CustomerDashboard() {
                 radius: ["52%", "75%"],
                 avoidLabelOverlap: true,
                 label: {
-                    show: false,
+                    show: false
                 },
                 itemStyle: {
                     borderRadius: 14,
                     borderColor: getChartColor("--card", "#ffffff"),
-                    borderWidth: 4,
+                    borderWidth: 4
                 },
                 data: [
                     {
                         value: bookings.filter((booking) => booking.status === "pending").length,
                         name: "Pending",
-                        itemStyle: { color: getChartColor("--warning", "#f59e0b") },
+                        itemStyle: { color: getChartColor("--warning", "#f59e0b") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "accepted").length,
                         name: "Accepted",
-                        itemStyle: { color: getChartColor("--secondary", "#14b8a6") },
+                        itemStyle: { color: getChartColor("--secondary", "#14b8a6") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "confirmed").length,
                         name: "Confirmed",
-                        itemStyle: { color: getChartColor("--primary", "#6366f1") },
+                        itemStyle: { color: getChartColor("--primary", "#6366f1") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "completed").length,
                         name: "Completed",
-                        itemStyle: { color: getChartColor("--success", "#22c55e") },
-                    },
-                ],
-            },
-        ],
+                        itemStyle: { color: getChartColor("--success", "#22c55e") }
+                    }
+                ]
+            }
+        ]
     };
 
     const eventReadinessOption: EChartsOption = {
@@ -240,20 +240,20 @@ export default function CustomerDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 16,
             bottom: 16,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "value",
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.5 } },
+            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.5 } }
         },
         yAxis: {
             type: "category",
@@ -261,10 +261,10 @@ export default function CustomerDashboard() {
             axisLabel: {
                 color: getChartColor("--muted-foreground", "#6b7280"),
                 width: 120,
-                overflow: "truncate",
+                overflow: "truncate"
             },
             axisLine: { show: false },
-            axisTick: { show: false },
+            axisTick: { show: false }
         },
         series: [
             {
@@ -273,10 +273,10 @@ export default function CustomerDashboard() {
                 barWidth: 18,
                 itemStyle: {
                     borderRadius: [999, 999, 999, 999],
-                    color: getChartColor("--accent", "#f97316"),
-                },
-            },
-        ],
+                    color: getChartColor("--accent", "#f97316")
+                }
+            }
+        ]
     };
 
     return (
@@ -289,7 +289,10 @@ export default function CustomerDashboard() {
                 <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_55%)]" />
                 <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
                     <div className="space-y-4">
-                        <Badge variant="soft" className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]">
+                        <Badge
+                            variant="soft"
+                            className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]"
+                        >
                             <Sparkles className="h-3.5 w-3.5" />
                             Planning Command Center
                         </Badge>
@@ -298,8 +301,8 @@ export default function CustomerDashboard() {
                                 Welcome back, {user?.name?.split(" ")[0]}
                             </h1>
                             <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-                                Your bookings, event momentum, and favorite vendors are all moving here. Use this
-                                space to keep every celebration on track.
+                                Your bookings, event momentum, and favorite vendors are all moving here. Use this space
+                                to keep every celebration on track.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -353,7 +356,9 @@ export default function CustomerDashboard() {
                                         <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                                             Planned budget
                                         </p>
-                                        <p className="text-xl font-semibold text-foreground">{formatCurrency(totalBudget)}</p>
+                                        <p className="text-xl font-semibold text-foreground">
+                                            {formatCurrency(totalBudget)}
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -368,26 +373,26 @@ export default function CustomerDashboard() {
                         label: "Pending bookings",
                         value: bookings.filter((booking) => booking.status === "pending").length,
                         icon: Clock,
-                        color: "bg-warning-soft text-warning",
+                        color: "bg-warning-soft text-warning"
                     },
                     {
                         label: "Completed bookings",
                         value: completedBookings,
                         icon: Calendar,
-                        color: "bg-success-soft text-success",
+                        color: "bg-success-soft text-success"
                     },
                     {
                         label: "Favorites",
                         value: shortlistedVendors.length,
                         icon: Heart,
-                        color: "bg-destructive-soft text-destructive",
+                        color: "bg-destructive-soft text-destructive"
                     },
                     {
                         label: "Avg favorite rating",
                         value: averageVendorRating.toFixed(1),
                         icon: Star,
-                        color: "bg-primary-soft text-primary",
-                    },
+                        color: "bg-primary-soft text-primary"
+                    }
                 ].map((stat, index) => (
                     <motion.div
                         key={stat.label}
@@ -397,7 +402,9 @@ export default function CustomerDashboard() {
                     >
                         <Card className="overflow-hidden">
                             <CardContent className="p-5">
-                                <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}>
+                                <div
+                                    className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}
+                                >
                                     <stat.icon className="h-5 w-5" />
                                 </div>
                                 <p className="text-3xl font-semibold text-foreground">{stat.value}</p>
@@ -439,7 +446,9 @@ export default function CustomerDashboard() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-lg">Upcoming Bookings</CardTitle>
-                            <p className="text-sm text-muted-foreground">The nearest bookings that need your attention.</p>
+                            <p className="text-sm text-muted-foreground">
+                                The nearest bookings that need your attention.
+                            </p>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
                             <Link to="/customer/bookings">
@@ -465,7 +474,7 @@ export default function CustomerDashboard() {
                                                 {new Date(booking.date).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
-                                                    year: "numeric",
+                                                    year: "numeric"
                                                 })}
                                             </span>
                                             <span>•</span>
@@ -534,11 +543,13 @@ export default function CustomerDashboard() {
                                                 {new Date(event.date).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
-                                                    year: "numeric",
+                                                    year: "numeric"
                                                 })}
                                             </p>
                                         </div>
-                                        <Badge variant="soft">{event.vendorCount ?? event.bookings?.length ?? 0} vendors</Badge>
+                                        <Badge variant="soft">
+                                            {event.vendorCount ?? event.bookings?.length ?? 0} vendors
+                                        </Badge>
                                     </div>
                                 </Link>
                             ))
@@ -579,7 +590,9 @@ export default function CustomerDashboard() {
                                             className="h-14 w-14 rounded-2xl object-cover"
                                         />
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate font-medium text-foreground">{vendor.businessName}</p>
+                                            <p className="truncate font-medium text-foreground">
+                                                {vendor.businessName}
+                                            </p>
                                             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                                                 <span className="inline-flex items-center gap-1">
                                                     <Star className="h-3.5 w-3.5 fill-warning text-warning" />

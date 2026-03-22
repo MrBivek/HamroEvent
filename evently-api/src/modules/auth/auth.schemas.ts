@@ -78,6 +78,11 @@ export const LoginSchema = z.object({
     password: Password,
 });
 
+export const LoginTwoFactorSchema = z.object({
+    tempToken: z.string().min(10),
+    code: z.string().min(6).max(6),
+});
+
 export const RequestOtpSchema = z.object({
     email: z.string().email(),
 });

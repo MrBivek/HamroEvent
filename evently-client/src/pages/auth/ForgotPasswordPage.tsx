@@ -21,18 +21,18 @@ export default function ForgotPasswordPage() {
         setIsSubmitting(true);
         try {
             await AuthService.postApiAuthForgotPassword({
-                requestBody: { email },
+                requestBody: { email }
             });
             toast({
                 title: "OTP sent",
-                description: "Check your email for the password reset code.",
+                description: "Check your email for the password reset code."
             });
             navigate(`/reset-password?email=${encodeURIComponent(email)}`);
         } catch (error) {
             toast({
                 title: "Could not send reset code",
                 description: getErrorMessage(error, "Please try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsSubmitting(false);

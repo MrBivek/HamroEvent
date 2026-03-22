@@ -14,7 +14,7 @@ import {
     Sparkles,
     Star,
     TrendingUp,
-    Wallet,
+    Wallet
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -41,7 +41,7 @@ export default function VendorDashboard() {
         pendingPayout: 0,
         availableBalance: 0,
         thisMonth: 0,
-        growth: 0,
+        growth: 0
     });
     const [transactions, setTransactions] = useState<VendorPaymentTransaction[]>([]);
 
@@ -53,7 +53,7 @@ export default function VendorDashboard() {
                     VendorsService.getApiVendorsMe(),
                     VendorBookingsService.getApiVendorsMeBookings({ page: 1, limit: 50 }),
                     VendorPaymentsService.getApiVendorsMePaymentsSummary(),
-                    VendorPaymentsService.getApiVendorsMePaymentsTransactions(),
+                    VendorPaymentsService.getApiVendorsMePaymentsTransactions()
                 ]);
                 if (!active) return;
                 setVendor(vendorRes);
@@ -82,26 +82,26 @@ export default function VendorDashboard() {
             label: "Pending requests",
             value: bookings.filter((booking) => booking.status === "pending").length,
             icon: Clock,
-            color: "bg-warning-soft text-warning",
+            color: "bg-warning-soft text-warning"
         },
         {
             label: "Active bookings",
             value: activeBookings,
             icon: Calendar,
-            color: "bg-primary-soft text-primary",
+            color: "bg-primary-soft text-primary"
         },
         {
             label: "This month",
             value: formatCurrency(paymentSummary.thisMonth),
             icon: Wallet,
-            color: "bg-secondary-soft text-secondary",
+            color: "bg-secondary-soft text-secondary"
         },
         {
             label: "Rating",
             value: vendor ? vendor.ratingAvg.toFixed(1) : "0.0",
             icon: Star,
-            color: "bg-accent-soft text-accent",
-        },
+            color: "bg-accent-soft text-accent"
+        }
     ];
 
     const bookingPipelineOption: EChartsOption = {
@@ -111,14 +111,14 @@ export default function VendorDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         legend: {
             bottom: 0,
             textStyle: {
-                color: getChartColor("--muted-foreground", "#6b7280"),
-            },
+                color: getChartColor("--muted-foreground", "#6b7280")
+            }
         },
         series: [
             {
@@ -127,47 +127,50 @@ export default function VendorDashboard() {
                 itemStyle: {
                     borderRadius: 14,
                     borderColor: getChartColor("--card", "#ffffff"),
-                    borderWidth: 4,
+                    borderWidth: 4
                 },
                 label: { show: false },
                 data: [
                     {
                         value: bookings.filter((booking) => booking.status === "pending").length,
                         name: "Pending",
-                        itemStyle: { color: getChartColor("--warning", "#f59e0b") },
+                        itemStyle: { color: getChartColor("--warning", "#f59e0b") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "accepted").length,
                         name: "Accepted",
-                        itemStyle: { color: getChartColor("--secondary", "#14b8a6") },
+                        itemStyle: { color: getChartColor("--secondary", "#14b8a6") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "confirmed").length,
                         name: "Confirmed",
-                        itemStyle: { color: getChartColor("--primary", "#6366f1") },
+                        itemStyle: { color: getChartColor("--primary", "#6366f1") }
                     },
                     {
                         value: completedBookings,
                         name: "Completed",
-                        itemStyle: { color: getChartColor("--success", "#22c55e") },
+                        itemStyle: { color: getChartColor("--success", "#22c55e") }
                     },
                     {
                         value: bookings.filter((booking) => booking.status === "rejected").length,
                         name: "Rejected",
-                        itemStyle: { color: getChartColor("--destructive", "#ef4444") },
-                    },
-                ],
-            },
-        ],
+                        itemStyle: { color: getChartColor("--destructive", "#ef4444") }
+                    }
+                ]
+            }
+        ]
     };
 
-    const revenueByMonth = transactions.reduce<number[]>((accumulator, transaction) => {
-        const date = new Date(transaction.date);
-        if (Number.isNaN(date.getTime())) return accumulator;
-        const sign = transaction.type === "debit" ? -1 : 1;
-        accumulator[date.getMonth()] += sign * transaction.amount;
-        return accumulator;
-    }, Array.from({ length: 12 }, () => 0));
+    const revenueByMonth = transactions.reduce<number[]>(
+        (accumulator, transaction) => {
+            const date = new Date(transaction.date);
+            if (Number.isNaN(date.getTime())) return accumulator;
+            const sign = transaction.type === "debit" ? -1 : 1;
+            accumulator[date.getMonth()] += sign * transaction.amount;
+            return accumulator;
+        },
+        Array.from({ length: 12 }, () => 0)
+    );
 
     const revenueTrendOption: EChartsOption = {
         animationDuration: 700,
@@ -177,26 +180,26 @@ export default function VendorDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 24,
             bottom: 24,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "category",
             data: MONTH_LABELS,
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } },
+            axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } }
         },
         yAxis: {
             type: "value",
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } },
+            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } }
         },
         series: [
             {
@@ -205,10 +208,10 @@ export default function VendorDashboard() {
                 barWidth: 20,
                 itemStyle: {
                     borderRadius: [10, 10, 0, 0],
-                    color: getChartColor("--primary", "#6366f1"),
-                },
-            },
-        ],
+                    color: getChartColor("--primary", "#6366f1")
+                }
+            }
+        ]
     };
 
     const recentTransactionOption: EChartsOption = {
@@ -219,20 +222,20 @@ export default function VendorDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 20,
             bottom: 16,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "value",
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.5 } },
+            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.5 } }
         },
         yAxis: {
             type: "category",
@@ -240,10 +243,10 @@ export default function VendorDashboard() {
             axisLabel: {
                 color: getChartColor("--muted-foreground", "#6b7280"),
                 width: 130,
-                overflow: "truncate",
+                overflow: "truncate"
             },
             axisTick: { show: false },
-            axisLine: { show: false },
+            axisLine: { show: false }
         },
         series: [
             {
@@ -255,21 +258,23 @@ export default function VendorDashboard() {
                             transaction.type === "debit"
                                 ? getChartColor("--destructive", "#ef4444")
                                 : getChartColor("--secondary", "#14b8a6"),
-                        borderRadius: [999, 999, 999, 999],
-                    },
+                        borderRadius: [999, 999, 999, 999]
+                    }
                 })),
-                barWidth: 16,
-            },
-        ],
+                barWidth: 16
+            }
+        ]
     };
 
     const handleDecision = async (id: string, decision: "ACCEPT" | "REJECT") => {
         try {
             const response = await VendorBookingsService.patchApiVendorsMeBookingsDecision({
                 id,
-                requestBody: { decision },
+                requestBody: { decision }
             });
-            setBookings((previous) => previous.map((booking) => (booking._id === id ? { ...booking, status: response.status } : booking)));
+            setBookings((previous) =>
+                previous.map((booking) => (booking._id === id ? { ...booking, status: response.status } : booking))
+            );
         } catch {
             // keep dashboard interactions lightweight
         }
@@ -298,7 +303,10 @@ export default function VendorDashboard() {
                 <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_55%)]" />
                 <div className="relative grid gap-6 lg:grid-cols-[1.25fr_0.95fr]">
                     <div className="space-y-4">
-                        <Badge variant="soft" className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]">
+                        <Badge
+                            variant="soft"
+                            className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]"
+                        >
                             <Sparkles className="h-3.5 w-3.5" />
                             Vendor Control Room
                         </Badge>
@@ -323,7 +331,9 @@ export default function VendorDashboard() {
                     <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                         <Card className="border-white/40 bg-white/70 backdrop-blur dark:bg-card/70">
                             <CardContent className="p-4">
-                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Total earnings</p>
+                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                                    Total earnings
+                                </p>
                                 <p className="mt-2 text-2xl font-semibold text-foreground">
                                     {formatCurrency(paymentSummary.totalEarnings)}
                                 </p>
@@ -335,7 +345,9 @@ export default function VendorDashboard() {
                         </Card>
                         <Card className="border-white/40 bg-white/70 backdrop-blur dark:bg-card/70">
                             <CardContent className="p-4">
-                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Business health</p>
+                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                                    Business health
+                                </p>
                                 <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
                                     <BadgeCheck className="h-5 w-5 text-secondary" />
                                     {vendor?.verificationStatus === "verified" ? "Verified profile" : "Pending review"}
@@ -347,7 +359,9 @@ export default function VendorDashboard() {
                         </Card>
                         <Card className="border-white/40 bg-white/70 backdrop-blur dark:bg-card/70">
                             <CardContent className="p-4">
-                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Completed jobs</p>
+                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                                    Completed jobs
+                                </p>
                                 <p className="mt-2 text-2xl font-semibold text-foreground">{completedBookings}</p>
                                 <p className="mt-1 text-sm text-muted-foreground">Strong signal for repeat trust</p>
                             </CardContent>
@@ -360,7 +374,9 @@ export default function VendorDashboard() {
                 {stats.map((stat) => (
                     <Card key={stat.label}>
                         <CardContent className="p-5">
-                            <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}>
+                            <div
+                                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}
+                            >
                                 <stat.icon className="h-5 w-5" />
                             </div>
                             <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
@@ -430,7 +446,8 @@ export default function VendorDashboard() {
                                                     <div>
                                                         <p className="font-medium text-foreground">{customerName}</p>
                                                         <p className="text-sm text-muted-foreground">
-                                                            {booking.eventType || "Event"} • {booking.packageName || "Package"}
+                                                            {booking.eventType || "Event"} •{" "}
+                                                            {booking.packageName || "Package"}
                                                         </p>
                                                     </div>
                                                     <Badge variant="warning">pending</Badge>
@@ -443,7 +460,7 @@ export default function VendorDashboard() {
                                                             {new Date(booking.date).toLocaleDateString("en-US", {
                                                                 weekday: "short",
                                                                 month: "short",
-                                                                day: "numeric",
+                                                                day: "numeric"
                                                             })}
                                                         </span>
                                                     </div>
@@ -481,10 +498,18 @@ export default function VendorDashboard() {
                                                 )}
 
                                                 <div className="flex flex-wrap gap-2">
-                                                    <Button size="sm" variant="success" onClick={() => handleDecision(booking._id, "ACCEPT")}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="success"
+                                                        onClick={() => handleDecision(booking._id, "ACCEPT")}
+                                                    >
                                                         Accept
                                                     </Button>
-                                                    <Button size="sm" variant="outline" onClick={() => handleDecision(booking._id, "REJECT")}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleDecision(booking._id, "REJECT")}
+                                                    >
                                                         Decline
                                                     </Button>
                                                     <Button size="sm" variant="ghost" asChild>
@@ -521,7 +546,7 @@ export default function VendorDashboard() {
                                             {new Date(transaction.date).toLocaleDateString("en-US", {
                                                 month: "short",
                                                 day: "numeric",
-                                                year: "numeric",
+                                                year: "numeric"
                                             })}
                                         </p>
                                     </div>

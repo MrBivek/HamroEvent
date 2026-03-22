@@ -35,18 +35,18 @@ export default function ResetPasswordPage() {
         setIsVerifying(true);
         try {
             const result = await AuthService.postApiAuthVerifyResetOtp({
-                requestBody: { email, otp },
+                requestBody: { email, otp }
             });
             setResetToken(result.resetToken);
             toast({
                 title: "OTP verified",
-                description: "You can now set a new password.",
+                description: "You can now set a new password."
             });
         } catch (error) {
             toast({
                 title: "OTP verification failed",
                 description: getErrorMessage(error, "Please check the code and try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsVerifying(false);
@@ -59,7 +59,7 @@ export default function ResetPasswordPage() {
             toast({
                 title: "Passwords do not match",
                 description: "Please enter the same password in both fields.",
-                variant: "destructive",
+                variant: "destructive"
             });
             return;
         }
@@ -70,19 +70,19 @@ export default function ResetPasswordPage() {
                 requestBody: {
                     email,
                     resetToken,
-                    newPassword,
-                },
+                    newPassword
+                }
             });
             toast({
                 title: "Password updated",
-                description: "You can now sign in with your new password.",
+                description: "You can now sign in with your new password."
             });
             navigate("/login");
         } catch (error) {
             toast({
                 title: "Could not reset password",
                 description: getErrorMessage(error, "Please try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsResetting(false);
@@ -97,19 +97,19 @@ export default function ResetPasswordPage() {
         setIsResending(true);
         try {
             await AuthService.postApiAuthForgotPassword({
-                requestBody: { email },
+                requestBody: { email }
             });
             setResetToken("");
             setOtp("");
             toast({
                 title: "OTP sent",
-                description: "Check your email for the new reset code.",
+                description: "Check your email for the new reset code."
             });
         } catch (error) {
             toast({
                 title: "Could not resend code",
                 description: getErrorMessage(error, "Please try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsResending(false);
@@ -168,7 +168,13 @@ export default function ResetPasswordPage() {
                                         />
                                     </div>
                                 </div>
-                                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isVerifying}>
+                                <Button
+                                    type="submit"
+                                    variant="hero"
+                                    size="lg"
+                                    className="w-full"
+                                    disabled={isVerifying}
+                                >
                                     {isVerifying ? "Verifying..." : "Verify OTP"}
                                 </Button>
                             </form>
@@ -192,7 +198,11 @@ export default function ResetPasswordPage() {
                                             onClick={() => setShowPassword((value) => !value)}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                         >
-                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -222,7 +232,13 @@ export default function ResetPasswordPage() {
                                         </button>
                                     </div>
                                 </div>
-                                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isResetting}>
+                                <Button
+                                    type="submit"
+                                    variant="hero"
+                                    size="lg"
+                                    className="w-full"
+                                    disabled={isResetting}
+                                >
                                     {isResetting ? "Updating..." : "Change Password"}
                                 </Button>
                             </form>

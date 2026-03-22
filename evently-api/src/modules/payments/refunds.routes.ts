@@ -8,9 +8,16 @@ import { RefundModel } from "./refund.model.js";
 import { PaymentModel } from "./payment.model.js";
 import { BookingModel } from "../bookings/booking.model.js";
 import { VendorModel } from "../vendors/vendor.model.js";
-import { CreateRefundSchema, RefundListQuerySchema, InitiateRefundSchema } from "./payments.schemas.js";
+import {
+    CreateRefundSchema,
+    RefundListQuerySchema,
+    InitiateRefundSchema,
+} from "./payments.schemas.js";
 import { createAuditLog } from "../audit-logs/audit-logs.service.js";
-import { createNotification, createNotificationsForAdmins } from "../notifications/notifications.service.js";
+import {
+    createNotification,
+    createNotificationsForAdmins,
+} from "../notifications/notifications.service.js";
 import { mapUserRoleToUi } from "../../common/mappers.js";
 import { emitBookingUpdate } from "../../socket.js";
 import { VendorPaymentConfigModel } from "./vendor-payment-config.model.js";
@@ -391,7 +398,9 @@ refundsRoutes.post(
 
             const provider = String(refund.provider || "").toUpperCase();
             if (provider !== "MOCK") {
-                const config = await VendorPaymentConfigModel.findOne({ vendorId: vendor._id }).lean();
+                const config = await VendorPaymentConfigModel.findOne({
+                    vendorId: vendor._id,
+                }).lean();
                 if (!config) throw new BadRequestError("Vendor payment configuration is missing");
 
                 if (provider === "KHALTI") {

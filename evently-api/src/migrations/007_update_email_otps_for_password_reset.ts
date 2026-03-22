@@ -3,7 +3,10 @@ import type mongoose from "mongoose";
 export const name = "007_update_email_otps_for_password_reset";
 
 async function dropIndexIfExists(conn: mongoose.Connection, collection: string, indexName: string) {
-    await conn.collection(collection).dropIndex(indexName).catch(() => {});
+    await conn
+        .collection(collection)
+        .dropIndex(indexName)
+        .catch(() => {});
 }
 
 export async function up(conn: mongoose.Connection) {
@@ -13,10 +16,7 @@ export async function up(conn: mongoose.Connection) {
 
     await conn
         .collection("emailOtps")
-        .updateMany(
-            { purpose: { $exists: false } },
-            { $set: { purpose: "VERIFY_ACCOUNT" } },
-        );
+        .updateMany({ purpose: { $exists: false } }, { $set: { purpose: "VERIFY_ACCOUNT" } });
 
     await conn
         .collection("emailOtps")

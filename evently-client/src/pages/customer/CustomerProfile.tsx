@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useToast } from "@/hooks/use-toast.ts";
+import { TwoFactorSettingsCard } from "@/components/account/TwoFactorSettingsCard.tsx";
 
 export default function CustomerProfile() {
     const { user, updateUser } = useAuthStore();
@@ -122,40 +123,46 @@ export default function CustomerProfile() {
                     </CardContent>
                 </Card>
 
-                <Card className="w-full lg:flex-1 min-w-0">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Account Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between py-3 border-b border-border">
-                            <div>
-                                <p className="font-medium text-foreground">Change Password</p>
-                                <p className="text-sm text-muted-foreground">Update your password</p>
+                <div className="w-full lg:flex-1 min-w-0 space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Account Settings</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between py-3 border-b border-border">
+                                <div>
+                                    <p className="font-medium text-foreground">Change Password</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Use forgot password from login when needed
+                                    </p>
+                                </div>
+                                <Button variant="outline" size="sm" disabled>
+                                    Managed at login
+                                </Button>
                             </div>
-                            <Button variant="outline" size="sm">
-                                Change
-                            </Button>
-                        </div>
-                        <div className="flex items-center justify-between py-3 border-b border-border">
-                            <div>
-                                <p className="font-medium text-foreground">Email Notifications</p>
-                                <p className="text-sm text-muted-foreground">Manage email preferences</p>
+                            <div className="flex items-center justify-between py-3 border-b border-border">
+                                <div>
+                                    <p className="font-medium text-foreground">Email Notifications</p>
+                                    <p className="text-sm text-muted-foreground">Manage email preferences</p>
+                                </div>
+                                <Button variant="outline" size="sm">
+                                    Manage
+                                </Button>
                             </div>
-                            <Button variant="outline" size="sm">
-                                Manage
-                            </Button>
-                        </div>
-                        <div className="flex items-center justify-between py-3">
-                            <div>
-                                <p className="font-medium text-destructive">Delete Account</p>
-                                <p className="text-sm text-muted-foreground">Permanently delete your account</p>
+                            <div className="flex items-center justify-between py-3">
+                                <div>
+                                    <p className="font-medium text-destructive">Delete Account</p>
+                                    <p className="text-sm text-muted-foreground">Permanently delete your account</p>
+                                </div>
+                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                    Delete
+                                </Button>
                             </div>
-                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                Delete
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+
+                    <TwoFactorSettingsCard />
+                </div>
             </div>
         </div>
     );

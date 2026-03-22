@@ -42,7 +42,7 @@ export function EChart({ option, className, style, height = 320 }: EChartProps) 
         });
         themeObserver.observe(document.documentElement, {
             attributes: true,
-            attributeFilter: ["class", "style"],
+            attributeFilter: ["class", "style"]
         });
 
         return () => {
@@ -58,11 +58,5 @@ export function EChart({ option, className, style, height = 320 }: EChartProps) 
         instanceRef.current?.resize();
     }, [option]);
 
-    return (
-        <div
-            ref={chartRef}
-            className={cn("w-full", className)}
-            style={{ height, minHeight: height, ...style }}
-        />
-    );
+    return <div ref={chartRef} className={cn("w-full", className)} style={{ height, minHeight: height, ...style }} />;
 }

@@ -160,6 +160,7 @@ export function toUiUser(user: UserDoc) {
         phone: user.phone,
         isActive: mapUserStatusToIsActive(user.status),
         status: user.status.toLowerCase(),
+        twoFactorEnabled: Boolean(user.twoFactorEnabled),
         createdAt: user.createdAt?.toISOString(),
     };
 }

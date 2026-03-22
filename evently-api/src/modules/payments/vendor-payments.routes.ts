@@ -10,10 +10,7 @@ import { PaymentModel } from "./payment.model.js";
 import { RefundModel } from "./refund.model.js";
 import { EventModel } from "../events/event.model.js";
 import { UserModel } from "../auth/user.model.js";
-import {
-    VendorPaymentConfigSchema,
-    VendorPaymentListQuerySchema,
-} from "./payments.schemas.js";
+import { VendorPaymentConfigSchema, VendorPaymentListQuerySchema } from "./payments.schemas.js";
 import { formatEventType } from "../../common/mappers.js";
 import { VendorPaymentConfigModel } from "./vendor-payment-config.model.js";
 

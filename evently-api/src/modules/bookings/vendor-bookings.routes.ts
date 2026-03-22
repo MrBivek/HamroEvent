@@ -47,7 +47,15 @@ function resolveEventEndUtc(eventDate?: Date | null, endTime?: string | null) {
     const hours = Math.floor(endMinutes / 60);
     const minutes = endMinutes % 60;
     return new Date(
-        Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), hours, minutes, 0, 0),
+        Date.UTC(
+            eventDate.getUTCFullYear(),
+            eventDate.getUTCMonth(),
+            eventDate.getUTCDate(),
+            hours,
+            minutes,
+            0,
+            0,
+        ),
     );
 }
 

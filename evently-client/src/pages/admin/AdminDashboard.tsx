@@ -11,7 +11,7 @@ import {
     Star,
     Store,
     TrendingUp,
-    Users,
+    Users
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -24,7 +24,7 @@ import type {
     AdminDashboardStats,
     AdminVendorListItem,
     Report,
-    User,
+    User
 } from "@/types";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -34,12 +34,12 @@ export default function AdminDashboard() {
         totalUsers: 0,
         activeVendors: 0,
         totalBookings: 0,
-        avgRating: 0,
+        avgRating: 0
     });
     const [pendingVendors, setPendingVendors] = useState<AdminDashboardPendingVendor[]>([]);
     const [analytics, setAnalytics] = useState<AdminAnalyticsResponse>({
         bookingsByCategory: [],
-        monthlyBookings: Array.from({ length: 12 }, () => 0),
+        monthlyBookings: Array.from({ length: 12 }, () => 0)
     });
     const [users, setUsers] = useState<User[]>([]);
     const [vendors, setVendors] = useState<AdminVendorListItem[]>([]);
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
                     AdminService.getApiAdminAnalytics(),
                     AdminService.getApiAdminUsers({ page: 1, limit: 100 }),
                     AdminService.getApiAdminVendors({ page: 1, limit: 100 }),
-                    AdminService.getApiAdminReports({ page: 1, limit: 100 }),
+                    AdminService.getApiAdminReports({ page: 1, limit: 100 })
                 ]);
                 if (!active) return;
                 setStats(dashboardRes?.stats || stats);
@@ -87,26 +87,26 @@ export default function AdminDashboard() {
             label: "Total users",
             value: stats.totalUsers,
             icon: Users,
-            color: "bg-primary-soft text-primary",
+            color: "bg-primary-soft text-primary"
         },
         {
             label: "Active vendors",
             value: stats.activeVendors,
             icon: Store,
-            color: "bg-secondary-soft text-secondary",
+            color: "bg-secondary-soft text-secondary"
         },
         {
             label: "Pending reports",
             value: pendingReports,
             icon: FileWarning,
-            color: "bg-destructive-soft text-destructive",
+            color: "bg-destructive-soft text-destructive"
         },
         {
             label: "Avg vendor rating",
             value: averageVendorRating.toFixed(1),
             icon: Star,
-            color: "bg-warning-soft text-warning",
-        },
+            color: "bg-warning-soft text-warning"
+        }
     ];
 
     const monthlyBookingOption: EChartsOption = {
@@ -116,27 +116,27 @@ export default function AdminDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 24,
             bottom: 24,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "category",
             boundaryGap: false,
             data: MONTH_LABELS,
             axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } },
-            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
+            axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") }
         },
         yAxis: {
             type: "value",
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } },
+            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } }
         },
         series: [
             {
@@ -147,10 +147,10 @@ export default function AdminDashboard() {
                 lineStyle: { width: 3, color: getChartColor("--primary", "#6366f1") },
                 itemStyle: { color: getChartColor("--primary", "#6366f1") },
                 areaStyle: {
-                    color: getChartColor("--primary-soft", "#eef2ff"),
-                },
-            },
-        ],
+                    color: getChartColor("--primary-soft", "#eef2ff")
+                }
+            }
+        ]
     };
 
     const categoryMixOption: EChartsOption = {
@@ -160,14 +160,14 @@ export default function AdminDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         legend: {
             bottom: 0,
             textStyle: {
-                color: getChartColor("--muted-foreground", "#6b7280"),
-            },
+                color: getChartColor("--muted-foreground", "#6b7280")
+            }
         },
         series: [
             {
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
                 itemStyle: {
                     borderRadius: 14,
                     borderColor: getChartColor("--card", "#ffffff"),
-                    borderWidth: 4,
+                    borderWidth: 4
                 },
                 data: analytics.bookingsByCategory.map((item, index) => ({
                     value: item.count,
@@ -188,12 +188,12 @@ export default function AdminDashboard() {
                             getChartColor("--secondary", "#14b8a6"),
                             getChartColor("--accent", "#f97316"),
                             getChartColor("--warning", "#f59e0b"),
-                            getChartColor("--success", "#22c55e"),
-                        ][index % 5],
-                    },
-                })),
-            },
-        ],
+                            getChartColor("--success", "#22c55e")
+                        ][index % 5]
+                    }
+                }))
+            }
+        ]
     };
 
     const userRoleOption: EChartsOption = {
@@ -204,26 +204,26 @@ export default function AdminDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         grid: {
             left: 16,
             right: 16,
             top: 24,
             bottom: 16,
-            containLabel: true,
+            containLabel: true
         },
         xAxis: {
             type: "category",
             data: ["Customers", "Vendors", "Admins"],
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } },
+            axisLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb") } }
         },
         yAxis: {
             type: "value",
             axisLabel: { color: getChartColor("--muted-foreground", "#6b7280") },
-            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } },
+            splitLine: { lineStyle: { color: getChartColor("--border", "#e5e7eb"), opacity: 0.6 } }
         },
         series: [
             {
@@ -232,14 +232,14 @@ export default function AdminDashboard() {
                 data: [
                     users.filter((user) => user.role === "customer").length,
                     users.filter((user) => user.role === "vendor").length,
-                    users.filter((user) => user.role === "admin").length,
+                    users.filter((user) => user.role === "admin").length
                 ],
                 itemStyle: {
                     borderRadius: [12, 12, 0, 0],
-                    color: getChartColor("--secondary", "#14b8a6"),
-                },
-            },
-        ],
+                    color: getChartColor("--secondary", "#14b8a6")
+                }
+            }
+        ]
     };
 
     const reportStatusOption: EChartsOption = {
@@ -249,8 +249,8 @@ export default function AdminDashboard() {
             backgroundColor: getChartColor("--card", "#ffffff"),
             borderColor: getChartColor("--border", "#e5e7eb"),
             textStyle: {
-                color: getChartColor("--foreground", "#111827"),
-            },
+                color: getChartColor("--foreground", "#111827")
+            }
         },
         series: [
             {
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
                 itemStyle: {
                     borderRadius: 14,
                     borderColor: getChartColor("--card", "#ffffff"),
-                    borderWidth: 4,
+                    borderWidth: 4
                 },
                 data: ["pending", "reviewed", "resolved"].map((status, index) => ({
                     value: reports.filter((report) => (report.status || "pending").toLowerCase() === status).length,
@@ -270,12 +270,12 @@ export default function AdminDashboard() {
                         color: [
                             getChartColor("--warning", "#f59e0b"),
                             getChartColor("--primary", "#6366f1"),
-                            getChartColor("--success", "#22c55e"),
-                        ][index],
-                    },
-                })),
-            },
-        ],
+                            getChartColor("--success", "#22c55e")
+                        ][index]
+                    }
+                }))
+            }
+        ]
     };
 
     return (
@@ -284,7 +284,10 @@ export default function AdminDashboard() {
                 <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_55%)]" />
                 <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
                     <div className="space-y-4">
-                        <Badge variant="soft" className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]">
+                        <Badge
+                            variant="soft"
+                            className="w-fit gap-2 rounded-full px-4 py-1.5 text-[11px] uppercase tracking-[0.18em]"
+                        >
                             <Sparkles className="h-3.5 w-3.5" />
                             Admin Radar
                         </Badge>
@@ -324,7 +327,9 @@ export default function AdminDashboard() {
                         </Card>
                         <Card className="border-white/40 bg-white/70 backdrop-blur dark:bg-card/70">
                             <CardContent className="p-4">
-                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Suspended users</p>
+                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                                    Suspended users
+                                </p>
                                 <p className="mt-2 text-2xl font-semibold text-foreground">{suspendedUsers}</p>
                                 <p className="mt-1 text-sm text-muted-foreground">accounts currently restricted</p>
                             </CardContent>
@@ -337,7 +342,9 @@ export default function AdminDashboard() {
                 {statCards.map((stat) => (
                     <Card key={stat.label}>
                         <CardContent className="p-5">
-                            <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}>
+                            <div
+                                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${stat.color}`}
+                            >
                                 <stat.icon className="h-5 w-5" />
                             </div>
                             <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
@@ -377,9 +384,7 @@ export default function AdminDashboard() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-lg">Account Distribution</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Role mix across the platform right now.
-                        </p>
+                        <p className="text-sm text-muted-foreground">Role mix across the platform right now.</p>
                     </CardHeader>
                     <CardContent>
                         <EChart option={userRoleOption} height={300} />
@@ -399,22 +404,28 @@ export default function AdminDashboard() {
                             {[
                                 {
                                     label: "Pending",
-                                    value: reports.filter((report) => (report.status || "pending").toLowerCase() === "pending").length,
+                                    value: reports.filter(
+                                        (report) => (report.status || "pending").toLowerCase() === "pending"
+                                    ).length,
                                     icon: AlertCircle,
-                                    tone: "text-warning",
+                                    tone: "text-warning"
                                 },
                                 {
                                     label: "Reviewed",
-                                    value: reports.filter((report) => (report.status || "").toLowerCase() === "reviewed").length,
+                                    value: reports.filter(
+                                        (report) => (report.status || "").toLowerCase() === "reviewed"
+                                    ).length,
                                     icon: ShieldCheck,
-                                    tone: "text-primary",
+                                    tone: "text-primary"
                                 },
                                 {
                                     label: "Resolved",
-                                    value: reports.filter((report) => (report.status || "").toLowerCase() === "resolved").length,
+                                    value: reports.filter(
+                                        (report) => (report.status || "").toLowerCase() === "resolved"
+                                    ).length,
                                     icon: CheckCircle2,
-                                    tone: "text-success",
-                                },
+                                    tone: "text-success"
+                                }
                             ].map((item) => (
                                 <div
                                     key={item.label}
@@ -481,9 +492,7 @@ export default function AdminDashboard() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-lg">Quick Actions</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Shortcuts into the main governance workflows.
-                        </p>
+                        <p className="text-sm text-muted-foreground">Shortcuts into the main governance workflows.</p>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-3">
                         <Button variant="outline" className="h-auto py-5 flex-col gap-2" asChild>

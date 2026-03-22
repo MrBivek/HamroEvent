@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { Switch } from "@/components/ui/switch.tsx";
 import { Save, Plus, Trash2, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast.ts";
+import { TwoFactorSettingsCard } from "@/components/account/TwoFactorSettingsCard.tsx";
 import { VendorsService } from "@/services/VendorsService";
 import { PackagesService } from "@/services/PackagesService";
 import { OpenAPI } from "@/core/OpenAPI";
@@ -327,6 +328,8 @@ export default function VendorProfile() {
                     </div>
                 </CardContent>
             </Card>
+
+            <TwoFactorSettingsCard />
         </div>
     );
 }

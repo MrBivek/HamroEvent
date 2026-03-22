@@ -16,6 +16,11 @@ export async function login(req: Request, res: Response) {
     res.json(result);
 }
 
+export async function loginTwoFactor(req: Request, res: Response) {
+    const result = await service.loginTwoFactor(req.body);
+    res.json(result);
+}
+
 export async function requestOtp(req: Request, res: Response) {
     const result = await service.requestOtp(req.body);
     res.json(result);

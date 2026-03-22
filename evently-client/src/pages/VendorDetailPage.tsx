@@ -574,41 +574,45 @@ export default function VendorDetailPage() {
                                                 .slice(0, 2)
                                                 .toUpperCase();
                                             return (
-                                            <Card key={review._id}>
-                                                <CardContent className="p-6">
-                                                    <div className="flex items-start gap-4">
-                                                        <Avatar className="h-10 w-10">
-                                                            <AvatarFallback className="bg-primary/10 text-primary">
-                                                                {reviewerInitials}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <span className="font-medium text-foreground">
-                                                                    {reviewerName}
-                                                                </span>
-                                                                <span className="text-sm text-muted-foreground">
-                                                                    {new Date(review.createdAt).toLocaleDateString()}
-                                                                </span>
+                                                <Card key={review._id}>
+                                                    <CardContent className="p-6">
+                                                        <div className="flex items-start gap-4">
+                                                            <Avatar className="h-10 w-10">
+                                                                <AvatarFallback className="bg-primary/10 text-primary">
+                                                                    {reviewerInitials}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <span className="font-medium text-foreground">
+                                                                        {reviewerName}
+                                                                    </span>
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        {new Date(
+                                                                            review.createdAt
+                                                                        ).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1 mb-2">
+                                                                    {[...Array(5)].map((_, i) => (
+                                                                        <Star
+                                                                            key={i}
+                                                                            className={`h-4 w-4 ${
+                                                                                i < review.rating
+                                                                                    ? "fill-warning text-warning"
+                                                                                    : "text-muted"
+                                                                            }`}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                                <p className="text-muted-foreground">
+                                                                    {review.comment}
+                                                                </p>
                                                             </div>
-                                                            <div className="flex items-center gap-1 mb-2">
-                                                                {[...Array(5)].map((_, i) => (
-                                                                    <Star
-                                                                        key={i}
-                                                                        className={`h-4 w-4 ${
-                                                                            i < review.rating
-                                                                                ? "fill-warning text-warning"
-                                                                                : "text-muted"
-                                                                        }`}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                            <p className="text-muted-foreground">{review.comment}</p>
                                                         </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        );
+                                                    </CardContent>
+                                                </Card>
+                                            );
                                         })}
                                     </div>
                                 ) : (

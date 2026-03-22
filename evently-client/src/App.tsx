@@ -41,6 +41,7 @@ import AdminReviews from "@/pages/admin/AdminReviews.tsx";
 import AdminReports from "@/pages/admin/AdminReports.tsx";
 import AdminAuditLogs from "@/pages/admin/AdminAuditLogs.tsx";
 import AdminNotifications from "@/pages/admin/AdminNotifications.tsx";
+import AdminProfile from "@/pages/admin/AdminProfile.tsx";
 import NotFound from "@/pages/NotFound.tsx";
 import PaymentReturn from "@/pages/payments/PaymentReturn.tsx";
 import RefundReturn from "@/pages/refunds/RefundReturn.tsx";
@@ -125,6 +126,7 @@ const App = () => {
                                 <Route path="/admin/reports" element={<AdminReports />} />
                                 <Route path="/admin/notifications" element={<AdminNotifications />} />
                                 <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+                                <Route path="/admin/profile" element={<AdminProfile />} />
                             </Route>
                         </Route>
 

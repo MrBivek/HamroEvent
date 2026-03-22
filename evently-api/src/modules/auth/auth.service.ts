@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import mongoose from "mongoose";
+import { verifySync } from "otplib";
 import { UserModel } from "./user.model.js";
 import jwt, { SignOptions } from "jsonwebtoken";
 import {
@@ -37,6 +38,12 @@ function signToken(userId: string, role: UserRole) {
     return jwt.sign({ sub: userId, role }, env.JWT_SECRET, { expiresIn });
 }
 
+function signTwoFactorToken(userId: string, role: UserRole) {
+    return jwt.sign({ sub: userId, role, purpose: "2fa-login" }, env.JWT_SECRET, {
+        expiresIn: "10m",
+    });
+}
+
 function generateOtp(length: number) {
     const min = 10 ** (length - 1);
     const max = 10 ** length;
@@ -48,7 +55,10 @@ function hashOtp(email: string, otp: string) {
 }
 
 function hashResetToken(email: string, token: string) {
-    return crypto.createHmac("sha256", env.JWT_SECRET).update(`reset:${email}:${token}`).digest("hex");
+    return crypto
+        .createHmac("sha256", env.JWT_SECRET)
+        .update(`reset:${email}:${token}`)
+        .digest("hex");
 }
 
 async function issueOtp(input: {
@@ -331,6 +341,14 @@ export async function login(input: { email: string; password: string }) {
     const ok = await bcrypt.compare(input.password, user.passwordHash);
     if (!ok) throw new UnauthorizedError("Invalid credentials");
 
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+        return {
+            requiresTwoFactor: true,
+            tempToken: signTwoFactorToken(user._id.toString(), user.role),
+            email: user.email,
+        };
+    }
+
     user.lastLoginAt = new Date();
     await user.save();
 
@@ -338,6 +356,46 @@ export async function login(input: { email: string; password: string }) {
 
     return {
         token,
+        user: toUiUser(user),
+    };
+}
+
+export async function loginTwoFactor(input: { tempToken: string; code: string }) {
+    let payload: { sub: string; role: UserRole; purpose?: string };
+    try {
+        payload = jwt.verify(input.tempToken, env.JWT_SECRET) as {
+            sub: string;
+            role: UserRole;
+            purpose?: string;
+        };
+    } catch {
+        throw new UnauthorizedError("Invalid or expired 2FA challenge");
+    }
+
+    if (payload.purpose !== "2fa-login") {
+        throw new UnauthorizedError("Invalid 2FA challenge");
+    }
+
+    const user = await UserModel.findById(payload.sub);
+    if (!user) throw new UnauthorizedError("Invalid 2FA challenge");
+    if (user.status !== UserStatus.ACTIVE) {
+        throw new UnauthorizedError("Account not verified");
+    }
+    if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+        throw new UnauthorizedError("2FA is not enabled for this account");
+    }
+
+    const verification = verifySync({
+        secret: user.twoFactorSecret,
+        token: input.code,
+    });
+    if (!verification.valid) throw new UnauthorizedError("Invalid authenticator code");
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    return {
+        token: signToken(user._id.toString(), user.role),
         user: toUiUser(user),
     };
 }
@@ -454,7 +512,11 @@ export async function verifyPasswordResetOtp(input: { email: string; otp: string
     };
 }
 
-export async function resetPassword(input: { email: string; resetToken: string; newPassword: string }) {
+export async function resetPassword(input: {
+    email: string;
+    resetToken: string;
+    newPassword: string;
+}) {
     const email = input.email.toLowerCase();
     const user = await UserModel.findOne({ email });
     if (!user) throw new BadRequestError("Account not found");

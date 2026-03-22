@@ -692,8 +692,7 @@ export default function VendorBookingDetail() {
     const totalPaid = paymentRecords
         .filter((payment) => String(payment.status).toUpperCase() === "PAID")
         .reduce((sum, payment) => sum + (payment.amount || 0), 0);
-    const canComplete =
-        eligibleForComplete && eventEnd && new Date().getTime() >= eventEnd.getTime();
+    const canComplete = eligibleForComplete && eventEnd && new Date().getTime() >= eventEnd.getTime();
 
     const getMessageSender = (msg: ChatMessage) => {
         if ("sender" in msg) return msg.sender;
@@ -754,11 +753,7 @@ export default function VendorBookingDetail() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setRefundPayment(null)}
-                            disabled={isRefunding}
-                        >
+                        <Button variant="outline" onClick={() => setRefundPayment(null)} disabled={isRefunding}>
                             Cancel
                         </Button>
                         <Button onClick={handleRefundInitiate} disabled={isRefunding}>

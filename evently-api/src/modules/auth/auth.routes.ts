@@ -4,6 +4,7 @@ import {
     RegisterCustomerSchema,
     RequestOtpSchema,
     VerifyOtpSchema,
+    LoginTwoFactorSchema,
     RequestPasswordResetSchema,
     VerifyPasswordResetOtpSchema,
     ResetPasswordSchema,
@@ -160,6 +161,30 @@ authRoutes.post("/login", validateBody(LoginSchema), controller.login);
 
 /**
  * @openapi
+ * /api/auth/login/2fa:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify authenticator code after password login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tempToken, code]
+ *             properties:
+ *               tempToken: { type: string }
+ *               code: { type: string, example: "123456" }
+ *     responses:
+ *       200:
+ *         description: JWT token + user
+ *       401:
+ *         description: Invalid or expired 2FA challenge
+ */
+authRoutes.post("/login/2fa", validateBody(LoginTwoFactorSchema), controller.loginTwoFactor);
+
+/**
+ * @openapi
  * /api/auth/request-otp:
  *   post:
  *     tags: [Auth]
@@ -275,8 +300,4 @@ authRoutes.post(
  *       200:
  *         description: Password reset complete
  */
-authRoutes.post(
-    "/reset-password",
-    validateBody(ResetPasswordSchema),
-    controller.resetPassword,
-);
+authRoutes.post("/reset-password", validateBody(ResetPasswordSchema), controller.resetPassword);

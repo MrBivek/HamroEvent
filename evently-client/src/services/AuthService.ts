@@ -125,6 +125,27 @@ export class AuthService {
             }
         });
     }
+
+    /**
+     * Verify authenticator code after password login
+     * @returns AuthLoginResponse JWT token + user
+     * @throws ApiError
+     */
+    public static postApiAuthLogin2fa({
+        requestBody
+    }: {
+        requestBody: {
+            tempToken: string;
+            code: string;
+        };
+    }): CancelablePromise<AuthLoginResponse> {
+        return __request(OpenAPI, {
+            method: "POST",
+            url: "/api/auth/login/2fa",
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
     /**
      * Send OTP to verify email
      * @returns AuthOtpResponse OTP sent

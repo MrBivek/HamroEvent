@@ -1,12 +1,5 @@
 import { useEffect, useState, type SVGProps } from "react";
-import {
-    DollarSign,
-    TrendingUp,
-    ArrowUpRight,
-    ArrowDownRight,
-    Download,
-    Wallet
-} from "lucide-react";
+import { DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight, Download, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";

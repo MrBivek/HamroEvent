@@ -35,7 +35,9 @@ async function runPaymentReminderCycle() {
         const bookingIds = bookings.map((b) => b._id);
 
         const [quotes, paymentsAgg, users] = await Promise.all([
-            QuoteModel.find({ bookingId: { $in: bookingIds } }).select({ bookingId: 1, amount: 1 }).lean(),
+            QuoteModel.find({ bookingId: { $in: bookingIds } })
+                .select({ bookingId: 1, amount: 1 })
+                .lean(),
             PaymentModel.aggregate<{ _id: mongoose.Types.ObjectId; totalPaid: number }>([
                 { $match: { bookingId: { $in: bookingIds }, status: PaymentStatus.PAID } },
                 { $group: { _id: "$bookingId", totalPaid: { $sum: "$amount" } } },
