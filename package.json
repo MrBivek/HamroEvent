@@ -9,6 +9,7 @@
     "scripts": {
         "dev": "pnpm -r dev",
         "build": "pnpm -r build",
+        "test": "pnpm -r test",
         "lint": "pnpm -r lint",
         "prettier": "prettier --write \"**/*.{ts,tsx,md,mdx,cjs,json}\""
     },

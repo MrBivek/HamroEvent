@@ -466,6 +466,14 @@ export interface VendorPaymentSummary {
     availableBalance: number;
     thisMonth: number;
     growth: number;
+    commissionRate?: number;
+    monthlyGrossEarnings?: number;
+    monthlyRefunds?: number;
+    monthlyNetEarnings?: number;
+    monthlyCommissionDue?: number;
+    monthlyCommissionPaid?: number;
+    monthlyCommissionOutstanding?: number;
+    totalCommissionPaid?: number;
 }
 
 export interface VendorPaymentTransaction {
@@ -496,6 +504,63 @@ export interface VendorPaymentConfig {
         secretKey?: string;
         mode?: "sandbox" | "live";
     };
+}
+
+export interface AdminPaymentConfig {
+    khalti?: {
+        publicKey?: string;
+        secretKey?: string;
+        mode?: "sandbox" | "live";
+    };
+    esewa?: {
+        merchantCode?: string;
+        secretKey?: string;
+        mode?: "sandbox" | "live";
+    };
+}
+
+export interface CommissionSummary {
+    monthKey: string;
+    year: number;
+    month: number;
+    commissionRate: number;
+    grossEarnings: number;
+    refundsAmount: number;
+    netEarnings: number;
+    commissionDue: number;
+    commissionPaid: number;
+    commissionReserved: number;
+    commissionOutstanding: number;
+}
+
+export interface CommissionPaymentRecord {
+    _id: string;
+    vendorId?: string;
+    vendorName?: string;
+    monthKey: string;
+    amount: number;
+    status: string;
+    provider: string;
+    payUrl?: string;
+    createdAt?: string;
+    paidAt?: string;
+}
+
+export interface AdminCommissionVendorSummary extends CommissionSummary {
+    vendorId: string;
+    businessName: string;
+}
+
+export interface AdminCommissionSummary {
+    monthKey: string;
+    commissionRate: number;
+    grossEarnings: number;
+    refundsAmount: number;
+    netEarnings: number;
+    commissionDue: number;
+    commissionPaid: number;
+    commissionOutstanding: number;
+    vendors: AdminCommissionVendorSummary[];
 }
 
 export interface VendorPaymentRecord {

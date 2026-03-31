@@ -13,6 +13,8 @@ import { UserModel } from "../auth/user.model.js";
 import { VendorPaymentConfigSchema, VendorPaymentListQuerySchema } from "./payments.schemas.js";
 import { formatEventType } from "../../common/mappers.js";
 import { VendorPaymentConfigModel } from "./vendor-payment-config.model.js";
+import { buildVendorCommissionSummary } from "./commission.service.js";
+import { CommissionPaymentModel } from "./commission-payment.model.js";
 
 export const vendorPaymentsRoutes = Router();
 
@@ -233,12 +235,32 @@ vendorPaymentsRoutes.get(
                     ? Number((((thisMonth - lastMonth) / lastMonth) * 100).toFixed(1))
                     : 0;
 
+            const currentCommission = await buildVendorCommissionSummary(vendor._id);
+            const allTimeCommissionAgg = await CommissionPaymentModel.aggregate([
+                {
+                    $match: {
+                        vendorId: vendor._id,
+                        status: PaymentStatus.PAID,
+                    },
+                },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]);
+            const totalCommissionPaid = allTimeCommissionAgg?.[0]?.total ?? 0;
+
             res.json({
                 totalEarnings,
                 pendingPayout,
                 availableBalance,
                 thisMonth,
                 growth,
+                commissionRate: currentCommission.commissionRate,
+                monthlyGrossEarnings: currentCommission.grossEarnings,
+                monthlyRefunds: currentCommission.refundsAmount,
+                monthlyNetEarnings: currentCommission.netEarnings,
+                monthlyCommissionDue: currentCommission.commissionDue,
+                monthlyCommissionPaid: currentCommission.commissionPaid,
+                monthlyCommissionOutstanding: currentCommission.commissionOutstanding,
+                totalCommissionPaid,
             });
         } catch (err) {
             next(err);
@@ -268,9 +290,10 @@ vendorPaymentsRoutes.get(
             const bookings = await BookingModel.find({ vendorId: vendor._id }).lean();
             const bookingIds = bookings.map((b) => b._id);
 
-            const [payments, refunds, events, customers] = await Promise.all([
+            const [payments, refunds, commissionPayments, events, customers] = await Promise.all([
                 PaymentModel.find({ bookingId: { $in: bookingIds } }).lean(),
                 RefundModel.find({ bookingId: { $in: bookingIds } }).lean(),
+                CommissionPaymentModel.find({ vendorId: vendor._id }).lean(),
                 EventModel.find({ _id: { $in: bookings.map((b) => b.eventId) } }).lean(),
                 UserModel.find({ _id: { $in: bookings.map((b) => b.userId) } }).lean(),
             ]);
@@ -312,6 +335,14 @@ vendorPaymentsRoutes.get(
                         type: "debit",
                     };
                 }),
+                ...commissionPayments.map((payment) => ({
+                    id: payment._id.toString(),
+                    booking: `Admin commission - ${payment.monthKey}`,
+                    amount: payment.amount,
+                    status: payment.status === PaymentStatus.PAID ? "completed" : "pending",
+                    date: (payment.paidAt ?? payment.createdAt)?.toISOString(),
+                    type: "debit",
+                })),
             ].sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
 
             res.json({ items: transactions });

@@ -13,7 +13,7 @@ const INTERVAL_MS = 5000;
 let intervalHandle: NodeJS.Timeout | null = null;
 let isRunning = false;
 
-async function runPaymentReminderCycle() {
+export async function runPaymentReminderCycle() {
     if (isRunning) return;
     isRunning = true;
     try {

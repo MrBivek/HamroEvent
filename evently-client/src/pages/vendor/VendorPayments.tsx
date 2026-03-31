@@ -10,12 +10,21 @@ import { Label } from "@/components/ui/label.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { motion } from "framer-motion";
 import { VendorPaymentsService } from "@/services/VendorPaymentsService";
+import { CommissionPaymentsService } from "@/services/CommissionPaymentsService";
 import { useToast } from "@/hooks/use-toast.ts";
 import { getErrorMessage } from "@/lib/api";
-import type { VendorPaymentConfig, VendorPaymentSummary, VendorPaymentTransaction } from "@/types";
+import type {
+    CommissionPaymentRecord,
+    CommissionSummary,
+    VendorPaymentConfig,
+    VendorPaymentSummary,
+    VendorPaymentTransaction,
+} from "@/types";
 
 export default function VendorPayments() {
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
     const [period, setPeriod] = useState("month");
+    const [commissionMonth, setCommissionMonth] = useState(currentMonthKey);
     const { toast } = useToast();
     const [summary, setSummary] = useState<VendorPaymentSummary>({
         totalEarnings: 0,
@@ -28,21 +37,61 @@ export default function VendorPayments() {
     const [config, setConfig] = useState<VendorPaymentConfig>({});
     const [configForm, setConfigForm] = useState<VendorPaymentConfig>({});
     const [isSavingConfig, setIsSavingConfig] = useState(false);
+    const [commissionSummary, setCommissionSummary] = useState<CommissionSummary>({
+        monthKey: currentMonthKey,
+        year: Number(currentMonthKey.slice(0, 4)),
+        month: Number(currentMonthKey.slice(5, 7)),
+        commissionRate: 0.1,
+        grossEarnings: 0,
+        refundsAmount: 0,
+        netEarnings: 0,
+        commissionDue: 0,
+        commissionPaid: 0,
+        commissionReserved: 0,
+        commissionOutstanding: 0,
+    });
+    const [commissionPayments, setCommissionPayments] = useState<CommissionPaymentRecord[]>([]);
+    const [commissionAmount, setCommissionAmount] = useState("");
+    const [commissionProvider, setCommissionProvider] = useState("KHALTI");
+    const [isPayingCommission, setIsPayingCommission] = useState(false);
 
     useEffect(() => {
         let active = true;
         const load = async () => {
             try {
-                const [summaryRes, txRes, configRes] = await Promise.all([
+                const [summaryRes, txRes, configRes, commissionSummaryRes, commissionPaymentsRes] = await Promise.all([
                     VendorPaymentsService.getApiVendorsMePaymentsSummary(),
                     VendorPaymentsService.getApiVendorsMePaymentsTransactions(),
-                    VendorPaymentsService.getApiVendorsMePaymentsConfig()
+                    VendorPaymentsService.getApiVendorsMePaymentsConfig(),
+                    CommissionPaymentsService.getApiVendorsMeCommissionsSummary(commissionMonth),
+                    CommissionPaymentsService.getApiVendorsMeCommissionsPayments({
+                        month: commissionMonth,
+                        page: 1,
+                        limit: 20,
+                    }),
                 ]);
                 if (!active) return;
-                setSummary(summaryRes || summary);
+                setSummary(summaryRes || {
+                    totalEarnings: 0,
+                    pendingPayout: 0,
+                    availableBalance: 0,
+                    thisMonth: 0,
+                    growth: 0
+                });
                 setTransactions(txRes?.items || []);
                 setConfig(configRes || {});
                 setConfigForm(configRes || {});
+                setCommissionSummary(commissionSummaryRes || commissionSummary);
+                setCommissionPayments(commissionPaymentsRes?.items || []);
+                setCommissionAmount(
+                    String(
+                        Math.max(
+                            (commissionSummaryRes?.commissionOutstanding || 0) -
+                                Math.max((commissionSummaryRes?.commissionReserved || 0) - (commissionSummaryRes?.commissionPaid || 0), 0),
+                            0,
+                        ),
+                    ),
+                );
             } catch {
                 if (!active) return;
                 setSummary({
@@ -55,18 +104,24 @@ export default function VendorPayments() {
                 setTransactions([]);
                 setConfig({});
                 setConfigForm({});
+                setCommissionPayments([]);
             }
         };
         load();
         return () => {
             active = false;
         };
-    }, []);
+    }, [commissionMonth]);
 
     const totalRefunds = transactions
         .filter((tx) => tx.type === "debit")
         .reduce((sum, tx) => sum + (tx.amount || 0), 0);
     const totalPayments = transactions.filter((tx) => tx.type === "credit").length;
+    const commissionRemaining = Math.max(
+        commissionSummary.commissionOutstanding -
+            Math.max(commissionSummary.commissionReserved - commissionSummary.commissionPaid, 0),
+        0,
+    );
 
     const handleSaveConfig = async () => {
         setIsSavingConfig(true);
@@ -85,6 +140,69 @@ export default function VendorPayments() {
             });
         } finally {
             setIsSavingConfig(false);
+        }
+    };
+
+    const openProviderFlow = (payUrl?: string, formData?: Record<string, string>) => {
+        if (formData && payUrl) {
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = payUrl;
+            Object.entries(formData).forEach(([key, value]) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+            return;
+        }
+
+        if (payUrl) {
+            window.open(payUrl, "_blank");
+        }
+    };
+
+    const handlePayCommission = async () => {
+        const amount = Number(commissionAmount);
+        if (!amount || Number.isNaN(amount) || amount <= 0) {
+            toast({ title: "Enter a valid amount", variant: "destructive" });
+            return;
+        }
+        if (amount > commissionRemaining) {
+            toast({
+                title: "Amount exceeds due commission",
+                description: `Remaining payable commission is NPR ${commissionRemaining.toLocaleString()}.`,
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsPayingCommission(true);
+        try {
+            const response = await CommissionPaymentsService.postApiVendorsMeCommissionsPaymentsInitiate({
+                requestBody: {
+                    month: commissionMonth,
+                    amount,
+                    provider: commissionProvider,
+                },
+            });
+            openProviderFlow(response.payUrl, response.formData);
+            toast({
+                title: "Commission payment started",
+                description: "Complete the payment in the opened window.",
+            });
+        } catch (error) {
+            toast({
+                title: "Failed to start commission payment",
+                description: getErrorMessage(error, "Please try again."),
+                variant: "destructive",
+            });
+        } finally {
+            setIsPayingCommission(false);
         }
     };
 
@@ -113,7 +231,7 @@ export default function VendorPayments() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
                     <Card className="hover-lift">
                         <CardContent className="p-4">
@@ -173,12 +291,27 @@ export default function VendorPayments() {
                         </CardContent>
                     </Card>
                 </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                    <Card className="hover-lift border-warning/30">
+                        <CardContent className="p-4">
+                            <div className="h-10 w-10 rounded-lg bg-warning-soft flex items-center justify-center mb-3">
+                                <Wallet className="h-5 w-5 text-warning" />
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">
+                                NPR {(summary.monthlyCommissionOutstanding || 0).toLocaleString()}
+                            </div>
+                            <div className="text-sm text-muted-foreground">Commission Due</div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </div>
 
             {/* Transactions & Payouts */}
             <Tabs defaultValue="transactions">
                 <TabsList>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                    <TabsTrigger value="commission">Commission</TabsTrigger>
                     <TabsTrigger value="settings">Payment Settings</TabsTrigger>
                 </TabsList>
 
@@ -228,6 +361,172 @@ export default function VendorPayments() {
                             </Card>
                         </motion.div>
                     ))}
+                </TabsContent>
+
+                <TabsContent value="commission" className="mt-6 space-y-6">
+                    <Card>
+                        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <CardTitle className="text-lg">Monthly Commission</CardTitle>
+                                <p className="text-sm text-muted-foreground">
+                                    10% of your net monthly earnings is payable to admin.
+                                </p>
+                            </div>
+                            <div className="w-full sm:w-[220px]">
+                                <Label htmlFor="commissionMonth">Month</Label>
+                                <Input
+                                    id="commissionMonth"
+                                    type="month"
+                                    value={commissionMonth}
+                                    onChange={(e) => setCommissionMonth(e.target.value)}
+                                />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid gap-4 md:grid-cols-4">
+                                <div className="rounded-2xl border border-border/70 p-4">
+                                    <p className="text-sm text-muted-foreground">Gross earnings</p>
+                                    <p className="mt-2 text-2xl font-semibold">
+                                        NPR {commissionSummary.grossEarnings.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 p-4">
+                                    <p className="text-sm text-muted-foreground">Refunds</p>
+                                    <p className="mt-2 text-2xl font-semibold">
+                                        NPR {commissionSummary.refundsAmount.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 p-4">
+                                    <p className="text-sm text-muted-foreground">Net earnings</p>
+                                    <p className="mt-2 text-2xl font-semibold">
+                                        NPR {commissionSummary.netEarnings.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-warning/40 bg-warning-soft/30 p-4">
+                                    <p className="text-sm text-muted-foreground">Outstanding</p>
+                                    <p className="mt-2 text-2xl font-semibold">
+                                        NPR {commissionRemaining.toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                                <div className="rounded-2xl border border-border/70 p-4">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="font-semibold text-foreground">Commission history</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Payments made for {commissionMonth}
+                                            </p>
+                                        </div>
+                                        <Badge variant="soft">
+                                            Rate {(commissionSummary.commissionRate * 100).toFixed(0)}%
+                                        </Badge>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {commissionPayments.length > 0 ? (
+                                            commissionPayments.map((payment) => (
+                                                <div
+                                                    key={payment._id}
+                                                    className="flex items-center justify-between rounded-xl border border-border/60 p-3"
+                                                >
+                                                    <div>
+                                                        <p className="font-medium text-foreground">
+                                                            {payment.provider} commission payment
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {payment.monthKey} •{" "}
+                                                            {new Date(
+                                                                payment.paidAt || payment.createdAt || "",
+                                                            ).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-semibold text-foreground">
+                                                            NPR {payment.amount.toLocaleString()}
+                                                        </p>
+                                                        <Badge
+                                                            variant={
+                                                                String(payment.status).toUpperCase() === "PAID"
+                                                                    ? "success"
+                                                                    : "soft"
+                                                            }
+                                                        >
+                                                            {String(payment.status).toLowerCase()}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">
+                                                No commission payments for this month yet.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-border/70 p-4 space-y-4">
+                                    <div>
+                                        <h3 className="font-semibold text-foreground">Pay admin commission</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Pay part or all of the outstanding monthly commission.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Amount (NPR)</Label>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            value={commissionAmount}
+                                            onChange={(e) => setCommissionAmount(e.target.value)}
+                                            placeholder="Enter amount"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Provider</Label>
+                                        <Select value={commissionProvider} onValueChange={setCommissionProvider}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Choose provider" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="KHALTI">Khalti</SelectItem>
+                                                <SelectItem value="ESEWA">eSewa</SelectItem>
+                                                <SelectItem value="MOCK">Mock</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">Commission due</span>
+                                            <span className="font-medium">
+                                                NPR {commissionSummary.commissionDue.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-muted-foreground">Already paid</span>
+                                            <span className="font-medium">
+                                                NPR {commissionSummary.commissionPaid.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-muted-foreground">Available to pay now</span>
+                                            <span className="font-medium">
+                                                NPR {commissionRemaining.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        className="w-full"
+                                        onClick={handlePayCommission}
+                                        disabled={isPayingCommission || commissionRemaining <= 0}
+                                    >
+                                        {isPayingCommission ? "Starting payment..." : "Pay Commission"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 <TabsContent value="settings" className="mt-6">

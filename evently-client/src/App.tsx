@@ -41,10 +41,12 @@ import AdminReviews from "@/pages/admin/AdminReviews.tsx";
 import AdminReports from "@/pages/admin/AdminReports.tsx";
 import AdminAuditLogs from "@/pages/admin/AdminAuditLogs.tsx";
 import AdminNotifications from "@/pages/admin/AdminNotifications.tsx";
+import AdminCommissions from "@/pages/admin/AdminCommissions.tsx";
 import AdminProfile from "@/pages/admin/AdminProfile.tsx";
 import NotFound from "@/pages/NotFound.tsx";
 import PaymentReturn from "@/pages/payments/PaymentReturn.tsx";
 import RefundReturn from "@/pages/refunds/RefundReturn.tsx";
+import CommissionPaymentReturn from "@/pages/payments/CommissionPaymentReturn.tsx";
 import { useAuthStore } from "@/store/authStore.ts";
 import { useShortlistStore } from "@/store/shortlistStore.ts";
 
@@ -75,6 +77,7 @@ const App = () => {
                             <Route path="/about" element={<AboutPage />} />
                             <Route path="/contact" element={<ContactPage />} />
                             <Route path="/payments/:provider" element={<PaymentReturn />} />
+                            <Route path="/commission-payments/:provider" element={<CommissionPaymentReturn />} />
                             <Route path="/refunds/:provider" element={<RefundReturn />} />
                         </Route>
 
@@ -124,6 +127,7 @@ const App = () => {
                                 <Route path="/admin/users" element={<AdminUsers />} />
                                 <Route path="/admin/reviews" element={<AdminReviews />} />
                                 <Route path="/admin/reports" element={<AdminReports />} />
+                                <Route path="/admin/commissions" element={<AdminCommissions />} />
                                 <Route path="/admin/notifications" element={<AdminNotifications />} />
                                 <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
                                 <Route path="/admin/profile" element={<AdminProfile />} />
