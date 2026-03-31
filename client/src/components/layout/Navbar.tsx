@@ -77,8 +77,8 @@ export function Navbar() {
                         </svg>
                     </div>
                     <span className="text-xl font-bold text-foreground">
-                        Evently
-                        <span className="text-xs font-normal text-muted-foreground ml-1">HamroEvent</span>
+                        Hamro Event
+                        <span className="text-xs font-normal text-muted-foreground ml-1">Event Hub</span>
                     </span>
                 </Link>
 
