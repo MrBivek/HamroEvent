@@ -550,6 +550,7 @@ export default function VendorPayments() {
                                     <div className="space-y-2">
                                         <Label>Public Key</Label>
                                         <Input
+                                            type="password"
                                             value={configForm.khalti?.publicKey || ""}
                                             onChange={(e) =>
                                                 setConfigForm((prev) => ({
@@ -563,6 +564,7 @@ export default function VendorPayments() {
                                     <div className="space-y-2">
                                         <Label>Secret Key</Label>
                                         <Input
+                                            type="password"
                                             value={configForm.khalti?.secretKey || ""}
                                             onChange={(e) =>
                                                 setConfigForm((prev) => ({
@@ -610,6 +612,7 @@ export default function VendorPayments() {
                                     <div className="space-y-2">
                                         <Label>Merchant Code</Label>
                                         <Input
+                                            type="password"
                                             value={configForm.esewa?.merchantCode || ""}
                                             onChange={(e) =>
                                                 setConfigForm((prev) => ({
@@ -623,6 +626,7 @@ export default function VendorPayments() {
                                     <div className="space-y-2">
                                         <Label>Secret Key</Label>
                                         <Input
+                                            type="password"
                                             value={configForm.esewa?.secretKey || ""}
                                             onChange={(e) =>
                                                 setConfigForm((prev) => ({

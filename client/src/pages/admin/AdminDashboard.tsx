@@ -75,7 +75,7 @@ export default function AdminDashboard() {
         return () => {
             active = false;
         };
-    }, []);
+    }, [analytics, stats]);
 
     const pendingReports = reports.filter((report) => (report.status || "pending").toLowerCase() === "pending").length;
     const suspendedUsers = users.filter((user) => user.status === "suspended").length;
