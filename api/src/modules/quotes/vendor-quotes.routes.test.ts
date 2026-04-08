@@ -68,13 +68,15 @@ function leanResult<T>(value: T) {
     };
 }
 
-async function runPostQuote(pathBookingId: string, body: Record<string, unknown>, tokenSub: string) {
-    const layer = vendorQuotesRoutes.stack.find(
-        (entry) => {
-            const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
-            return route?.path === "/me/bookings/:id/quote" && route.methods?.post;
-        },
-    );
+async function runPostQuote(
+    pathBookingId: string,
+    body: Record<string, unknown>,
+    tokenSub: string,
+) {
+    const layer = vendorQuotesRoutes.stack.find((entry) => {
+        const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
+        return route?.path === "/me/bookings/:id/quote" && route.methods?.post;
+    });
     if (!layer?.route) throw new Error("POST quote route not found");
 
     const req: any = {
@@ -140,7 +142,9 @@ describe("vendor quotes routes", () => {
         const bookingId = new mongoose.Types.ObjectId();
         const save = vi.fn().mockResolvedValue(undefined);
 
-        vendorModelMock.findOne.mockReturnValue(leanResult({ _id: vendorId, userId: vendorUserId }));
+        vendorModelMock.findOne.mockReturnValue(
+            leanResult({ _id: vendorId, userId: vendorUserId }),
+        );
         bookingModelMock.findOne.mockResolvedValue({
             _id: bookingId,
             vendorId,
@@ -213,7 +217,9 @@ describe("vendor quotes routes", () => {
         const packageId = new mongoose.Types.ObjectId();
         const bookingId = new mongoose.Types.ObjectId();
 
-        vendorModelMock.findOne.mockReturnValue(leanResult({ _id: vendorId, userId: vendorUserId }));
+        vendorModelMock.findOne.mockReturnValue(
+            leanResult({ _id: vendorId, userId: vendorUserId }),
+        );
         bookingModelMock.findOne.mockResolvedValue({
             _id: bookingId,
             vendorId,

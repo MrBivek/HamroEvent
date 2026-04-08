@@ -29,7 +29,10 @@ export function getMonthRange(year: number, month: number) {
     return { start, end };
 }
 
-export async function buildVendorCommissionSummary(vendorId: mongoose.Types.ObjectId, month?: string) {
+export async function buildVendorCommissionSummary(
+    vendorId: mongoose.Types.ObjectId,
+    month?: string,
+) {
     const { monthKey, year, month: monthNumber } = parseMonthKey(month);
     const { start, end } = getMonthRange(year, monthNumber);
 
@@ -88,7 +91,9 @@ export async function buildVendorCommissionSummary(vendorId: mongoose.Types.Obje
                 $match: {
                     vendorId,
                     monthKey,
-                    status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING, PaymentStatus.PAID] },
+                    status: {
+                        $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING, PaymentStatus.PAID],
+                    },
                 },
             },
             { $group: { _id: null, total: { $sum: "$amount" } } },

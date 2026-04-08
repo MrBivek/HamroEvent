@@ -960,7 +960,8 @@ export default function VendorRegisterPage() {
                                                 <Sparkles className="h-10 w-10 text-primary mx-auto mb-3" />
                                                 <h3 className="font-semibold text-foreground mb-1">Almost there!</h3>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Review your information and submit to join Evently's vendor network.
+                                                    Review your information and submit to join Hamro Event's vendor
+                                                    network.
                                                 </p>
                                             </motion.div>
                                         </div>

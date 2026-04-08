@@ -1,4 +1,4 @@
-const BRAND_NAME = "Evently";
+const BRAND_NAME = "Hamro Event";
 
 const escapeHtml = (value: string) =>
     value
@@ -26,7 +26,7 @@ export function renderEmailTemplate(input: EmailTemplateInput) {
     const highlight = input.highlight ? escapeHtml(input.highlight) : "";
     const footerNote = input.footerNote
         ? escapeHtml(input.footerNote)
-        : "This email was sent by Evently.";
+        : "This email was sent by Hamro Event.";
 
     const contentLines = (input.contentLines ?? []).map((line) => escapeHtml(line));
     const ctaLabel = input.ctaLabel ? escapeHtml(input.ctaLabel) : "";
@@ -81,11 +81,11 @@ export function renderEmailTemplate(input: EmailTemplateInput) {
 }
 
 export function buildOtpEmail(input: { otp: string; expiresMinutes: number }) {
-    const subject = "Verify your Evently account";
-    const text = `Your Evently verification code is ${input.otp}. It expires in ${input.expiresMinutes} minutes.`;
+    const subject = "Verify your Hamro Event account";
+    const text = `Your Hamro Event verification code is ${input.otp}. It expires in ${input.expiresMinutes} minutes.`;
     const html = renderEmailTemplate({
         title: "Verify your account",
-        subtitle: "Secure your Evently account in minutes.",
+        subtitle: "Secure your Hamro Event account in minutes.",
         preheader: `Your verification code is ${input.otp}`,
         highlight: input.otp,
         contentLines: [
@@ -98,11 +98,11 @@ export function buildOtpEmail(input: { otp: string; expiresMinutes: number }) {
 }
 
 export function buildPasswordResetOtpEmail(input: { otp: string; expiresMinutes: number }) {
-    const subject = "Reset your Evently password";
-    const text = `Your Evently password reset code is ${input.otp}. It expires in ${input.expiresMinutes} minutes.`;
+    const subject = "Reset your Hamro Event password";
+    const text = `Your Hamro Event password reset code is ${input.otp}. It expires in ${input.expiresMinutes} minutes.`;
     const html = renderEmailTemplate({
         title: "Reset your password",
-        subtitle: "Use this code to continue securing your Evently account.",
+        subtitle: "Use this code to continue securing your Hamro Event account.",
         preheader: `Your password reset code is ${input.otp}`,
         highlight: input.otp,
         contentLines: [
@@ -124,7 +124,7 @@ export function buildQuoteApprovedEmail(input: {
     inclusions?: string[];
     roleLabel: "Customer" | "Vendor";
 }) {
-    const subject = "Quote approved on Evently";
+    const subject = "Quote approved on Hamro Event";
     const lines: string[] = [];
     if (input.recipientName) {
         lines.push(`Hi ${input.recipientName},`);
@@ -148,9 +148,9 @@ export function buildQuoteApprovedEmail(input: {
     const html = renderEmailTemplate({
         title: "Quote approved",
         subtitle: "Both parties accepted the final pricing and inclusions.",
-        preheader: "Your Evently booking is confirmed",
+        preheader: "Your Hamro Event booking is confirmed",
         contentLines: lines,
-        footerNote: "You can continue the conversation in Evently if you need adjustments.",
+        footerNote: "You can continue the conversation in Hamro Event if you need adjustments.",
     });
 
     return { subject, text: lines.join("\n"), html };

@@ -25,7 +25,7 @@ export default function AdminCommissions() {
         commissionDue: 0,
         commissionPaid: 0,
         commissionOutstanding: 0,
-        vendors: [],
+        vendors: []
     });
     const [payments, setPayments] = useState<CommissionPaymentRecord[]>([]);
     const [config, setConfig] = useState<AdminPaymentConfig>({});
@@ -39,7 +39,7 @@ export default function AdminCommissions() {
                 const [summaryRes, paymentsRes, configRes] = await Promise.all([
                     AdminPaymentsService.getApiAdminCommissionsSummary(month),
                     AdminPaymentsService.getApiAdminCommissionsPayments({ month, page: 1, limit: 20 }),
-                    AdminPaymentsService.getApiAdminPaymentsConfig(),
+                    AdminPaymentsService.getApiAdminPaymentsConfig()
                 ]);
                 if (!active) return;
                 setSummary(summaryRes || summary);
@@ -51,7 +51,7 @@ export default function AdminCommissions() {
                 toast({
                     title: "Failed to load commissions",
                     description: getErrorMessage(error, "Please try again."),
-                    variant: "destructive",
+                    variant: "destructive"
                 });
             }
         };
@@ -72,7 +72,7 @@ export default function AdminCommissions() {
             toast({
                 title: "Failed to save settings",
                 description: getErrorMessage(error, "Please try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsSaving(false);
@@ -100,11 +100,7 @@ export default function AdminCommissions() {
                     value={`NPR ${summary.grossEarnings.toLocaleString()}`}
                     icon={Wallet}
                 />
-                <StatCard
-                    title="Net Earnings"
-                    value={`NPR ${summary.netEarnings.toLocaleString()}`}
-                    icon={Landmark}
-                />
+                <StatCard title="Net Earnings" value={`NPR ${summary.netEarnings.toLocaleString()}`} icon={Landmark} />
                 <StatCard
                     title="Commission Due"
                     value={`NPR ${summary.commissionDue.toLocaleString()}`}
@@ -137,11 +133,7 @@ export default function AdminCommissions() {
                                                 {vendor.commissionDue.toLocaleString()}
                                             </p>
                                         </div>
-                                        <Badge
-                                            variant={
-                                                vendor.commissionOutstanding > 0 ? "warning" : "success"
-                                            }
-                                        >
+                                        <Badge variant={vendor.commissionOutstanding > 0 ? "warning" : "success"}>
                                             {vendor.commissionOutstanding > 0
                                                 ? `Outstanding NPR ${vendor.commissionOutstanding.toLocaleString()}`
                                                 : "Fully paid"}
@@ -169,11 +161,12 @@ export default function AdminCommissions() {
                                 <div className="space-y-2">
                                     <Label>Public Key</Label>
                                     <Input
+                                        type="password"
                                         value={configForm.khalti?.publicKey || ""}
                                         onChange={(e) =>
                                             setConfigForm((prev) => ({
                                                 ...prev,
-                                                khalti: { ...(prev.khalti || {}), publicKey: e.target.value },
+                                                khalti: { ...(prev.khalti || {}), publicKey: e.target.value }
                                             }))
                                         }
                                     />
@@ -181,11 +174,12 @@ export default function AdminCommissions() {
                                 <div className="space-y-2">
                                     <Label>Secret Key</Label>
                                     <Input
+                                        type="password"
                                         value={configForm.khalti?.secretKey || ""}
                                         onChange={(e) =>
                                             setConfigForm((prev) => ({
                                                 ...prev,
-                                                khalti: { ...(prev.khalti || {}), secretKey: e.target.value },
+                                                khalti: { ...(prev.khalti || {}), secretKey: e.target.value }
                                             }))
                                         }
                                     />
@@ -199,8 +193,8 @@ export default function AdminCommissions() {
                                                 ...prev,
                                                 khalti: {
                                                     ...(prev.khalti || {}),
-                                                    mode: value as "sandbox" | "live",
-                                                },
+                                                    mode: value as "sandbox" | "live"
+                                                }
                                             }))
                                         }
                                     >
@@ -225,11 +219,12 @@ export default function AdminCommissions() {
                                 <div className="space-y-2">
                                     <Label>Merchant Code</Label>
                                     <Input
+                                        type="password"
                                         value={configForm.esewa?.merchantCode || ""}
                                         onChange={(e) =>
                                             setConfigForm((prev) => ({
                                                 ...prev,
-                                                esewa: { ...(prev.esewa || {}), merchantCode: e.target.value },
+                                                esewa: { ...(prev.esewa || {}), merchantCode: e.target.value }
                                             }))
                                         }
                                     />
@@ -237,11 +232,12 @@ export default function AdminCommissions() {
                                 <div className="space-y-2">
                                     <Label>Secret Key</Label>
                                     <Input
+                                        type="password"
                                         value={configForm.esewa?.secretKey || ""}
                                         onChange={(e) =>
                                             setConfigForm((prev) => ({
                                                 ...prev,
-                                                esewa: { ...(prev.esewa || {}), secretKey: e.target.value },
+                                                esewa: { ...(prev.esewa || {}), secretKey: e.target.value }
                                             }))
                                         }
                                     />
@@ -255,8 +251,8 @@ export default function AdminCommissions() {
                                                 ...prev,
                                                 esewa: {
                                                     ...(prev.esewa || {}),
-                                                    mode: value as "sandbox" | "live",
-                                                },
+                                                    mode: value as "sandbox" | "live"
+                                                }
                                             }))
                                         }
                                     >
@@ -302,9 +298,7 @@ export default function AdminCommissions() {
                                         NPR {payment.amount.toLocaleString()}
                                     </p>
                                     <Badge
-                                        variant={
-                                            String(payment.status).toUpperCase() === "PAID" ? "success" : "soft"
-                                        }
+                                        variant={String(payment.status).toUpperCase() === "PAID" ? "success" : "soft"}
                                     >
                                         {String(payment.status).toLowerCase()}
                                     </Badge>
@@ -320,15 +314,7 @@ export default function AdminCommissions() {
     );
 }
 
-function StatCard({
-    title,
-    value,
-    icon: Icon,
-}: {
-    title: string;
-    value: string;
-    icon: typeof Wallet;
-}) {
+function StatCard({ title, value, icon: Icon }: { title: string; value: string; icon: typeof Wallet }) {
     return (
         <Card>
             <CardContent className="p-4">

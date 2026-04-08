@@ -44,7 +44,7 @@ const testimonials = [
         name: "Priya Thapa",
         role: "Bride",
         image: VENDOR_PLACEHOLDER,
-        text: "Evently made planning our wedding so much easier! We found amazing vendors all in one place.",
+        text: "Hamro Event made planning our wedding so much easier! We found amazing vendors all in one place.",
         rating: 5
     },
     {
@@ -276,7 +276,7 @@ export default function LandingPage() {
                         viewport={{ once: true }}
                         className="text-center mb-12"
                     >
-                        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Evently?</h2>
+                        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Hamro Event?</h2>
                         <p className="text-muted-foreground max-w-2xl mx-auto">
                             We make event planning simple, reliable, and stress-free
                         </p>
@@ -406,7 +406,7 @@ export default function LandingPage() {
                                     transition={{ delay: 0.1 }}
                                     className="text-primary-foreground/80 mb-8 max-w-xl mx-auto"
                                 >
-                                    Join thousands of happy customers who planned their perfect events with Evently.
+                                    Join thousands of happy customers who planned their perfect events with Hamro Event.
                                 </motion.p>
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}

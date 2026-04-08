@@ -18,7 +18,7 @@ import type {
     CommissionSummary,
     VendorPaymentConfig,
     VendorPaymentSummary,
-    VendorPaymentTransaction,
+    VendorPaymentTransaction
 } from "@/types";
 
 export default function VendorPayments() {
@@ -48,7 +48,7 @@ export default function VendorPayments() {
         commissionDue: 0,
         commissionPaid: 0,
         commissionReserved: 0,
-        commissionOutstanding: 0,
+        commissionOutstanding: 0
     });
     const [commissionPayments, setCommissionPayments] = useState<CommissionPaymentRecord[]>([]);
     const [commissionAmount, setCommissionAmount] = useState("");
@@ -67,17 +67,19 @@ export default function VendorPayments() {
                     CommissionPaymentsService.getApiVendorsMeCommissionsPayments({
                         month: commissionMonth,
                         page: 1,
-                        limit: 20,
-                    }),
+                        limit: 20
+                    })
                 ]);
                 if (!active) return;
-                setSummary(summaryRes || {
-                    totalEarnings: 0,
-                    pendingPayout: 0,
-                    availableBalance: 0,
-                    thisMonth: 0,
-                    growth: 0
-                });
+                setSummary(
+                    summaryRes || {
+                        totalEarnings: 0,
+                        pendingPayout: 0,
+                        availableBalance: 0,
+                        thisMonth: 0,
+                        growth: 0
+                    }
+                );
                 setTransactions(txRes?.items || []);
                 setConfig(configRes || {});
                 setConfigForm(configRes || {});
@@ -87,10 +89,14 @@ export default function VendorPayments() {
                     String(
                         Math.max(
                             (commissionSummaryRes?.commissionOutstanding || 0) -
-                                Math.max((commissionSummaryRes?.commissionReserved || 0) - (commissionSummaryRes?.commissionPaid || 0), 0),
-                            0,
-                        ),
-                    ),
+                                Math.max(
+                                    (commissionSummaryRes?.commissionReserved || 0) -
+                                        (commissionSummaryRes?.commissionPaid || 0),
+                                    0
+                                ),
+                            0
+                        )
+                    )
                 );
             } catch {
                 if (!active) return;
@@ -120,7 +126,7 @@ export default function VendorPayments() {
     const commissionRemaining = Math.max(
         commissionSummary.commissionOutstanding -
             Math.max(commissionSummary.commissionReserved - commissionSummary.commissionPaid, 0),
-        0,
+        0
     );
 
     const handleSaveConfig = async () => {
@@ -176,7 +182,7 @@ export default function VendorPayments() {
             toast({
                 title: "Amount exceeds due commission",
                 description: `Remaining payable commission is NPR ${commissionRemaining.toLocaleString()}.`,
-                variant: "destructive",
+                variant: "destructive"
             });
             return;
         }
@@ -187,19 +193,19 @@ export default function VendorPayments() {
                 requestBody: {
                     month: commissionMonth,
                     amount,
-                    provider: commissionProvider,
-                },
+                    provider: commissionProvider
+                }
             });
             openProviderFlow(response.payUrl, response.formData);
             toast({
                 title: "Commission payment started",
-                description: "Complete the payment in the opened window.",
+                description: "Complete the payment in the opened window."
             });
         } catch (error) {
             toast({
                 title: "Failed to start commission payment",
                 description: getErrorMessage(error, "Please try again."),
-                variant: "destructive",
+                variant: "destructive"
             });
         } finally {
             setIsPayingCommission(false);
@@ -438,7 +444,7 @@ export default function VendorPayments() {
                                                         <p className="text-sm text-muted-foreground">
                                                             {payment.monthKey} •{" "}
                                                             {new Date(
-                                                                payment.paidAt || payment.createdAt || "",
+                                                                payment.paidAt || payment.createdAt || ""
                                                             ).toLocaleString()}
                                                         </p>
                                                     </div>

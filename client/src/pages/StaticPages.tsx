@@ -18,7 +18,7 @@ export function AboutPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-4xl md:text-5xl font-bold text-foreground mb-4"
                     >
-                        About Evently
+                        About Hamro Event
                     </motion.h1>
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
@@ -131,7 +131,7 @@ export function ContactPage() {
                                     </div>
                                     <div>
                                         <p className="font-medium text-foreground">Email</p>
-                                        <p className="text-muted-foreground">hello@evently.com.np</p>
+                                        <p className="text-muted-foreground">hello@hamroevent.com.np</p>
                                     </div>
                                 </div>
                             </div>

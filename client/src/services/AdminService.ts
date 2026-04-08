@@ -272,6 +272,30 @@ export class AdminService {
         });
     }
     /**
+     * Update report status (Admin only)
+     * @returns Report OK
+     * @throws ApiError
+     */
+    public static patchApiAdminReports({
+        id,
+        requestBody
+    }: {
+        id: string;
+        requestBody: {
+            status: "OPEN" | "REVIEWED" | "RESOLVED";
+        };
+    }): CancelablePromise<Report> {
+        return __request(OpenAPI, {
+            method: "PATCH",
+            url: "/api/admin/reports/{id}",
+            path: {
+                id: id
+            },
+            body: requestBody,
+            mediaType: "application/json"
+        });
+    }
+    /**
      * List support tickets (Admin only)
      * @returns PaginatedResponse<SupportTicket> OK
      * @throws ApiError

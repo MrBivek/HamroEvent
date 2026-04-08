@@ -144,7 +144,9 @@ adminCommissionsRoutes.get(
                 monthKey,
                 commissionRate: 0.1,
                 ...totals,
-                vendors: summaries.sort((a, b) => b.commissionOutstanding - a.commissionOutstanding),
+                vendors: summaries.sort(
+                    (a, b) => b.commissionOutstanding - a.commissionOutstanding,
+                ),
             });
         } catch (err) {
             next(err);
@@ -186,7 +188,8 @@ adminCommissionsRoutes.get(
             if (parsed.month) filter.monthKey = parsed.month;
             if (req.query.vendorId) {
                 const vendorId = String(req.query.vendorId);
-                if (!mongoose.isValidObjectId(vendorId)) throw new BadRequestError("Invalid vendorId");
+                if (!mongoose.isValidObjectId(vendorId))
+                    throw new BadRequestError("Invalid vendorId");
                 filter.vendorId = new mongoose.Types.ObjectId(vendorId);
             }
 

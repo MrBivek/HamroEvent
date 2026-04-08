@@ -35,7 +35,7 @@ export function Footer() {
                             <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary">
                                 <span className="text-lg font-bold text-primary-foreground">E</span>
                             </div>
-                            <span className="text-xl font-bold text-foreground">Evently</span>
+                            <span className="text-xl font-bold text-foreground">Hamro Event</span>
                         </Link>
                         <p className="text-sm text-muted-foreground mb-6 max-w-xs">
                             Nepal's premier event services marketplace. Connect with verified vendors for your perfect
@@ -114,7 +114,7 @@ export function Footer() {
                             </li>
                             <li className="flex items-center gap-3 text-sm text-muted-foreground">
                                 <Mail className="h-4 w-4 text-primary shrink-0" />
-                                <span>hello@evently.com.np</span>
+                                <span>hello@hamroevent.com.np</span>
                             </li>
                         </ul>
                     </div>
@@ -123,7 +123,7 @@ export function Footer() {
                 {/* Bottom Bar */}
                 <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-sm text-muted-foreground">
-                        © {new Date().getFullYear()} Evently (HamroEvent). All rights reserved.
+                        © {new Date().getFullYear()} Hamro Event. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         <Link

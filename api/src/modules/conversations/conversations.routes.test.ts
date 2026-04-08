@@ -67,12 +67,10 @@ function leanResult<T>(value: T) {
 }
 
 async function runSendMessage(paramsId: string, body: Record<string, unknown>, tokenSub: string) {
-    const layer = conversationsRoutes.stack.find(
-        (entry) => {
-            const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
-            return route?.path === "/:id/messages" && route.methods?.post;
-        },
-    );
+    const layer = conversationsRoutes.stack.find((entry) => {
+        const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
+        return route?.path === "/:id/messages" && route.methods?.post;
+    });
     if (!layer?.route) throw new Error("POST messages route not found");
 
     const req: any = {

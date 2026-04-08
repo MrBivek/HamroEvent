@@ -440,8 +440,11 @@ export interface Report {
     targetId: string;
     reason: string;
     reporterId?: string;
+    reporterName?: string;
+    targetName?: string;
     status?: string;
     createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface PaginatedResponse<T> {

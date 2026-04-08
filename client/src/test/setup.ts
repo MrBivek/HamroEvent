@@ -13,6 +13,6 @@ beforeEach(() => {
         user: null,
         token: null,
         isAuthenticated: false,
-        isLoading: false,
+        isLoading: false
     });
 });

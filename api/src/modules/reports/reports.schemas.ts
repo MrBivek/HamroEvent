@@ -12,3 +12,7 @@ export const ReportListQuerySchema = z.object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(50).default(20),
 });
+
+export const AdminUpdateReportSchema = z.object({
+    status: z.enum(Object.values(ReportStatus) as [string, ...string[]]),
+});

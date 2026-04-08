@@ -8,7 +8,7 @@ export function setupSwagger(app: Express) {
         definition: {
             openapi: "3.0.0",
             info: {
-                title: "Evently API",
+                title: "Hamro Event API",
                 version: "1.0.0",
                 description: "API Documentation",
             },

@@ -64,7 +64,7 @@ export default function CustomerRegisterPage() {
                             </div>
                         </Link>
                         <CardTitle className="text-2xl">Create Account</CardTitle>
-                        <CardDescription>Join Evently to plan your perfect event</CardDescription>
+                        <CardDescription>Join Hamro Event to plan your perfect event</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">

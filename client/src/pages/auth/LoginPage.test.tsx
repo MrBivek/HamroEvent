@@ -8,18 +8,18 @@ const { toastMock, authServiceMock } = vi.hoisted(() => ({
     toastMock: vi.fn(),
     authServiceMock: {
         postApiAuthLogin: vi.fn(),
-        postApiAuthLogin2fa: vi.fn(),
-    },
+        postApiAuthLogin2fa: vi.fn()
+    }
 }));
 
 vi.mock("@/hooks/use-toast.ts", () => ({
     useToast: () => ({
-        toast: toastMock,
-    }),
+        toast: toastMock
+    })
 }));
 
 vi.mock("@/services/AuthService", () => ({
-    AuthService: authServiceMock,
+    AuthService: authServiceMock
 }));
 
 function renderLoginPage() {
@@ -32,7 +32,7 @@ function renderLoginPage() {
                 <Route path="/vendor/dashboard" element={<div>Vendor Dashboard</div>} />
                 <Route path="/admin/dashboard" element={<div>Admin Dashboard</div>} />
             </Routes>
-        </MemoryRouter>,
+        </MemoryRouter>
     );
 }
 
@@ -43,7 +43,7 @@ describe("LoginPage", () => {
             user: null,
             token: null,
             isAuthenticated: false,
-            isLoading: false,
+            isLoading: false
         });
     });
 
@@ -51,16 +51,16 @@ describe("LoginPage", () => {
         authServiceMock.postApiAuthLogin.mockResolvedValue({
             requiresTwoFactor: true,
             tempToken: "temp-token",
-            email: "customer@example.com",
+            email: "customer@example.com"
         });
 
         renderLoginPage();
 
         fireEvent.change(screen.getByLabelText(/email/i), {
-            target: { value: "customer@example.com" },
+            target: { value: "customer@example.com" }
         });
         fireEvent.change(screen.getByLabelText(/^password$/i), {
-            target: { value: "password123" },
+            target: { value: "password123" }
         });
         fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
@@ -79,17 +79,17 @@ describe("LoginPage", () => {
                 email: "customer@example.com",
                 isActive: true,
                 status: "active",
-                createdAt: "2026-01-01T00:00:00.000Z",
-            },
+                createdAt: "2026-01-01T00:00:00.000Z"
+            }
         });
 
         renderLoginPage();
 
         fireEvent.change(screen.getByLabelText(/email/i), {
-            target: { value: "customer@example.com" },
+            target: { value: "customer@example.com" }
         });
         fireEvent.change(screen.getByLabelText(/^password$/i), {
-            target: { value: "password123" },
+            target: { value: "password123" }
         });
         fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
@@ -100,16 +100,16 @@ describe("LoginPage", () => {
 
     it("redirects to OTP verification when the account is not verified", async () => {
         authServiceMock.postApiAuthLogin.mockRejectedValue({
-            body: { error: "Account not verified" },
+            body: { error: "Account not verified" }
         });
 
         renderLoginPage();
 
         fireEvent.change(screen.getByLabelText(/email/i), {
-            target: { value: "pending@example.com" },
+            target: { value: "pending@example.com" }
         });
         fireEvent.change(screen.getByLabelText(/^password$/i), {
-            target: { value: "password123" },
+            target: { value: "password123" }
         });
         fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 

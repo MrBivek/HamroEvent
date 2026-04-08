@@ -8,18 +8,18 @@ const { toastMock, eventsServiceMock } = vi.hoisted(() => ({
     eventsServiceMock: {
         getApiEvents: vi.fn(),
         postApiEvents: vi.fn(),
-        deleteApiEvents: vi.fn(),
-    },
+        deleteApiEvents: vi.fn()
+    }
 }));
 
 vi.mock("@/hooks/use-toast.ts", () => ({
     useToast: () => ({
-        toast: toastMock,
-    }),
+        toast: toastMock
+    })
 }));
 
 vi.mock("@/services/EventsService", () => ({
-    EventsService: eventsServiceMock,
+    EventsService: eventsServiceMock
 }));
 
 vi.mock("@/components/ui/dialog.tsx", () => ({
@@ -27,13 +27,13 @@ vi.mock("@/components/ui/dialog.tsx", () => ({
     DialogContent: ({ children }: { children: any }) => <div>{children}</div>,
     DialogHeader: ({ children }: { children: any }) => <div>{children}</div>,
     DialogTitle: ({ children }: { children: any }) => <h2>{children}</h2>,
-    DialogTrigger: ({ children }: { children: any }) => <div>{children}</div>,
+    DialogTrigger: ({ children }: { children: any }) => <div>{children}</div>
 }));
 
 vi.mock("@/components/ui/popover.tsx", () => ({
     Popover: ({ children }: { children: any }) => <div>{children}</div>,
     PopoverTrigger: ({ children }: { children: any }) => <div>{children}</div>,
-    PopoverContent: ({ children }: { children: any }) => <div>{children}</div>,
+    PopoverContent: ({ children }: { children: any }) => <div>{children}</div>
 }));
 
 vi.mock("@/components/ui/calendar.tsx", () => ({
@@ -41,7 +41,7 @@ vi.mock("@/components/ui/calendar.tsx", () => ({
         <button type="button" onClick={() => onSelect?.(new Date("2026-10-22T00:00:00.000Z"))}>
             Pick test date
         </button>
-    ),
+    )
 }));
 
 vi.mock("@/components/ui/select.tsx", async () => {
@@ -69,7 +69,7 @@ vi.mock("@/components/ui/select.tsx", async () => {
                 if (child.type === SelectItem) {
                     items.push({
                         value: child.props.value,
-                        label: typeof child.props.children === "string" ? child.props.children : child.props.value,
+                        label: typeof child.props.children === "string" ? child.props.children : child.props.value
                     });
                     return;
                 }
@@ -88,7 +88,7 @@ vi.mock("@/components/ui/select.tsx", async () => {
         Select: ({
             value,
             onValueChange,
-            children,
+            children
         }: {
             value?: string;
             onValueChange?: (value: string) => void;
@@ -117,7 +117,7 @@ vi.mock("@/components/ui/select.tsx", async () => {
         SelectTrigger: ({ children }: { children: any }) => <div>{children}</div>,
         SelectValue,
         SelectContent: ({ children }: { children: any }) => <div>{children}</div>,
-        SelectItem,
+        SelectItem
     };
 });
 
@@ -138,36 +138,36 @@ describe("CustomerEvents", () => {
             location: "Kathmandu",
             budget: 200000,
             createdAt: "2026-01-01T00:00:00.000Z",
-            vendorCount: 0,
+            vendorCount: 0
         });
 
         render(
             <MemoryRouter>
                 <CustomerEvents />
-            </MemoryRouter>,
+            </MemoryRouter>
         );
 
         await screen.findByText(/my events/i);
 
         fireEvent.change(screen.getByLabelText(/event title/i), {
-            target: { value: "Wedding Celebration" },
+            target: { value: "Wedding Celebration" }
         });
         fireEvent.change(screen.getByLabelText(/event type/i), {
-            target: { value: "Wedding" },
+            target: { value: "Wedding" }
         });
         fireEvent.change(screen.getByLabelText(/location/i), {
-            target: { value: "Kathmandu" },
+            target: { value: "Kathmandu" }
         });
         fireEvent.change(screen.getByLabelText(/budget/i), {
-            target: { value: "200000" },
+            target: { value: "200000" }
         });
 
         fireEvent.click(screen.getByRole("button", { name: /pick test date/i }));
         fireEvent.change(screen.getByLabelText(/select start time/i), {
-            target: { value: "10:00" },
+            target: { value: "10:00" }
         });
         fireEvent.change(screen.getByLabelText(/select end time/i), {
-            target: { value: "16:00" },
+            target: { value: "16:00" }
         });
 
         fireEvent.submit(screen.getByLabelText(/event title/i).closest("form")!);
@@ -182,8 +182,8 @@ describe("CustomerEvents", () => {
                     endTime: "16:00",
                     location: "Kathmandu",
                     notes: "",
-                    budget: 200000,
-                },
+                    budget: 200000
+                }
             });
         });
     });

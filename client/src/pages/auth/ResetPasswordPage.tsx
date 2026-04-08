@@ -131,7 +131,7 @@ export default function ResetPasswordPage() {
                         </CardTitle>
                         <CardDescription>
                             {resetToken
-                                ? "Choose a fresh password for your Evently account."
+                                ? "Choose a fresh password for your Hamro Event account."
                                 : "Enter the OTP sent to your email, then we’ll unlock password reset."}
                         </CardDescription>
                     </CardHeader>

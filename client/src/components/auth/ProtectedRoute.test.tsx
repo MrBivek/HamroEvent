@@ -15,7 +15,7 @@ function renderProtectedRoute(initialPath = "/customer/dashboard") {
                     <Route path="/customer/bookings" element={<div>Customer Bookings</div>} />
                 </Route>
             </Routes>
-        </MemoryRouter>,
+        </MemoryRouter>
     );
 }
 
@@ -25,7 +25,7 @@ describe("ProtectedRoute", () => {
             user: null,
             token: null,
             isAuthenticated: false,
-            isLoading: false,
+            isLoading: false
         });
     });
 
@@ -43,11 +43,11 @@ describe("ProtectedRoute", () => {
                 email: "customer@example.com",
                 isActive: true,
                 status: "active",
-                createdAt: "2026-01-01T00:00:00.000Z",
+                createdAt: "2026-01-01T00:00:00.000Z"
             },
             token: "token",
             isAuthenticated: true,
-            isLoading: false,
+            isLoading: false
         });
 
         renderProtectedRoute("/customer/bookings");
@@ -63,11 +63,11 @@ describe("ProtectedRoute", () => {
                 email: "vendor@example.com",
                 isActive: true,
                 status: "active",
-                createdAt: "2026-01-01T00:00:00.000Z",
+                createdAt: "2026-01-01T00:00:00.000Z"
             },
             token: "token",
             isAuthenticated: true,
-            isLoading: false,
+            isLoading: false
         });
 
         renderProtectedRoute("/customer/bookings");

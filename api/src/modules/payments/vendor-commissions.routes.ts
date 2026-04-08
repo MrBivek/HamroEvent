@@ -8,10 +8,16 @@ import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { env } from "../../configurations/env.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { AdminPaymentConfigModel } from "./admin-payment-config.model.js";
-import { CommissionMonthQuerySchema, InitiateCommissionPaymentSchema } from "./commissions.schemas.js";
+import {
+    CommissionMonthQuerySchema,
+    InitiateCommissionPaymentSchema,
+} from "./commissions.schemas.js";
 import { buildVendorCommissionSummary, parseMonthKey } from "./commission.service.js";
 import { CommissionPaymentModel } from "./commission-payment.model.js";
-import { createNotification, createNotificationsForAdmins } from "../notifications/notifications.service.js";
+import {
+    createNotification,
+    createNotificationsForAdmins,
+} from "../notifications/notifications.service.js";
 
 const KHALTI_INITIATE_URLS = {
     sandbox: "https://a.khalti.com/api/v2/epayment/initiate/",
@@ -321,7 +327,8 @@ vendorCommissionsRoutes.post(
     async (req, res, next) => {
         try {
             const id = String(req.params.id);
-            if (!mongoose.isValidObjectId(id)) throw new NotFoundError("Commission payment not found");
+            if (!mongoose.isValidObjectId(id))
+                throw new NotFoundError("Commission payment not found");
 
             const vendor = await VendorModel.findOne({ userId: req.auth!.sub }).lean();
             if (!vendor) throw new NotFoundError("Vendor profile not found");
@@ -344,7 +351,8 @@ vendorCommissionsRoutes.post(
                 if (provider === "KHALTI") {
                     const secretKey = adminConfig.khalti?.secretKey;
                     const mode = adminConfig.khalti?.mode ?? "sandbox";
-                    if (!secretKey) throw new BadRequestError("Admin Khalti keys are not configured");
+                    if (!secretKey)
+                        throw new BadRequestError("Admin Khalti keys are not configured");
                     if (!commissionPayment.providerRef) {
                         throw new BadRequestError("Missing Khalti payment reference");
                     }
@@ -368,14 +376,16 @@ vendorCommissionsRoutes.post(
                 } else if (provider === "ESEWA") {
                     const merchantCode = adminConfig.esewa?.merchantCode;
                     const mode = adminConfig.esewa?.mode ?? "sandbox";
-                    if (!merchantCode) throw new BadRequestError("Admin eSewa keys are not configured");
+                    if (!merchantCode)
+                        throw new BadRequestError("Admin eSewa keys are not configured");
                     if (!commissionPayment.providerRef) {
                         throw new BadRequestError("Missing eSewa payment reference");
                     }
                     const meta = commissionPayment.providerMeta as
                         | { formData?: Record<string, string> }
                         | undefined;
-                    const totalAmount = meta?.formData?.total_amount ?? commissionPayment.amount.toFixed(2);
+                    const totalAmount =
+                        meta?.formData?.total_amount ?? commissionPayment.amount.toFixed(2);
                     const url = new URL(ESEWA_STATUS_URLS[mode]);
                     url.searchParams.set("product_code", merchantCode);
                     url.searchParams.set("total_amount", totalAmount);

@@ -116,7 +116,7 @@ export default function LoginPage() {
                         <CardDescription>
                             {tempToken
                                 ? "Enter the 6-digit code from your authenticator app"
-                                : "Sign in to your Evently account"}
+                                : "Sign in to your Hamro Event account"}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

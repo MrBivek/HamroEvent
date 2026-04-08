@@ -50,12 +50,10 @@ function createToken(sub: string, role: UserRole) {
 }
 
 async function runRoute(body: Record<string, unknown>) {
-    const layer = eventsRoutes.stack.find(
-        (entry) => {
-            const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
-            return route?.path === "/" && route.methods?.post;
-        },
-    );
+    const layer = eventsRoutes.stack.find((entry) => {
+        const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
+        return route?.path === "/" && route.methods?.post;
+    });
     if (!layer?.route) throw new Error("POST / route not found");
 
     const req: any = {

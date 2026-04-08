@@ -9,18 +9,18 @@ const { toastMock, accountServiceMock } = vi.hoisted(() => ({
         getApiAccountSecurity: vi.fn(),
         postApiAccount2faSetup: vi.fn(),
         postApiAccount2faEnable: vi.fn(),
-        postApiAccount2faDisable: vi.fn(),
-    },
+        postApiAccount2faDisable: vi.fn()
+    }
 }));
 
 vi.mock("@/hooks/use-toast.ts", () => ({
     useToast: () => ({
-        toast: toastMock,
-    }),
+        toast: toastMock
+    })
 }));
 
 vi.mock("@/services/AccountService", () => ({
-    AccountService: accountServiceMock,
+    AccountService: accountServiceMock
 }));
 
 describe("TwoFactorSettingsCard", () => {
@@ -35,11 +35,11 @@ describe("TwoFactorSettingsCard", () => {
                 isActive: true,
                 status: "active",
                 twoFactorEnabled: false,
-                createdAt: "2026-01-01T00:00:00.000Z",
+                createdAt: "2026-01-01T00:00:00.000Z"
             },
             token: "token",
             isAuthenticated: true,
-            isLoading: false,
+            isLoading: false
         });
     });
 
@@ -47,16 +47,16 @@ describe("TwoFactorSettingsCard", () => {
         accountServiceMock.getApiAccountSecurity.mockResolvedValue({
             email: "customer@example.com",
             twoFactorEnabled: false,
-            hasPendingSetup: false,
+            hasPendingSetup: false
         });
         accountServiceMock.postApiAccount2faSetup.mockResolvedValue({
             qrCodeDataUrl: "data:image/png;base64,abc",
             manualEntryKey: "SECRETKEY",
-            email: "customer@example.com",
+            email: "customer@example.com"
         });
         accountServiceMock.postApiAccount2faEnable.mockResolvedValue({
             twoFactorEnabled: true,
-            user: { twoFactorEnabled: true },
+            user: { twoFactorEnabled: true }
         });
 
         render(<TwoFactorSettingsCard />);
@@ -67,13 +67,13 @@ describe("TwoFactorSettingsCard", () => {
 
         expect(await screen.findByText(/manual key/i)).toBeInTheDocument();
         fireEvent.change(screen.getByLabelText(/authenticator code/i), {
-            target: { value: "123456" },
+            target: { value: "123456" }
         });
         fireEvent.click(screen.getByRole("button", { name: /verify and enable/i }));
 
         await waitFor(() => {
             expect(accountServiceMock.postApiAccount2faEnable).toHaveBeenCalledWith({
-                requestBody: { code: "123456" },
+                requestBody: { code: "123456" }
             });
         });
         expect(useAuthStore.getState().user?.twoFactorEnabled).toBe(true);
@@ -89,33 +89,33 @@ describe("TwoFactorSettingsCard", () => {
                 isActive: true,
                 status: "active",
                 twoFactorEnabled: true,
-                createdAt: "2026-01-01T00:00:00.000Z",
+                createdAt: "2026-01-01T00:00:00.000Z"
             },
             token: "token",
             isAuthenticated: true,
-            isLoading: false,
+            isLoading: false
         });
         accountServiceMock.getApiAccountSecurity.mockResolvedValue({
             email: "customer@example.com",
             twoFactorEnabled: true,
-            hasPendingSetup: false,
+            hasPendingSetup: false
         });
         accountServiceMock.postApiAccount2faDisable.mockResolvedValue({
             twoFactorEnabled: false,
-            user: { twoFactorEnabled: false },
+            user: { twoFactorEnabled: false }
         });
 
         render(<TwoFactorSettingsCard />);
 
         expect(await screen.findByText(/two-factor authentication is active/i)).toBeInTheDocument();
         fireEvent.change(screen.getByLabelText(/authenticator code/i), {
-            target: { value: "654321" },
+            target: { value: "654321" }
         });
         fireEvent.click(screen.getByRole("button", { name: /disable 2fa/i }));
 
         await waitFor(() => {
             expect(accountServiceMock.postApiAccount2faDisable).toHaveBeenCalledWith({
-                requestBody: { code: "654321" },
+                requestBody: { code: "654321" }
             });
         });
         expect(useAuthStore.getState().user?.twoFactorEnabled).toBe(false);

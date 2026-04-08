@@ -9,15 +9,15 @@ export class CommissionPaymentsService {
             method: "GET",
             url: "/api/vendors/me/commissions/summary",
             query: {
-                month,
-            },
+                month
+            }
         });
     }
 
     public static getApiVendorsMeCommissionsPayments({
         month,
         page = 1,
-        limit = 20,
+        limit = 20
     }: {
         month?: string;
         page?: number;
@@ -29,13 +29,13 @@ export class CommissionPaymentsService {
             query: {
                 month,
                 page,
-                limit,
-            },
+                limit
+            }
         });
     }
 
     public static postApiVendorsMeCommissionsPaymentsInitiate({
-        requestBody,
+        requestBody
     }: {
         requestBody: {
             month: string;
@@ -47,12 +47,12 @@ export class CommissionPaymentsService {
             method: "POST",
             url: "/api/vendors/me/commissions/payments/initiate",
             body: requestBody,
-            mediaType: "application/json",
+            mediaType: "application/json"
         });
     }
 
     public static postApiVendorsMeCommissionsPaymentsConfirm({
-        id,
+        id
     }: {
         id: string;
     }): CancelablePromise<CommissionPaymentRecord> {
@@ -60,8 +60,8 @@ export class CommissionPaymentsService {
             method: "POST",
             url: "/api/vendors/me/commissions/payments/{id}/confirm",
             path: {
-                id,
-            },
+                id
+            }
         });
     }
 }

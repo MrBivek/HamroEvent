@@ -130,7 +130,7 @@ export function DashboardLayout() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary">
                         <span className="text-lg font-bold text-primary-foreground">E</span>
                     </div>
-                    <span className="text-xl font-bold text-sidebar-foreground">Evently</span>
+                    <span className="text-xl font-bold text-sidebar-foreground">Hamro Event</span>
                 </Link>
             </div>
 

@@ -71,7 +71,11 @@ describe("payment reminder job", () => {
 
         bookingModelMock.find.mockReturnValue({
             select: vi.fn().mockReturnValue({
-                lean: vi.fn().mockResolvedValue([{ _id: bookingId, userId, eventId: new mongoose.Types.ObjectId() }]),
+                lean: vi
+                    .fn()
+                    .mockResolvedValue([
+                        { _id: bookingId, userId, eventId: new mongoose.Types.ObjectId() },
+                    ]),
             }),
         });
         quoteModelMock.find.mockReturnValue({
@@ -82,9 +86,11 @@ describe("payment reminder job", () => {
         paymentModelMock.aggregate.mockResolvedValue([{ _id: bookingId, totalPaid: 2000 }]);
         userModelMock.find.mockReturnValue({
             select: vi.fn().mockReturnValue({
-                lean: vi.fn().mockResolvedValue([
-                    { _id: userId, email: "customer@example.com", fullName: "Customer One" },
-                ]),
+                lean: vi
+                    .fn()
+                    .mockResolvedValue([
+                        { _id: userId, email: "customer@example.com", fullName: "Customer One" },
+                    ]),
             }),
         });
 
@@ -106,7 +112,11 @@ describe("payment reminder job", () => {
 
         bookingModelMock.find.mockReturnValue({
             select: vi.fn().mockReturnValue({
-                lean: vi.fn().mockResolvedValue([{ _id: bookingId, userId, eventId: new mongoose.Types.ObjectId() }]),
+                lean: vi
+                    .fn()
+                    .mockResolvedValue([
+                        { _id: bookingId, userId, eventId: new mongoose.Types.ObjectId() },
+                    ]),
             }),
         });
         quoteModelMock.find.mockReturnValue({
@@ -117,9 +127,11 @@ describe("payment reminder job", () => {
         paymentModelMock.aggregate.mockResolvedValue([{ _id: bookingId, totalPaid: 5000 }]);
         userModelMock.find.mockReturnValue({
             select: vi.fn().mockReturnValue({
-                lean: vi.fn().mockResolvedValue([
-                    { _id: userId, email: "customer@example.com", fullName: "Customer One" },
-                ]),
+                lean: vi
+                    .fn()
+                    .mockResolvedValue([
+                        { _id: userId, email: "customer@example.com", fullName: "Customer One" },
+                    ]),
             }),
         });
 
