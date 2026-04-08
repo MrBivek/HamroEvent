@@ -392,7 +392,7 @@ async function runExpressRoute({
     return res;
 }
 
-describe("Major backend modules", () => {
+describe("API Module Unit Tests", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         buildPaymentReminderEmailMock.mockReturnValue({

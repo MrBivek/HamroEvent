@@ -1,12 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "@/pages/auth/LoginPage";
-import CustomerEvents from "@/pages/customer/CustomerEvents";
-import CustomerBookingDetail from "@/pages/customer/CustomerBookingDetail";
-import AdminReports from "@/pages/admin/AdminReports";
-import { TwoFactorSettingsCard } from "@/components/account/TwoFactorSettingsCard";
 import { useAuthStore } from "@/store/authStore.ts";
+import AdminReports from "@/pages/admin/AdminReports";
+import CustomerEvents from "@/pages/customer/CustomerEvents";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import CustomerBookingDetail from "@/pages/customer/CustomerBookingDetail";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { TwoFactorSettingsCard } from "@/components/account/TwoFactorSettingsCard";
 
 const {
     toastMock,
@@ -286,7 +286,7 @@ function renderCustomerBookingDetail() {
     );
 }
 
-describe("Frontend major modules", () => {
+describe("FE Modules Unit Testing", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useAuthStore.setState({
