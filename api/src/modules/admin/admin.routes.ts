@@ -1,7 +1,15 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../../middlewares/auth.js";
-import { UserRole, VerificationStatus, NotificationType } from "../../common/enums.js";
+import {
+    PaymentStatus,
+    ReportStatus,
+    SupportTicketStatus,
+    UserRole,
+    UserStatus,
+    VerificationStatus,
+    NotificationType,
+} from "../../common/enums.js";
 import { BadRequestError, NotFoundError } from "../../common/errors.js";
 import { VendorModel } from "../vendors/vendor.model.js";
 import { PackageModel } from "../packages/package.model.js";
@@ -21,10 +29,47 @@ import { BookingModel } from "../bookings/booking.model.js";
 import { mapVerificationStatusToUi, toUiUser } from "../../common/mappers.js";
 import { VerificationRequestModel } from "../verification-requests/verification-request.model.js";
 import { CategoryModel } from "../categories/category.model.js";
-import { UserStatus } from "../../common/enums.js";
 import { LocationModel } from "../locations/location.model.js";
+import { ReportModel } from "../reports/report.model.js";
+import { SupportTicketModel } from "../support-tickets/support-ticket.model.js";
+import { PaymentModel } from "../payments/payment.model.js";
+import { RefundModel } from "../payments/refund.model.js";
+import { CommissionPaymentModel } from "../payments/commission-payment.model.js";
+import { QuoteModel } from "../quotes/quote.model.js";
 
 export const adminRoutes = Router();
+
+const ADMIN_COLLECTIONS = [
+    "users",
+    "vendors",
+    "categories",
+    "locations",
+    "events",
+    "bookings",
+    "quotes",
+    "payments",
+    "refunds",
+    "commissionPayments",
+    "payouts",
+    "packages",
+    "reviews",
+    "reports",
+    "verificationRequests",
+    "documents",
+    "availability",
+    "favorites",
+    "conversations",
+    "messages",
+    "notifications",
+    "supportTickets",
+    "auditLogs",
+    "adminPaymentConfigs",
+    "vendorPaymentConfigs",
+];
+
+function toIso(date?: Date) {
+    return date?.toISOString();
+}
 
 /**
  * @openapi
@@ -86,6 +131,243 @@ adminRoutes.get("/dashboard", requireAuth, requireRole(UserRole.ADMIN), async (_
                 avgRating,
             },
             pendingVendors,
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/admin/dashboard-data:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Aggregated admin dashboard data from existing collections
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: OK }
+ */
+adminRoutes.get("/dashboard-data", requireAuth, requireRole(UserRole.ADMIN), async (_req, res, next) => {
+    try {
+        const db = mongoose.connection.db;
+        const currentYear = new Date().getUTCFullYear();
+
+        const [
+            totalUsers,
+            activeVendors,
+            totalBookings,
+            avgRatingAgg,
+            users,
+            vendors,
+            reports,
+            pendingVerificationRequests,
+            bookings,
+            openReports,
+            openSupportTickets,
+            pendingQuotes,
+            hiddenReviews,
+            paidPaymentsAgg,
+            paidRefundsAgg,
+            paidCommissionAgg,
+            collectionStats,
+        ] = await Promise.all([
+            UserModel.countDocuments({}),
+            VendorModel.countDocuments({ verifiedStatus: VerificationStatus.APPROVED }),
+            BookingModel.countDocuments({}),
+            VendorModel.aggregate([
+                { $match: { ratingCount: { $gt: 0 } } },
+                { $group: { _id: null, avg: { $avg: "$ratingAvg" } } },
+            ]),
+            UserModel.find({}).sort({ createdAt: -1 }).limit(100).lean(),
+            VendorModel.find({ verifiedStatus: VerificationStatus.APPROVED })
+                .sort({ createdAt: -1 })
+                .limit(100)
+                .lean(),
+            ReportModel.find({}).sort({ createdAt: -1 }).limit(100).lean(),
+            VerificationRequestModel.find({ status: VerificationStatus.PENDING })
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .lean(),
+            BookingModel.find({}).select({ vendorId: 1, createdAt: 1 }).lean(),
+            ReportModel.countDocuments({ status: ReportStatus.OPEN }),
+            SupportTicketModel.countDocuments({
+                status: { $in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] },
+            }),
+            QuoteModel.countDocuments({ status: "PENDING" }),
+            ReviewModel.countDocuments({ isHidden: true }),
+            PaymentModel.aggregate([
+                { $match: { status: PaymentStatus.PAID } },
+                { $group: { _id: null, amount: { $sum: "$amount" }, count: { $sum: 1 } } },
+            ]),
+            RefundModel.aggregate([
+                { $match: { status: PaymentStatus.PAID } },
+                { $group: { _id: null, amount: { $sum: "$amount" }, count: { $sum: 1 } } },
+            ]),
+            CommissionPaymentModel.aggregate([
+                { $match: { status: PaymentStatus.PAID } },
+                { $group: { _id: null, amount: { $sum: "$amount" }, count: { $sum: 1 } } },
+            ]),
+            Promise.all(
+                ADMIN_COLLECTIONS.map(async (collection) => ({
+                    collection,
+                    count: db ? await db.collection(collection).countDocuments({}) : 0,
+                })),
+            ),
+        ]);
+
+        const avgRating = avgRatingAgg.length ? Number(avgRatingAgg[0].avg.toFixed(2)) : 0;
+
+        const vendorIds = [
+            ...new Set([
+                ...vendors.map((vendor) => vendor._id.toString()),
+                ...pendingVerificationRequests.map((request) => request.vendorId.toString()),
+                ...reports
+                    .filter((report) => report.targetType.toLowerCase() === "vendor")
+                    .map((report) => report.targetId.toString()),
+                ...bookings.map((booking) => booking.vendorId.toString()),
+            ]),
+        ].map((id) => new mongoose.Types.ObjectId(id));
+
+        const userIds = [
+            ...new Set([
+                ...vendors.map((vendor) => vendor.userId.toString()),
+                ...reports.map((report) => report.createdBy.toString()),
+            ]),
+        ].map((id) => new mongoose.Types.ObjectId(id));
+
+        const vendorCategoryIds = vendors
+            .map((vendor) => vendor.categoryId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+        const vendorLocationIds = vendors
+            .map((vendor) => vendor.primaryLocationId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+
+        const [allVendors, categories, locations, relatedUsers] = await Promise.all([
+            vendorIds.length ? VendorModel.find({ _id: { $in: vendorIds } }).lean() : [],
+            vendorCategoryIds.length ? CategoryModel.find({ _id: { $in: vendorCategoryIds } }).lean() : [],
+            vendorLocationIds.length ? LocationModel.find({ _id: { $in: vendorLocationIds } }).lean() : [],
+            userIds.length ? UserModel.find({ _id: { $in: userIds } }).lean() : [],
+        ]);
+
+        const vendorMap = new Map(allVendors.map((vendor) => [vendor._id.toString(), vendor]));
+        const categoryMap = new Map(categories.map((category) => [category._id.toString(), category]));
+        const locationMap = new Map(locations.map((location) => [location._id.toString(), location]));
+        const userMap = new Map(relatedUsers.map((user) => [user._id.toString(), user]));
+
+        const bookingsByVendorId = new Map<string, number>();
+        for (const booking of bookings) {
+            const vendorId = booking.vendorId.toString();
+            bookingsByVendorId.set(vendorId, (bookingsByVendorId.get(vendorId) ?? 0) + 1);
+        }
+
+        const categoryCounts: Record<string, number> = {};
+        const monthlyBookings = Array.from({ length: 12 }, () => 0);
+        for (const booking of bookings) {
+            const vendor = vendorMap.get(booking.vendorId.toString());
+            const categoryName = vendor?.categoryId
+                ? (categoryMap.get(vendor.categoryId.toString())?.name ?? "Other")
+                : "Other";
+            categoryCounts[categoryName] = (categoryCounts[categoryName] ?? 0) + 1;
+
+            const date = booking.createdAt ?? new Date();
+            if (date.getUTCFullYear() === currentYear) {
+                monthlyBookings[date.getUTCMonth()] += 1;
+            }
+        }
+
+        const totalCategoryBookings = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0) || 1;
+        const bookingsByCategory = Object.entries(categoryCounts)
+            .map(([category, count]) => ({
+                category,
+                count,
+                percent: Math.round((count / totalCategoryBookings) * 100),
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        const pendingVendors = pendingVerificationRequests.map((request) => {
+            const vendor = vendorMap.get(request.vendorId.toString());
+            const category = vendor?.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+            return {
+                id: request._id.toString(),
+                name: vendor?.businessName ?? "Vendor",
+                category: category?.name ?? category?.slug ?? "",
+                date: toIso(request.submittedAt),
+            };
+        });
+
+        const mappedVendors = vendors.map((vendor) => {
+            const category = vendor.categoryId ? categoryMap.get(vendor.categoryId.toString()) : undefined;
+            const location = vendor.primaryLocationId
+                ? locationMap.get(vendor.primaryLocationId.toString())
+                : undefined;
+            const user = userMap.get(vendor.userId.toString());
+            return {
+                vendorId: vendor._id.toString(),
+                userId: vendor.userId.toString(),
+                businessName: vendor.businessName,
+                category: category?.slug ?? category?.name ?? "",
+                location: vendor.locationText ?? location?.name ?? vendor.serviceAreas?.[0] ?? "",
+                ratingAvg: vendor.ratingAvg ?? 0,
+                ratingCount: vendor.ratingCount ?? 0,
+                bookingCount: bookingsByVendorId.get(vendor._id.toString()) ?? 0,
+                contactEmail: vendor.contactEmail ?? user?.email ?? "",
+                contactPhone: vendor.contactPhone ?? user?.phone ?? "",
+                verificationStatus: mapVerificationStatusToUi(vendor.verifiedStatus),
+                status: user?.status?.toLowerCase() ?? "active",
+                createdAt: toIso(vendor.createdAt),
+            };
+        });
+
+        const mappedReports = reports.map((report) => ({
+            _id: report._id.toString(),
+            targetType: report.targetType,
+            targetId: report.targetId.toString(),
+            reason: report.reason,
+            reporterId: report.createdBy.toString(),
+            reporterName:
+                userMap.get(report.createdBy.toString())?.fullName ??
+                userMap.get(report.createdBy.toString())?.email ??
+                "User",
+            targetName:
+                report.targetType.toLowerCase() === "vendor"
+                    ? (vendorMap.get(report.targetId.toString())?.businessName ?? "Vendor")
+                    : `${report.targetType} ${report.targetId.toString()}`,
+            status: report.status,
+            createdAt: toIso(report.createdAt),
+            updatedAt: toIso(report.updatedAt),
+        }));
+
+        res.json({
+            stats: {
+                totalUsers,
+                activeVendors,
+                totalBookings,
+                avgRating,
+            },
+            analytics: {
+                bookingsByCategory,
+                monthlyBookings,
+            },
+            users: users.map((user) => toUiUser(user as any)),
+            vendors: mappedVendors,
+            reports: mappedReports,
+            pendingVendors,
+            queues: {
+                pendingVerifications: pendingVerificationRequests.length,
+                openReports,
+                openSupportTickets,
+                pendingQuotes,
+                hiddenReviews,
+            },
+            financials: {
+                paidPayments: paidPaymentsAgg[0]?.amount ?? 0,
+                paidPaymentCount: paidPaymentsAgg[0]?.count ?? 0,
+                paidRefunds: paidRefundsAgg[0]?.amount ?? 0,
+                paidRefundCount: paidRefundsAgg[0]?.count ?? 0,
+                paidCommissions: paidCommissionAgg[0]?.amount ?? 0,
+                paidCommissionCount: paidCommissionAgg[0]?.count ?? 0,
+            },
+            collectionStats: collectionStats.sort((a, b) => b.count - a.count),
         });
     } catch (err) {
         next(err);

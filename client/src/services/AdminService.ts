@@ -5,6 +5,7 @@
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type {
     AdminAnalyticsResponse,
+    AdminDashboardDataResponse,
     AdminDashboardResponse,
     AdminVendorListItem,
     AdminVendorVerificationResponse,
@@ -29,6 +30,17 @@ export class AdminService {
         return __request(OpenAPI, {
             method: "GET",
             url: "/api/admin/dashboard"
+        });
+    }
+    /**
+     * Aggregated admin dashboard data from existing collections
+     * @returns AdminDashboardDataResponse OK
+     * @throws ApiError
+     */
+    public static getApiAdminDashboardData(): CancelablePromise<AdminDashboardDataResponse> {
+        return __request(OpenAPI, {
+            method: "GET",
+            url: "/api/admin/dashboard-data"
         });
     }
     /**

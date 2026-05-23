@@ -601,6 +601,29 @@ export interface AdminAnalyticsResponse {
     monthlyBookings: number[];
 }
 
+export interface AdminDashboardDataResponse extends AdminDashboardResponse {
+    analytics: AdminAnalyticsResponse;
+    users: User[];
+    vendors: AdminVendorListItem[];
+    reports: Report[];
+    queues: {
+        pendingVerifications: number;
+        openReports: number;
+        openSupportTickets: number;
+        pendingQuotes: number;
+        hiddenReviews: number;
+    };
+    financials: {
+        paidPayments: number;
+        paidPaymentCount: number;
+        paidRefunds: number;
+        paidRefundCount: number;
+        paidCommissions: number;
+        paidCommissionCount: number;
+    };
+    collectionStats: Array<{ collection: string; count: number }>;
+}
+
 export interface AdminVendorVerificationResponse {
     vendor: VendorProfile | Record<string, unknown>;
     note?: string;

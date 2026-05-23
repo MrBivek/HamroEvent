@@ -5,6 +5,7 @@ import {
     AlertCircle,
     ArrowRight,
     CheckCircle2,
+    Database,
     FileWarning,
     ShieldCheck,
     Sparkles,
@@ -28,56 +29,60 @@ import type {
 } from "@/types";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DEFAULT_STATS: AdminDashboardStats = {
+    totalUsers: 0,
+    activeVendors: 0,
+    totalBookings: 0,
+    avgRating: 0
+};
+const DEFAULT_ANALYTICS: AdminAnalyticsResponse = {
+    bookingsByCategory: [],
+    monthlyBookings: Array.from({ length: 12 }, () => 0)
+};
+
+function getReportStatus(report: Report) {
+    const status = (report.status || "OPEN").toLowerCase();
+    return status === "open" ? "pending" : status;
+}
 
 export default function AdminDashboard() {
-    const [stats, setStats] = useState<AdminDashboardStats>({
-        totalUsers: 0,
-        activeVendors: 0,
-        totalBookings: 0,
-        avgRating: 0
-    });
+    const [stats, setStats] = useState<AdminDashboardStats>(DEFAULT_STATS);
     const [pendingVendors, setPendingVendors] = useState<AdminDashboardPendingVendor[]>([]);
-    const [analytics, setAnalytics] = useState<AdminAnalyticsResponse>({
-        bookingsByCategory: [],
-        monthlyBookings: Array.from({ length: 12 }, () => 0)
-    });
+    const [analytics, setAnalytics] = useState<AdminAnalyticsResponse>(DEFAULT_ANALYTICS);
     const [users, setUsers] = useState<User[]>([]);
     const [vendors, setVendors] = useState<AdminVendorListItem[]>([]);
     const [reports, setReports] = useState<Report[]>([]);
+    const [collectionStats, setCollectionStats] = useState<Array<{ collection: string; count: number }>>([]);
 
     useEffect(() => {
         let active = true;
         const load = async () => {
             try {
-                const [dashboardRes, analyticsRes, usersRes, vendorsRes, reportsRes] = await Promise.all([
-                    AdminService.getApiAdminDashboard(),
-                    AdminService.getApiAdminAnalytics(),
-                    AdminService.getApiAdminUsers({ page: 1, limit: 100 }),
-                    AdminService.getApiAdminVendors({ page: 1, limit: 100 }),
-                    AdminService.getApiAdminReports({ page: 1, limit: 100 })
-                ]);
+                const dashboardRes = await AdminService.getApiAdminDashboardData();
                 if (!active) return;
-                setStats(dashboardRes?.stats || stats);
+                setStats(dashboardRes?.stats || DEFAULT_STATS);
                 setPendingVendors(dashboardRes?.pendingVendors || []);
-                setAnalytics(analyticsRes || analytics);
-                setUsers(usersRes?.items || []);
-                setVendors(vendorsRes?.items || []);
-                setReports(reportsRes?.items || []);
+                setAnalytics(dashboardRes?.analytics || DEFAULT_ANALYTICS);
+                setUsers(dashboardRes?.users || []);
+                setVendors(dashboardRes?.vendors || []);
+                setReports(dashboardRes?.reports || []);
+                setCollectionStats(dashboardRes?.collectionStats || []);
             } catch {
                 if (!active) return;
                 setPendingVendors([]);
                 setUsers([]);
                 setVendors([]);
                 setReports([]);
+                setCollectionStats([]);
             }
         };
         load();
         return () => {
             active = false;
         };
-    }, [analytics, stats]);
+    }, []);
 
-    const pendingReports = reports.filter((report) => (report.status || "pending").toLowerCase() === "pending").length;
+    const pendingReports = reports.filter((report) => getReportStatus(report) === "pending").length;
     const suspendedUsers = users.filter((user) => user.status === "suspended").length;
     const averageVendorRating =
         vendors.length > 0 ? vendors.reduce((sum, vendor) => sum + (vendor.ratingAvg || 0), 0) / vendors.length : 0;
@@ -264,7 +269,7 @@ export default function AdminDashboard() {
                     borderWidth: 4
                 },
                 data: ["pending", "reviewed", "resolved"].map((status, index) => ({
-                    value: reports.filter((report) => (report.status || "pending").toLowerCase() === status).length,
+                    value: reports.filter((report) => getReportStatus(report) === status).length,
                     name: status,
                     itemStyle: {
                         color: [
@@ -405,7 +410,7 @@ export default function AdminDashboard() {
                                 {
                                     label: "Pending",
                                     value: reports.filter(
-                                        (report) => (report.status || "pending").toLowerCase() === "pending"
+                                        (report) => getReportStatus(report) === "pending"
                                     ).length,
                                     icon: AlertCircle,
                                     tone: "text-warning"
@@ -413,7 +418,7 @@ export default function AdminDashboard() {
                                 {
                                     label: "Reviewed",
                                     value: reports.filter(
-                                        (report) => (report.status || "").toLowerCase() === "reviewed"
+                                        (report) => getReportStatus(report) === "reviewed"
                                     ).length,
                                     icon: ShieldCheck,
                                     tone: "text-primary"
@@ -421,7 +426,7 @@ export default function AdminDashboard() {
                                 {
                                     label: "Resolved",
                                     value: reports.filter(
-                                        (report) => (report.status || "").toLowerCase() === "resolved"
+                                        (report) => getReportStatus(report) === "resolved"
                                     ).length,
                                     icon: CheckCircle2,
                                     tone: "text-success"
